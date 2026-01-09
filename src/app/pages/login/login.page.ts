@@ -2,6 +2,9 @@
 import { Component, OnInit } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Store } from '@ngrx/store';
+// Stores
+import * as fromAuth from 'src/app/store/auth';
 
 @Component({
 	selector: 'app-login',
@@ -19,7 +22,7 @@ export class LoginPage implements OnInit {
 
 	constructor(
 		private fb: FormBuilder,
-		// private authStore: Store<fromAuth.State>,
+		private authStore: Store<fromAuth.State>,
 		private navCtrl: NavController
 	) { }
 
@@ -29,9 +32,8 @@ export class LoginPage implements OnInit {
 	public login() {
 		// Validate the form it's valid
 		if (this.form.valid) {
-			console.log('Login', this.form.value);
 			// Get the value and dispatch the login action
-			// this.authStore.dispatch(fromAuth.actions.login(this.form.value));
+			this.authStore.dispatch(fromAuth.actions.login(this.form.value));
 		}
 	}
 
