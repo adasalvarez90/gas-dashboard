@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, User, onAuthStateChanged } from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword, signOut, User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from '@angular/fire/auth';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -11,6 +11,13 @@ export class FirebaseAuthService {
 
   login(email: string, password: string): Promise<User> {
     return signInWithEmailAndPassword(this.auth, email, password)
+      .then(cred => cred.user);
+  }
+
+   /** LOGIN CON GOOGLE */
+  loginWithGoogle(): Promise<User> {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(this.auth, provider)
       .then(cred => cred.user);
   }
 

@@ -5,6 +5,9 @@ export const login = createAction('[Auth] Login', props<{ email: string; passwor
 export const loginSuccess = createAction('[Auth] Login Success', props<{ user: Partial<User> }>());
 export const loginFailure = createAction('[Auth] Login Failure', props<{ error: any }>());
 
+/** GOOGLE LOGIN */
+export const loginWithGoogle = createAction('[Auth] Login With Google');
+
 export const logout = createAction('[Auth] Logout');
 export const logoutSuccess = createAction('[Auth] Logout Success');
 

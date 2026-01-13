@@ -1,26 +1,37 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { FirebaseAuthService } from 'src/app/services/firebase-auth.service';
 import * as AuthActions from './auth.actions';
-import { FirebaseAuthService } from 'src/app/services/firebase-auth.service.ts';
-import { exhaustMap, map } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 @Injectable()
 export class AuthEffects {
   constructor(
     private actions$: Actions,
-    private firebaseAuth: FirebaseAuthService
+    private authService: FirebaseAuthService
   ) {}
 
   login$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.login),
-      exhaustMap(({ email, password }) =>
-        this.firebaseAuth
-          .login(email, password)
-          .then((user) => {
-            return AuthActions.loginSuccess({ user });
-          })
-          .catch((error) => AuthActions.loginFailure({ error }))
+      switchMap(({ email, password }) =>
+        this.authService.login(email, password).then(
+          (user) => AuthActions.loginSuccess({ user }),
+          (error) => AuthActions.loginFailure({ error })
+        )
+      )
+    )
+  );
+
+  /** LOGIN CON GOOGLE */
+  loginWithGoogle$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.loginWithGoogle),
+      switchMap(() =>
+        this.authService.loginWithGoogle().then(
+          (user) => AuthActions.loginSuccess({ user }),
+          (error) => AuthActions.loginFailure({ error })
+        )
       )
     )
   );
@@ -28,17 +39,12 @@ export class AuthEffects {
   logout$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.logout),
-      exhaustMap(() =>
-        this.firebaseAuth.logout().then(() => AuthActions.logoutSuccess())
+      switchMap(() =>
+        this.authService.logout().then(
+          () => AuthActions.loginSuccess({ user: null }),
+          (error) => AuthActions.loginFailure({ error })
+        )
       )
-    )
-  );
-
-  session$ = createEffect(() =>
-    this.firebaseAuth.authState$().pipe(
-      map((user) => {
-        return AuthActions.sessionUpdated({ user });
-      })
     )
   );
 }
