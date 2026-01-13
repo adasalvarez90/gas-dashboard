@@ -7,15 +7,13 @@ import { ErrorMessage } from 'src/app/models/error-message.model';
  */
 // Define the State interface based on the entity and order interfaces
 export interface State extends Auth {
-	error: ErrorMessage;
-	loaded: boolean;
-	user: Partial<User>;
-	module: number;
+  user: Partial<User>;
+  loading: boolean;
+  error: any;
 }
 // Define the feature initial state
 export const initialState: State = {
-	error: null,
-	loaded: false,
-	user: null,
-	module: null,
+  user: null,
+  loading: false,
+  error: null,
 };
