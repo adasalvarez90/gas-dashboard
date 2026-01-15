@@ -12,9 +12,11 @@ import { AuthFacade } from 'src/app/store/auth/auth.facade';
   styleUrls: ['./login.page.scss'],
 })
 export class LoginPage implements OnInit {
+
+  private user$ = this.auth.user$;
   // Form
   public form: FormGroup = this.fb.group({
-    username: ['', Validators.required],
+    email: ['', Validators.required],
     password: ['', Validators.required],
   });
 
@@ -30,12 +32,10 @@ export class LoginPage implements OnInit {
     // Validate the form it's valid
     if (this.form.valid) {
       // Get the value and dispatch the login action
-      this.auth.login(this.form.value.username, this.form.value.password);
+      this.auth.login(this.form.value.email, this.form.value.password);
+      // Console log the user
+      // this.user$.subscribe(user => console.log('User logged in:', user));
     }
-  }
-
-  public loginWithGoogle() {
-    this.auth.loginWithGoogle();
   }
 
   public recovery() {

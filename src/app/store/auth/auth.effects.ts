@@ -2,7 +2,9 @@ import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { FirebaseAuthService } from 'src/app/services/firebase-auth.service';
 import * as AuthActions from './auth.actions';
-import { switchMap } from 'rxjs/operators';
+import { exhaustMap } from 'rxjs/operators';
+import { from, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 @Injectable()
 export class AuthEffects {
@@ -11,38 +13,31 @@ export class AuthEffects {
     private authService: FirebaseAuthService
   ) {}
 
+  // LOGIN
   login$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.login),
-      switchMap(({ email, password }) =>
-        this.authService.login(email, password).then(
-          (user) => AuthActions.loginSuccess({ user }),
-          (error) => AuthActions.loginFailure({ error })
+      exhaustMap(({ email, password }) =>
+        from(this.authService.login(email, password)).pipe(
+          map((user) => AuthActions.loginSuccess({ user })),
+          catchError((error) =>
+            of(AuthActions.loginFailure({ error: error.message }))
+          )
         )
       )
     )
   );
 
-  /** LOGIN CON GOOGLE */
-  loginWithGoogle$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(AuthActions.loginWithGoogle),
-      switchMap(() =>
-        this.authService.loginWithGoogle().then(
-          (user) => AuthActions.loginSuccess({ user }),
-          (error) => AuthActions.loginFailure({ error })
-        )
-      )
-    )
-  );
-
+  // LOGOUT
   logout$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.logout),
-      switchMap(() =>
-        this.authService.logout().then(
-          () => AuthActions.loginSuccess({ user: null }),
-          (error) => AuthActions.loginFailure({ error })
+      exhaustMap(() =>
+        from(this.authService.logout()).pipe(
+          map(() => AuthActions.logoutSuccess()),
+          catchError((error) =>
+            of(AuthActions.logoutFailure({ error: error.message }))
+          )
         )
       )
     )

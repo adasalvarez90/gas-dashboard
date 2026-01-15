@@ -17,11 +17,6 @@ export class AuthFacade {
     this.store.dispatch(AuthActions.login({ email, password }));
   }
 
-  /** GOOGLE LOGIN */
-  public loginWithGoogle() {
-    this.store.dispatch(AuthActions.loginWithGoogle());
-  }
-
   public logout() {
     this.store.dispatch(AuthActions.logout());
   }
