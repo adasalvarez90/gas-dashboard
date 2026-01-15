@@ -1,4 +1,5 @@
 export interface Metadata {
+	uid: string;
 	_id?: string;
 	_on?: boolean;
 	_code?: number;
