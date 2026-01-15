@@ -1,12 +1,11 @@
 import { Injectable } from '@angular/core';
 import * as AuthActions from './auth.actions';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { LoadingController, ToastController } from '@ionic/angular';
 //Rxjs
 import { exhaustMap } from 'rxjs/operators';
 import { from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-// Models
-import { User } from 'src/app/store/user/user.model';
 // Services
 import { FirebaseAuthService } from 'src/app/services/firebase-auth.service';
 import { UserFirestoreService } from 'src/app/services/user-firestore.service';
@@ -16,7 +15,9 @@ export class AuthEffects {
   constructor(
     private actions$: Actions,
     private authService: FirebaseAuthService,
-    private userFS: UserFirestoreService
+    private userFS: UserFirestoreService,
+    private loadingCtrl: LoadingController,
+    private toastCtrl: ToastController
   ) {}
 
   // LOGIN
@@ -26,20 +27,56 @@ export class AuthEffects {
       exhaustMap(({ email, password }) =>
         from(this.authService.login(email, password)).pipe(
           exhaustMap(async (fbUser) => {
+            // Create the loading
+            const loading = await this.loadingCtrl.create({
+              cssClass: 'my-custom-class',
+              message: 'Iniciando sesión. Espere, por favor.',
+            });
 
-            console.log('Firebase User UID:', fbUser.uid);
+            // Create the toast
+            const toast = await this.toastCtrl.create({
+              color: 'primary',
+              message: '',
+              duration: 5000,
+              position: 'middle',
+              cssClass: 'toast-auth',
+            });
 
-            const user = await this.userFS.getUser(fbUser.uid);
+            // Define the try catch block
+            try {
+              // Present the loading
+              await loading.present();
+              const user = await this.userFS.getUser(fbUser.uid);
 
-            if (!user) {
-              console.error('User not registered in Firestore');
+              if (!user) {
+                console.error('User not registered in Firestore');
 
+                throw { error: { message: 'Usuario no registrado. Contacte al administrador.' } };
+              }
+
+              // Modified the toast message
+              toast.message = `¡Bienvenid@! ${user.name}`;
+              // Hide the loading
+              await loading.dismiss();
+              // Show the toast
+              await toast.present();
+              // Initialize session
+              // setTimeout(() => location.reload(), 2000);
+              // Return the success action
+              return AuthActions.loginSuccess({ user });
+              // In case of error
+            } catch (error: any) {
+              // Dismiss the loading
+              await loading.dismiss();
+              // Change the toast message and show it
+              toast.message = `${error.error.message}`;
+              // Present the toast
+              toast.present();
+              // dispatch the create error
               return AuthActions.loginFailure({
-                error: 'User is not registered in the system',
+                error: error.message,
               });
             }
-
-            return AuthActions.loginSuccess({ user });
           }),
           catchError((error) =>
             of(AuthActions.loginFailure({ error: error.message }))
