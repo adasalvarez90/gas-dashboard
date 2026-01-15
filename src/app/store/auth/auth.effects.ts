@@ -1,3 +1,4 @@
+import { Router } from '@angular/router';
 import { Injectable } from '@angular/core';
 import * as AuthActions from './auth.actions';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
@@ -5,7 +6,7 @@ import { LoadingController, ToastController } from '@ionic/angular';
 //Rxjs
 import { exhaustMap } from 'rxjs/operators';
 import { from, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, tap, catchError } from 'rxjs/operators';
 // Services
 import { FirebaseAuthService } from 'src/app/services/firebase-auth.service';
 import { UserFirestoreService } from 'src/app/services/user-firestore.service';
@@ -13,6 +14,7 @@ import { UserFirestoreService } from 'src/app/services/user-firestore.service';
 @Injectable()
 export class AuthEffects {
   constructor(
+    private router: Router,
     private actions$: Actions,
     private authService: FirebaseAuthService,
     private userFS: UserFirestoreService,
@@ -51,7 +53,12 @@ export class AuthEffects {
               if (!user) {
                 console.error('User not registered in Firestore');
 
-                throw { error: { message: 'Usuario no registrado. Contacte al administrador.' } };
+                throw {
+                  error: {
+                    message:
+                      'Usuario no registrado. Contacte al administrador.',
+                  },
+                };
               }
 
               // Modified the toast message
@@ -84,6 +91,15 @@ export class AuthEffects {
         )
       )
     )
+  );
+
+  loginSuccess$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.loginSuccess),
+        tap(() => this.router.navigate(['/dashboard']))
+      ),
+    { dispatch: false }
   );
 
   // LOGOUT
