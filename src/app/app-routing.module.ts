@@ -12,13 +12,17 @@ const routes: Routes = [
   },
   {
     path: 'login',
-	canActivate: [NoAuthGuard],
-    loadChildren: () => import('./pages/login/login.module').then((m) => m.LoginPageModule),
+    canActivate: [NoAuthGuard],
+    loadChildren: () =>
+      import('./pages/login/login.module').then((m) => m.LoginPageModule),
   },
   {
     path: 'dashboard',
-	canActivate: [AuthGuard],
-    loadChildren: () => import('./pages/dashboard/dashboard.module').then((m) => m.DashboardPageModule),
+    canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/dashboard/dashboard.module').then(
+        (m) => m.DashboardPageModule
+      ),
   },
 ];
 
