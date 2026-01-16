@@ -1,41 +1,51 @@
-// Libraries
-import { createReducer, on, ActionReducer } from '@ngrx/store';
-// Actions
-import * as actions from './user.actions';
-import * as _ from 'lodash';
-// State
-import { State, adapter, initialState } from './user.state';
-/**
- * DEFINE THE REDUCER METHODS
- */
-// Create the reducer
-const _reducer: ActionReducer<State> = createReducer(
-	initialState,
-	// Entity reducers
-	on(actions.addAll, (state: State, { users }) => {
-		// Merge the new state
-		state = _.assign(_.cloneDeep(state), { loaded: true });
-		// Add all the users
-		return adapter.setAll(users, state);
-	}),
-	on(actions.select, (state: State, { id }) => {
-		return {...state, ...{ selectedUserId: id }};
-	}),
-	on(actions.created, (state: State, { user }) => adapter.addOne(user, state)),
-	on(actions.updated, (state: State, { user }) => adapter.updateOne(user, state)),
-	on(actions.deleted, (state: State, { id }) => adapter.removeOne(id, state)),
-	// Search actions
-	on(actions.searchText, (state: State, { search }) => _.assign(_.cloneDeep(state), { search })),
-	// Errors
-	on(actions.createError, (state: State, { error }) => _.assign(_.cloneDeep(state), { error })),
-	on(actions.updateError, (state: State, { error }) => _.assign(_.cloneDeep(state), { error })),
-	on(actions.removeError, (state: State, { error }) => _.assign(_.cloneDeep(state), { error })),
-	// Select by token
-	on(actions.selectByTokenSuccess, (state: State, { user }) => _.assign(_.cloneDeep(state), { userByToken: user })),
-);
+import { createReducer, on } from '@ngrx/store';
+import { initialState, State } from './user.state';
+import * as UsersActions from './user.actions';
 
-// Create the reducer function
-export function reducer(state, action) {
-	//
-	return _reducer(state, action);
-}
+export const userReducer = createReducer(
+  initialState,
+
+  on(UsersActions.loadUsers, (state) => ({
+    ...state,
+    loading: true,
+    error: null,
+  })),
+
+  on(UsersActions.loadUsersSuccess, (state, { users }) => ({
+    ...state,
+    list: users,
+    loading: false,
+  })),
+
+  on(UsersActions.loadUsersFailure, (state, { error }) => ({
+    ...state,
+    loading: false,
+    error,
+  })),
+
+  on(UsersActions.selectUser, (state, { user }) => ({
+    ...state,
+    selected: user,
+  })),
+
+  on(UsersActions.createUserSuccess, (state, { user }) => ({
+    ...state,
+    list: [...state.list, user],
+    selected: user,
+    loading: false,
+  })),
+
+  on(UsersActions.updateUserSuccess, (state, { user }) => ({
+    ...state,
+    list: state.list.map((u) => (u.uid === user.uid ? user : u)),
+    selected: user,
+    loading: false,
+  })),
+
+  on(UsersActions.deleteUserSuccess, (state, { uid }) => ({
+    ...state,
+    list: state.list.filter((u) => u.uid !== uid),
+    selected: state.selected?.uid === uid ? null : state.selected,
+    loading: false,
+  }))
+);

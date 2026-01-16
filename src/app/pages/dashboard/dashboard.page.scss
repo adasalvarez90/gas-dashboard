@@ -1,0 +1,39 @@
+
+ion-menu.md ion-list#inbox-list ion-list-header {
+    font-size: 22px;
+    font-weight: 600;
+
+    min-height: 20px;
+}
+
+ion-menu.md ion-item.selected {
+    --background: rgba(var(--ion-color-primary-rgb), 0.14);
+}
+
+ion-menu.md ion-item.selected ion-icon {
+    color: var(--ion-color-primary);
+}
+
+ion-menu.md ion-item ion-icon {
+    color: #616e7e;
+}
+
+ion-menu.md ion-item ion-label {
+    font-weight: 500;
+}
+
+ion-menu.ios ion-item {
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --min-height: 50px;
+}
+
+ion-item.selected {
+    font-weight: bold;
+    color: var(--ion-color-primary);
+}
+
+.my-badge {
+    padding: 8px;
+    opacity: 0.8;
+}

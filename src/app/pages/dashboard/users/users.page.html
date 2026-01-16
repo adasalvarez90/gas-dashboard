@@ -1,13 +1,72 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>users</ion-title>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Usuarios</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="addUser()">
+        <ion-icon slot="icon-only" name="add"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar
+      #searchBar
+      (ionInput)="filter(searchBar.value)"
+      debounce="500"
+      placeholder="Buscar usuarios"
+    ></ion-searchbar>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">users</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content>
+  <div class="scrollbar">
+    @if ((currentUser$ | async); as auth) { @if ((users$ | async); as users) {
+    <ion-list-header>
+      <p>
+        @if ((search$ | async); as search) {
+        <span>
+          {{ users.length }} de {{ total$ | async }} {{ 'usuario' | plural
+          :(total$ | async) :'s' :'' }} con <ion-text>"{{ search }}" </ion-text>
+        </span>
+        } @else {
+        <span
+          >{{ users.length }} {{ 'usuario' | plural :users.length :'s' :''
+          }}</span
+        >
+        }
+      </p>
+    </ion-list-header>
+    }
+    <ion-list class="ion-no-padding">
+      @for((user of users$ | async); track user.name; let i = $index) {
+      <ion-item
+        lines="inset"
+        [button]="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth._code === user._code)"
+        (click)="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth._code === user._code) ? editUser(user) : null"
+        [disabled]="!(auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth._code === user._code))"
+      >
+        <ion-label>
+          <h2>
+            <ion-text>
+              <b>{{ user.name }}</b>
+            </ion-text>
+          </h2>
+          <h3>
+            <ion-text color="warning"> {{ user.email }} </ion-text>
+          </h3>
+        </ion-label>
+        <ion-label class="ion-text-right">
+          @if (user.role === 1) {
+            <ion-badge class="my-badge" color="success">
+              <ion-icon slot="icon-only" name="star"></ion-icon>
+            </ion-badge>
+          }
+        </ion-label>
+      </ion-item>
+      }
+    </ion-list>
+    }
+  </div>
 </ion-content>
