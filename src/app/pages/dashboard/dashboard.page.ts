@@ -1,5 +1,6 @@
 import { logout } from './../../store/auth/auth.actions';
 import { Component, OnInit } from '@angular/core';
+import { AlertController } from '@ionic/angular';
 import { AuthFacade } from 'src/app/store/auth/auth.facade';
 
 @Component({
@@ -139,11 +140,33 @@ export class DashboardPage implements OnInit {
   ];
 
   auth$ = this.authFacade.user$;
-  constructor(private authFacade: AuthFacade) {}
+  constructor(
+    private authFacade: AuthFacade,
+    private alertCtrl: AlertController,
+  ) {}
 
   ngOnInit() {}
 
   logout() {
-    this.authFacade.logout();
+    // Confirm logout action
+    this.alertCtrl
+      .create({
+        header: 'Cerrar sesión',
+        message: '¿Estás seguro de que deseas cerrar sesión?',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+          },
+          {
+            text: 'Cerrar sesión',
+            role: 'confirm',
+            handler: () => {
+              this.authFacade.logout();
+            },
+          },
+        ],
+      })
+      .then((alert) => alert.present());
   }
 }

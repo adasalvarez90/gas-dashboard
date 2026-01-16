@@ -38,6 +38,7 @@ export const authReducer = createReducer(
     ...state,
     user: null,
     isAuthenticated: false,
+    loading: false,
   })),
 
   on(AuthActions.restoreSession, (state) => ({
@@ -57,5 +58,6 @@ export const authReducer = createReducer(
     ...state,
     user: null,
     isAuthenticated: false,
+    loading: false,
   }))
 );

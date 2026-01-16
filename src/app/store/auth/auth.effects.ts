@@ -117,6 +117,15 @@ export class AuthEffects {
     )
   );
 
+  logoutSuccess$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AuthActions.logoutSuccess),
+        tap(() => this.router.navigate(['/login']))
+      ),
+    { dispatch: false }
+  );
+
   restoreSession$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.restoreSession),
