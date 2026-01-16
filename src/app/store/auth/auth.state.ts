@@ -9,7 +9,7 @@ import { ErrorMessage } from 'src/app/models/error-message.model';
 export interface State extends Auth {
   user: Partial<User>;
   loading: boolean;
-  error: any;
+  error: ErrorMessage;
 }
 // Define the feature initial state
 export const initialState: State = {

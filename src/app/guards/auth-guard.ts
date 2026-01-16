@@ -20,10 +20,11 @@ export class AuthGuardClass {
     next: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean | UrlTree> {
-    return this.authFacade.user$.pipe(
+    return this.authFacade.auth$.pipe(
       take(1),
-      map((user) => {
-        if (user) {
+      map((auth) => {
+
+        if (auth) {
           return true;
         }
 

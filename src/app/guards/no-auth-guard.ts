@@ -23,6 +23,7 @@ export class NoAuthGuardClass {
     return this.authFacade.user$.pipe(
       take(1),
       map((user) => {
+        
         if (!user) {
           return true;
         }

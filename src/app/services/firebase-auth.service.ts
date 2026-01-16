@@ -1,14 +1,21 @@
 import { Injectable } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, User, onAuthStateChanged } from '@angular/fire/auth';
-import { Observable } from 'rxjs';
+import {
+  Auth,
+  signInWithEmailAndPassword,
+  signOut,
+  User,
+  onAuthStateChanged,
+} from '@angular/fire/auth';
+import { BehaviorSubject, Observable, concat, map } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FirebaseAuthService {
 
   constructor(private auth: Auth) {}
 
+  
   // Email / Password login
   async login(email: string, password: string): Promise<User> {
     const cred = await signInWithEmailAndPassword(this.auth, email, password);
@@ -22,8 +29,8 @@ export class FirebaseAuthService {
 
   // Auth state observable
   authState$(): Observable<User | null> {
-    return new Observable(subscriber => {
-      const unsubscribe = onAuthStateChanged(this.auth, user => {
+    return new Observable((subscriber) => {
+      const unsubscribe = onAuthStateChanged(this.auth, (user) => {
         subscriber.next(user);
       });
       return unsubscribe;

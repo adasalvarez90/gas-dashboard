@@ -6,7 +6,7 @@ import { LoadingController, ToastController } from '@ionic/angular';
 //Rxjs
 import { exhaustMap } from 'rxjs/operators';
 import { from, of } from 'rxjs';
-import { map, tap, catchError } from 'rxjs/operators';
+import { map, tap, take, catchError } from 'rxjs/operators';
 // Services
 import { FirebaseAuthService } from 'src/app/services/firebase-auth.service';
 import { UserFirestoreService } from 'src/app/services/user-firestore.service';
@@ -112,6 +112,36 @@ export class AuthEffects {
           catchError((error) =>
             of(AuthActions.logoutFailure({ error: error.message }))
           )
+        )
+      )
+    )
+  );
+
+  restoreSession$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.restoreSession),
+      exhaustMap(() =>
+        this.authService.authState$().pipe(
+          take(1),
+          exhaustMap(async (fbUser) => {
+
+            if (!fbUser) {
+              return AuthActions.restoreSessionFailure();
+            }
+
+            try {
+              const user = await this.userFS.getUser(fbUser.uid);
+
+              if (!user) {
+                return AuthActions.restoreSessionFailure();
+              }
+
+              return AuthActions.restoreSessionSuccess({ user });
+            } catch (error) {
+              console.error('Restore session error:', error);
+              return AuthActions.restoreSessionFailure();
+            }
+          })
         )
       )
     )

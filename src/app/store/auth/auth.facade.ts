@@ -7,6 +7,7 @@ import * as fromAuth from './auth.selectors';
   providedIn: 'root',
 })
 export class AuthFacade {
+  auth$ = this.store.select(fromAuth.selectAuth);
   user$ = this.store.select(fromAuth.selectUser);
   loading$ = this.store.select(fromAuth.selectLoading);
   error$ = this.store.select(fromAuth.selectError);
@@ -19,5 +20,9 @@ export class AuthFacade {
 
   public logout() {
     this.store.dispatch(AuthActions.logout());
+  }
+
+  public restoreSession() {
+    this.store.dispatch(AuthActions.restoreSession());
   }
 }
