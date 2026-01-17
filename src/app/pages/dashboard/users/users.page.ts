@@ -14,7 +14,7 @@ export class UsersPage implements OnInit {
 
   // Search term
   search$ = this.userFacade.search$;
-  total$ = this.userFacade.total$;
+  total$ = null//this.userFacade.total$;
 
   constructor(
     private userFacade: UserFacade,
@@ -22,10 +22,7 @@ export class UsersPage implements OnInit {
     private navCtrl: NavController
   ) {}
 
-  ngOnInit() {
-    // load users
-    this.userFacade.loadUsers();
-  }
+  ngOnInit() {}
 
   filter(event: any) {
     // get search term

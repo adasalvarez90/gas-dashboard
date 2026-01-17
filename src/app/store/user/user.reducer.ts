@@ -47,5 +47,7 @@ export const userReducer = createReducer(
     list: state.list.filter((u) => u.uid !== uid),
     selected: state.selected?.uid === uid ? null : state.selected,
     loading: false,
-  }))
+  })),
+
+  on(UsersActions.clearUsers, () => initialState)
 );

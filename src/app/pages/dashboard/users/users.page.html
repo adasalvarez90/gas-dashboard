@@ -43,9 +43,9 @@
       @for((user of users$ | async); track user.name; let i = $index) {
       <ion-item
         lines="inset"
-        [button]="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth._code === user._code)"
-        (click)="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth._code === user._code) ? editUser(user) : null"
-        [disabled]="!(auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth._code === user._code))"
+        [button]="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid)"
+        (click)="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid) ? editUser(user) : null"
+        [disabled]="!(auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid))"
       >
         <ion-label>
           <h2>

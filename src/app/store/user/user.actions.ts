@@ -27,3 +27,5 @@ export const deleteUserFailure = createAction('[Users] Delete Failure', props<{ 
 
 // Search
 export const setSearchTerm = createAction('[Users] Set Search Term', props<{ searchTerm: string }>());
+
+export const clearUsers = createAction('[Users] Clear Users');

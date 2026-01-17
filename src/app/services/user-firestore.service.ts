@@ -63,7 +63,7 @@ export class UserFirestoreService {
     await updateDoc(ref, { ...user });
   }
 
-  // 🗑️ Delete user 
+  // 🗑️ Delete user
   async deleteUser(uid: string): Promise<void> {
     const ref = doc(this.firestore, `users/${uid}`);
     await updateDoc(ref, { _on: false });

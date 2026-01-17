@@ -12,7 +12,7 @@ import { IonicModule } from '@ionic/angular';
 		CommonModule,
 		IonicModule,
 		EffectsModule.forFeature([UserEffects]),
-		StoreModule.forFeature('user', userReducer)
+		StoreModule.forFeature('users', userReducer)
 	]
 })
 export class UserModule { }

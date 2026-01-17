@@ -34,7 +34,7 @@ export class LoginPage implements OnInit {
       // Get the value and dispatch the login action
       this.auth.login(this.form.value.email, this.form.value.password);
       // Console log the user
-      this.user$.subscribe(user => console.log('User logged in:', user));
+      this.user$.subscribe();
     }
   }
 

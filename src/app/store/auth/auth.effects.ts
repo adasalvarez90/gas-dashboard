@@ -1,6 +1,7 @@
 import { Router } from '@angular/router';
 import { Injectable } from '@angular/core';
 import * as AuthActions from './auth.actions';
+import * as UserActions from '../user/user.actions';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { LoadingController, ToastController } from '@ionic/angular';
 //Rxjs
@@ -19,7 +20,7 @@ export class AuthEffects {
     private authService: FirebaseAuthService,
     private userFS: UserFirestoreService,
     private loadingCtrl: LoadingController,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
   ) {}
 
   // LOGIN
@@ -86,20 +87,25 @@ export class AuthEffects {
             }
           }),
           catchError((error) =>
-            of(AuthActions.loginFailure({ error: error.message }))
-          )
-        )
-      )
-    )
+            of(AuthActions.loginFailure({ error: error.message })),
+          ),
+        ),
+      ),
+    ),
   );
 
   loginSuccess$ = createEffect(
     () =>
       this.actions$.pipe(
         ofType(AuthActions.loginSuccess),
-        tap(() => this.router.navigate(['/dashboard']))
+        tap(() => {
+          // Load the users after login
+          UserActions.loadUsers();
+          // Navigate to dashboard
+          this.router.navigate(['/dashboard']);
+        }),
       ),
-    { dispatch: false }
+    { dispatch: false },
   );
 
   // LOGOUT
@@ -110,20 +116,20 @@ export class AuthEffects {
         from(this.authService.logout()).pipe(
           map(() => AuthActions.logoutSuccess()),
           catchError((error) =>
-            of(AuthActions.logoutFailure({ error: error.message }))
-          )
-        )
-      )
-    )
+            of(AuthActions.logoutFailure({ error: error.message })),
+          ),
+        ),
+      ),
+    ),
   );
 
   logoutSuccess$ = createEffect(
     () =>
       this.actions$.pipe(
         ofType(AuthActions.logoutSuccess),
-        tap(() => this.router.navigate(['/login']))
+        tap(() => this.router.navigate(['/login'])),
       ),
-    { dispatch: false }
+    { dispatch: false },
   );
 
   restoreSession$ = createEffect(() =>
@@ -133,7 +139,6 @@ export class AuthEffects {
         this.authService.authState$().pipe(
           take(1),
           exhaustMap(async (fbUser) => {
-
             if (!fbUser) {
               return AuthActions.restoreSessionFailure();
             }
@@ -150,9 +155,16 @@ export class AuthEffects {
               console.error('Restore session error:', error);
               return AuthActions.restoreSessionFailure();
             }
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    ),
+  );
+
+  restoreSessionSuccess$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.restoreSessionSuccess),
+      map(() => UserActions.loadUsers()),
+    ),
   );
 }
