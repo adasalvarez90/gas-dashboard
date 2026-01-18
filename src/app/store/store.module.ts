@@ -7,6 +7,7 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 // Modules
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { InviteModule } from './invite/invite.module'
 // Custom serializer
 import { CustomSerializer } from './router/router-custom-serializer';
 // Reducers
@@ -18,6 +19,7 @@ import { reducers } from './store.reducer';
 		CommonModule,
 		AuthModule,
 		UserModule,
+		InviteModule,
 		// NGRX Modules
 		StoreModule.forRoot(reducers),
 		EffectsModule.forRoot([]),
