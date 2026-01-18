@@ -7,7 +7,7 @@ import { User } from './user.model';
 @Injectable({ providedIn: 'root' })
 export class UserFacade {
   users$ = this.store.select(fromUser.selectUsers);
-  selected$ = this.store.select(fromUser.selectSelectedUser);
+  selectedUser$ = this.store.select(fromUser.selectedUser);
   loading$ = this.store.select(fromUser.selectLoading);
   search$ = this.store.select(fromUser.selectSearch);
 

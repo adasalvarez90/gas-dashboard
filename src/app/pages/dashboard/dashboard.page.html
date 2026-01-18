@@ -8,7 +8,7 @@
         <!-- <ion-title>{{ greet$ | async }}</ion-title> -->
         <ion-buttons slot="end">
           <ion-button (click)="logout()" title="Salir">
-            <ion-icon name="matLogout" slot="start"></ion-icon>
+            <ion-icon name="log-out" slot="icon-only"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -20,10 +20,11 @@
           <ion-menu-toggle auto-hide="false">
             <ion-item
               routerDirection="root"
-              [routerLink]="['/dashboard/profile']"
+              [routerLink]="['/dashboard/users/manage']"
               lines="none"
               detail="false"
               routerLinkActive="selected"
+              (click)="editProfile(user)"
             >
               <ion-label text-wrap>
                 <h2>{{ user.name }}</h2>

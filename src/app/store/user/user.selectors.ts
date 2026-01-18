@@ -27,7 +27,7 @@ export const selectUsers = createSelector(
   },
 );
 
-export const selectSelectedUser = createSelector(
+export const selectedUser = createSelector(
   selectUsersState,
   (state) => state.selected,
 );

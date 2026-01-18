@@ -39,34 +39,40 @@
       </p>
     </ion-list-header>
     }
-    <ion-list class="ion-no-padding">
-      @for((user of users$ | async); track user.name; let i = $index) {
-      <ion-item
-        lines="inset"
-        [button]="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid)"
-        (click)="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid) ? editUser(user) : null"
-        [disabled]="!(auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid))"
-      >
-        <ion-label>
-          <h2>
-            <ion-text>
-              <b>{{ user.name }}</b>
-            </ion-text>
-          </h2>
-          <h3>
-            <ion-text color="warning"> {{ user.email }} </ion-text>
-          </h3>
-        </ion-label>
-        <ion-label class="ion-text-right">
-          @if (user.role === 1) {
-            <ion-badge class="my-badge" color="success">
-              <ion-icon slot="icon-only" name="star"></ion-icon>
-            </ion-badge>
-          }
-        </ion-label>
-      </ion-item>
-      }
-    </ion-list>
+    <ion-grid>
+      <ion-row>
+        <ion-col size="12">
+          <ion-list class="ion-no-padding" [inset]="true">
+            @for((user of users$ | async); track user.name; let i = $index) {
+            <ion-item
+              lines="inset"
+              [button]="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid)"
+              (click)="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid) ? editUser(user) : null"
+              [disabled]="!(auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid))"
+            >
+              <ion-label>
+                <h2>
+                  <ion-text>
+                    <b>{{ user.name }}</b>
+                  </ion-text>
+                </h2>
+                <h3>
+                  <ion-text color="warning"> {{ user.email }} </ion-text>
+                </h3>
+              </ion-label>
+              <ion-label class="ion-text-right">
+                @if (user.role === 1) {
+                  <ion-badge class="my-badge" color="success">
+                    <ion-icon name="star"></ion-icon>
+                  </ion-badge>
+                }
+              </ion-label>
+            </ion-item>
+            }
+          </ion-list>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
     }
   </div>
 </ion-content>

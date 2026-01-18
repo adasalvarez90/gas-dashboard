@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
+import { NavController } from '@ionic/angular';
+// Facades
 import { UserFacade } from 'src/app/store/user/user.facade';
 import { AuthFacade } from 'src/app/store/auth/auth.facade';
-import { NavController } from '@ionic/angular';
+
 @Component({
   selector: 'app-users',
   standalone: false,

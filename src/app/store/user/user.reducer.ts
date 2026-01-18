@@ -8,18 +8,21 @@ export const userReducer = createReducer(
   on(UsersActions.loadUsers, (state) => ({
     ...state,
     loading: true,
+    selected: null,
     error: null,
   })),
 
   on(UsersActions.loadUsersSuccess, (state, { users }) => ({
     ...state,
     list: users,
+    selected: null,
     loading: false,
   })),
 
   on(UsersActions.loadUsersFailure, (state, { error }) => ({
     ...state,
     loading: false,
+    selected: null,
     error,
   })),
 
