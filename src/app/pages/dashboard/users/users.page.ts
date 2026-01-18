@@ -38,14 +38,14 @@ export class UsersPage implements OnInit {
     // clear selected user
     this.userFacade.selectUser(null);
     // navigate to manage page
-		this.navCtrl.navigateForward(['dashboard', 'profile', 'manage']);
+		this.navCtrl.navigateForward(['dashboard', 'users', 'manage']);
   }
 
   editUser(user: any) {
     // set selected user
     this.userFacade.selectUser(user);
     // navigate to manage page
-    this.navCtrl.navigateForward(['dashboard', 'profile', 'manage']);
+    this.navCtrl.navigateForward(['dashboard', 'users', 'manage']);
   }
 
   delete(uid: string) {
