@@ -7,24 +7,30 @@ import { Invite } from './invite.model';
 
 @Injectable({ providedIn: 'root' })
 export class InviteFacade {
-  invites$ = this.store.select(InviteSelectors.selectAllInvites);
-  loading$ = this.store.select(InviteSelectors.selectInvitesLoading);
+	invites$ = this.store.select(InviteSelectors.selectFiltered);
+	loading$ = this.store.select(InviteSelectors.selectInvitesLoading);
+	search$ = this.store.select(InviteSelectors.selectSearch);
+	total$ = this.store.select(InviteSelectors.selectInvitesTotal);
 
-  constructor(private store: Store) {}
+	constructor(private store: Store) { }
 
-  loadInvites() {
-	this.store.dispatch(InviteActions.loadInvites());
-  }
+	loadInvites() {
+		this.store.dispatch(InviteActions.loadInvites());
+	}
 
-  createInvite(email: string, role: 1 | 2) {
-	this.store.dispatch(InviteActions.createInvite({ email, role }));
-  }
+	createInvite(email: string, role: 1 | 2) {
+		this.store.dispatch(InviteActions.createInvite({ email, role }));
+	}
 
-  resendInvite(invite: Invite) {
-	this.store.dispatch(InviteActions.resendInvite({ invite }));
-  }
+	resendInvite(invite: Invite) {
+		this.store.dispatch(InviteActions.resendInvite({ invite }));
+	}
 
-  cancelInvite(inviteId: string) {
-	this.store.dispatch(InviteActions.cancelInvite({ inviteId }));
-  }
+	cancelInvite(inviteId: string) {
+		this.store.dispatch(InviteActions.cancelInvite({ inviteId }));
+	}
+
+	searchText(searchTerm: string) {
+		this.store.dispatch(InviteActions.setSearchTerm({ searchTerm }));
+	}
 }

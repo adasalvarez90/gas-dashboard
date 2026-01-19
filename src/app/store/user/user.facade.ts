@@ -6,34 +6,34 @@ import { User } from './user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserFacade {
-  users$ = this.store.select(fromUser.selectUsers);
-  selectedUser$ = this.store.select(fromUser.selectedUser);
-  loading$ = this.store.select(fromUser.selectLoading);
-  search$ = this.store.select(fromUser.selectSearch);
+	users$ = this.store.select(fromUser.selectUsers);
+	selectedUser$ = this.store.select(fromUser.selectedUser);
+	loading$ = this.store.select(fromUser.selectLoading);
+	search$ = this.store.select(fromUser.selectSearch);
 
-  constructor(private store: Store) {}
+	constructor(private store: Store) {}
 
-  loadUsers() {
-    this.store.dispatch(UserActions.loadUsers());
-  }
+	loadUsers() {
+		this.store.dispatch(UserActions.loadUsers());
+	}
 
-  selectUser(user: User) {
-    this.store.dispatch(UserActions.selectUser({ user }));
-  }
+	selectUser(user: User) {
+		this.store.dispatch(UserActions.selectUser({ user }));
+	}
 
-  createUser(user: User) {
-    this.store.dispatch(UserActions.createUser({ user }));
-  }
+	createUser(user: User) {
+		this.store.dispatch(UserActions.createUser({ user }));
+	}
 
-  updateUser(user: User) {
-    this.store.dispatch(UserActions.updateUser({ user }));
-  }
+	updateUser(user: User) {
+		this.store.dispatch(UserActions.updateUser({ user }));
+	}
 
-  deleteUser(uid: string) {
-    this.store.dispatch(UserActions.deleteUser({ uid }));
-  }
+	deleteUser(uid: string) {
+		this.store.dispatch(UserActions.deleteUser({ uid }));
+	}
 
-  searchText(searchTerm: string) {
-    this.store.dispatch(UserActions.setSearchTerm({ searchTerm }));
-  }
+	searchText(searchTerm: string) {
+		this.store.dispatch(UserActions.setSearchTerm({ searchTerm }));
+	}
 }

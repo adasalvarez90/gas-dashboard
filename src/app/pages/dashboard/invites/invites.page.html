@@ -1,0 +1,65 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-menu-button></ion-menu-button>
+		</ion-buttons>
+		<ion-title>Invitaciones</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="addInivte()">
+				<ion-icon slot="icon-only" name="add"></ion-icon>
+			</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+	<ion-toolbar>
+		<ion-searchbar #searchBar (ionInput)="filter(searchBar.value)" debounce="500"
+			placeholder="Buscar invitaciones"></ion-searchbar>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<div class="scrollbar">
+		@if ((invites$ | async); as invites) {
+		<ion-list-header>
+			<p>
+				@if ((search$ | async); as search) {
+				<span>
+					{{ invites.length }} de {{ total$ | async }} {{ 'inivtaci' | plural
+					:(total$ | async) :'ones' :'ón' }} con <ion-text>"{{ search }}" </ion-text>
+				</span>
+				} @else {
+				<span>{{ invites.length }} {{ 'inivtaci' | plural :invites.length :'ones' :'ón'
+					}}</span>
+				}
+			</p>
+		</ion-list-header>
+		}
+		<ion-grid>
+			<ion-row>
+				<ion-col size="12">
+					<ion-list class="ion-no-padding" [inset]="true">
+						@for((invite of invites$ | async); track invite.email; let i =
+						$index) {
+						<ion-item lines="inset">
+							<ion-label>
+								<h2>
+									<ion-text>
+										<b>{{ invite.email }}</b>
+									</ion-text>
+								</h2>
+								<h3>
+									<ion-text color="warning">
+										{{ invite.role === 1 ? 'Admin' : 'User' }}
+									</ion-text>
+								</h3>
+							</ion-label>
+							<ion-label class="ion-text-right">
+								<!-- Datos a la derecha del item -->
+							</ion-label>
+						</ion-item>
+						}
+					</ion-list>
+				</ion-col>
+			</ion-row>
+		</ion-grid>
+	</div>
+</ion-content>

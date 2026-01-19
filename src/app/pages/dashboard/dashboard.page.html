@@ -1,77 +1,66 @@
 <ion-split-pane contentId="mainContent" when="xl" [disabled]="true">
-  <ion-menu menuId="mainMenu" type="overlay" contentId="mainContent">
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-menu-button menu="mainMenu"></ion-menu-button>
-        </ion-buttons>
-        <!-- <ion-title>{{ greet$ | async }}</ion-title> -->
-        <ion-buttons slot="end">
-          <ion-button (click)="logout()" title="Salir">
-            <ion-icon name="log-out" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content>
-      <div class="scrollbar">
-        @if ((auth$ | async); as user) {
-        <ion-list class="inbox-list ion-no-padding">
-          <ion-menu-toggle auto-hide="false">
-            <ion-item
-              routerDirection="root"
-              [routerLink]="['/dashboard/users/manage']"
-              lines="none"
-              detail="false"
-              routerLinkActive="selected"
-              (click)="editProfile(user)"
-            >
-              <ion-label text-wrap>
-                <h2>{{ user.name }}</h2>
-                <p>{{ user.email }}</p>
-              </ion-label>
-              <ion-label class="ion-text-right">
-                @if (user.role === 1) {
-                <ion-badge class="my-badge" color="success">
-                  <ion-icon slot="icon-only" name="star"></ion-icon>
-                </ion-badge>
-                }
-              </ion-label>
-            </ion-item>
-          </ion-menu-toggle>
-          @for(section of menu; track section) {
-          <ion-list class="ion-no-padding">
-            @if (section.pages.length && user.role <= section.role) {
-            <ion-item-divider>
-              <ion-label>{{ section.name }}</ion-label>
-            </ion-item-divider>
-            @for (page of section.pages; track page; let i = $index) {
-            <ion-menu-toggle auto-hide="false">
-              @if (!page.hidden && user.role <= page.role) {
-              <ion-item
-                routerDirection="root"
-                [routerLink]="[page.url]"
-                lines="inset"
-                detail="false"
-                routerLinkActive="selected"
-              >
-                <ion-icon [name]="page.icon" slot="start"></ion-icon>
-                <ion-label> {{ page.name }} </ion-label>
-                @if (page.badge && page.badge !== '0') {
-                <ion-badge slot="end" color="success">
-                  {{ page.badge }}
-                </ion-badge>
-                }
-              </ion-item>
-              }
-            </ion-menu-toggle>
-            } }
-          </ion-list>
-          }
-        </ion-list>
-        }
-      </div>
-    </ion-content>
-  </ion-menu>
-  <ion-router-outlet id="mainContent"></ion-router-outlet>
+	<ion-menu menuId="mainMenu" type="overlay" contentId="mainContent">
+		<ion-header>
+			<ion-toolbar>
+				<ion-buttons slot="start">
+					<ion-menu-button menu="mainMenu"></ion-menu-button>
+				</ion-buttons>
+				<!-- <ion-title>{{ greet$ | async }}</ion-title> -->
+				<ion-buttons slot="end">
+					<ion-button (click)="logout()" title="Salir">
+						<ion-icon name="log-out" slot="icon-only"></ion-icon>
+					</ion-button>
+				</ion-buttons>
+			</ion-toolbar>
+		</ion-header>
+		<ion-content>
+			<div class="scrollbar">
+				@if ((auth$ | async); as user) {
+					<ion-list class="inbox-list ion-no-padding">
+						<ion-menu-toggle auto-hide="false">
+							<ion-item routerDirection="root" [routerLink]="['/dashboard/users/manage']" lines="none"
+								detail="false" routerLinkActive="selected" (click)="editProfile(user)">
+								<ion-label text-wrap>
+									<h2>{{ user.name }}</h2>
+									<p>{{ user.email }}</p>
+								</ion-label>
+								<ion-label class="ion-text-right">
+									@if (user.role === 1) {
+									<ion-badge class="my-badge" color="success">
+										<ion-icon slot="icon-only" name="star"></ion-icon>
+									</ion-badge>
+									}
+								</ion-label>
+							</ion-item>
+						</ion-menu-toggle>
+					@for(section of menu; track section) {
+						<ion-list class="ion-no-padding">
+							@if (section.pages.length && user.role <= section.role) { 
+								<ion-item-divider>
+									<ion-label>{{ section.name }}</ion-label>
+								</ion-item-divider>
+								@for (page of section.pages; track page; let i = $index) {
+									<ion-menu-toggle auto-hide="false">
+										@if (!page.hidden && user.role <= page.role) { <ion-item routerDirection="root"
+											[routerLink]="[page.url]" lines="inset" detail="false" routerLinkActive="selected">
+											<ion-icon [name]="page.icon" slot="start"></ion-icon>
+											<ion-label> {{ page.name }} </ion-label>
+											@if (page.badge && page.badge !== '0') {
+											<ion-badge slot="end" color="success">
+												{{ page.badge }}
+											</ion-badge>
+											}
+											</ion-item>
+											}
+									</ion-menu-toggle>
+								}
+							}
+						</ion-list>
+					}
+				</ion-list>
+				}
+			</div>
+		</ion-content>
+	</ion-menu>
+	<ion-router-outlet id="mainContent"></ion-router-outlet>
 </ion-split-pane>

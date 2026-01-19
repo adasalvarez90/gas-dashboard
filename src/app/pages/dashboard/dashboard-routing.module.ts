@@ -7,31 +7,39 @@ import { RoleGuard } from 'src/app/guards/role-guard';
 import { DashboardPage } from './dashboard.page';
 
 const routes: Routes = [
-  {
-    path: '',
-    component: DashboardPage,
+	{
+		path: '',
+		component: DashboardPage,
 
-    children: [
-      {
-        path: '',
-        pathMatch: 'full',
-        redirectTo: 'users',
-      },
-      {
-        path: 'users',
-        loadChildren: () =>
-          import('./users/users.module').then((m) => m.UsersPageModule),
-        canActivate: [RoleGuard],
-        data: {
-          roles: [0, 1, 2], // Admin, Manager, Support
-        },
-      },
-    ],
-  },
+		children: [
+			{
+				path: '',
+				pathMatch: 'full',
+				redirectTo: 'users',
+			},
+			{
+				path: 'users',
+				loadChildren: () =>
+					import('./users/users.module').then((m) => m.UsersPageModule),
+				canActivate: [RoleGuard],
+				data: {
+					roles: [0, 1, 2], // Admin, Manager, Support
+				},
+			},
+			{
+				path: 'invites',
+				loadChildren: () =>
+					import('./invites/invites.module').then((m) => m.InvitesPageModule),
+				data: {
+					roles: [0, 1], // Support and Admin
+				},
+			},
+		],
+	},
 ];
 
 @NgModule({
-  imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule],
+	imports: [RouterModule.forChild(routes)],
+	exports: [RouterModule],
 })
-export class DashboardPageRoutingModule {}
+export class DashboardPageRoutingModule { }
