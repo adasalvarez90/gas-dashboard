@@ -1,0 +1,132 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-title>Invitación</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="close()">
+				<ion-icon name="close-outline"></ion-icon>
+			</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+
+	<!-- IDENTIDAD -->
+	<ion-card>
+		<ion-card-header>
+			<ion-card-title>{{ invite.email }}</ion-card-title>
+			<ion-card-subtitle>
+				Rol:
+				<ion-chip color="secondary">
+					{{ invite.role === 1 ? 'Admin' : 'User' }}
+				</ion-chip>
+			</ion-card-subtitle>
+		</ion-card-header>
+	</ion-card>
+
+	<!-- ESTADO -->
+	<ion-card>
+		<ion-card-content>
+
+			<ion-item lines="none">
+				<ion-label>Status</ion-label>
+				<ion-chip [color]="
+            invite.status === 'pending' ? 'success' :
+            invite.status === 'used' ? 'medium' :
+            invite.status === 'expired' ? 'warning' :
+            'danger'
+          ">
+					{{ invite.status }}
+				</ion-chip>
+			</ion-item>
+
+			<ion-item lines="none">
+				<ion-label>Expira</ion-label>
+				<ion-text>
+					{{ invite.expiresAt | date:'medium' }}
+				</ion-text>
+			</ion-item>
+
+			<ion-item *ngIf="isNearExpiration(invite)" lines="none">
+				<ion-text color="warning">
+					⚠ Expira pronto
+				</ion-text>
+			</ion-item>
+
+		</ion-card-content>
+	</ion-card>
+
+	<!-- LINK -->
+	<ion-card>
+		<ion-card-header>
+			<ion-card-title>Link de invitación</ion-card-title>
+		</ion-card-header>
+
+		<ion-card-content>
+			<ion-item>
+				<ion-input readonly [value]="inviteLink">
+				</ion-input>
+
+				<ion-button slot="end" fill="clear" (click)="copyLink()">
+					Copiar
+				</ion-button>
+			</ion-item>
+		</ion-card-content>
+	</ion-card>
+
+	<!-- ACCIONES -->
+	<ion-card>
+		<ion-card-content>
+
+			<ion-button expand="block" fill="outline" (click)="resend()" [disabled]="invite.status !== 'pending'">
+				Reenviar invitación
+			</ion-button>
+
+			<ion-button expand="block" color="danger" fill="outline" (click)="cancel()"
+				[disabled]="invite.status !== 'pending'">
+				Cancelar invitación
+			</ion-button>
+
+		</ion-card-content>
+	</ion-card>
+
+	<!-- AUDITORÍA -->
+	<ion-accordion-group>
+		<ion-accordion value="audit">
+			<ion-item slot="header">
+				<ion-label>Detalles</ion-label>
+			</ion-item>
+
+			<div slot="content">
+				<ion-item>
+					<ion-label>Creada</ion-label>
+					<ion-text>
+						{{ invite.createdAt | date:'medium' }}
+					</ion-text>
+				</ion-item>
+
+				<ion-item *ngIf="invite.usedAt">
+					<ion-label>Usada</ion-label>
+					<ion-text>
+						{{ invite.usedAt | date:'medium' }}
+					</ion-text>
+				</ion-item>
+
+				<ion-item *ngIf="invite.cancelledAt">
+					<ion-label>Cancelada</ion-label>
+					<ion-text>
+						{{ invite.cancelledAt | date:'medium' }}
+					</ion-text>
+				</ion-item>
+
+				<ion-item>
+					<ion-label>Reenvíos</ion-label>
+					<ion-text>
+						{{ invite.resendCount }}
+					</ion-text>
+				</ion-item>
+			</div>
+		</ion-accordion>
+	</ion-accordion-group>
+
+</ion-content>

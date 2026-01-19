@@ -59,4 +59,13 @@ export class InviteEffects {
 	  ),
 	{ dispatch: false },
   );
+
+  changeStatus$ = createEffect(
+	() =>
+	  this.actions$.pipe(
+		ofType(InviteActions.changeStatus),
+		exhaustMap(({ inviteId, status }) => this.inviteFS.changeStatus(inviteId, status)),
+	  ),
+	{ dispatch: false },
+  );
 }

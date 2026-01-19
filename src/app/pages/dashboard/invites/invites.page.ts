@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { NavController } from '@ionic/angular';
+import { ModalController, NavController } from '@ionic/angular';
+// Components
+import { InviteDetailComponent } from 'src/app/components/invite-detail/invite-detail.component';
 //
 import { InviteFacade } from 'src/app/store/invite/invite.facade';
 import { Invite } from 'src/app/store/invite/invite.model';
@@ -23,7 +25,8 @@ export class InvitesPage implements OnInit {
 
 	constructor(
 		private inviteFacade: InviteFacade,
-		private navCtrl: NavController
+		private navCtrl: NavController,
+		private modalCtrl: ModalController
 	) { }
 
 	ngOnInit() {
@@ -33,6 +36,15 @@ export class InvitesPage implements OnInit {
 	filter(searchTerm: any) {
 		// dispatch search term
 		this.inviteFacade.searchText(searchTerm);
+	}
+
+	async openInvite(invite: Invite) {
+		const modal = await this.modalCtrl.create({
+			component: InviteDetailComponent,
+			componentProps: { invite },
+		});
+
+		await modal.present();
 	}
 
 	add() {
@@ -53,7 +65,26 @@ export class InvitesPage implements OnInit {
 		navigator.clipboard.writeText(url);
 	}
 
+	isNearExpiration(invite: Invite, hours = 24): boolean {
+		const now = Date.now();
+		const threshold = hours * 60 * 60 * 1000;
+		return (
+			invite.status === 'pending' &&
+			invite.expiresAt - now <= threshold &&
+			invite.expiresAt > now
+		);
+	}
+
+
 	isExpired(invite: Invite) {
-		return Date.now() > invite.expiresAt;
+		const expired = invite.status === "expired" || Date.now() > invite.expiresAt;
+		if (invite.status !== "expired" && expired) this.inviteFacade.changeStatus(invite.id, "expired");
+
+		return expired;
+	}
+
+	isDisable(invite: Invite) {
+		// Return true when is cancelled | used | expired
+		return invite.status === "cancelled" || invite.status === "used" || invite.status === "expired";
 	}
 }

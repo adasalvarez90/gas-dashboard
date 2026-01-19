@@ -21,5 +21,8 @@ export const resendInvite = createAction('[Invites] Resend', props<{ invite: Inv
 // ===== CANCEL =====
 export const cancelInvite = createAction('[Invites] Cancel', props<{ inviteId: string }>());
 
+// ===== CHANGE STATUS =====
+export const changeStatus = createAction('[Invites] Change status', props<{ inviteId: string, status: string }>());
+
 // Search
 export const setSearchTerm = createAction('[Invites] Set Search Term', props<{ searchTerm: string }>());

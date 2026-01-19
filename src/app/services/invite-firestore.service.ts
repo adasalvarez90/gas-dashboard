@@ -89,6 +89,16 @@ export class InviteFirestoreService {
     });
   }
 
+  // ===== CHANGE STATUS =====
+  async changeStatus(inviteId: string, status: string): Promise<void> {
+    const ref = doc(this.firestore, this.collectionName, inviteId);
+
+    await updateDoc(ref, {
+      status,
+      cancelledAt: Date.now(),
+    });
+  }
+
   // ===== MARK AS USED =====
   async markAsUsed(inviteId: string): Promise<void> {
     const ref = doc(this.firestore, this.collectionName, inviteId);

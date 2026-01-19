@@ -26,6 +26,10 @@ export class InviteFacade {
 		this.store.dispatch(InviteActions.resendInvite({ invite }));
 	}
 
+	changeStatus(inviteId: string, status: string) {
+		this.store.dispatch(InviteActions.changeStatus({ inviteId, status }));
+	}
+
 	cancelInvite(inviteId: string) {
 		this.store.dispatch(InviteActions.cancelInvite({ inviteId }));
 	}
