@@ -7,7 +7,11 @@ const routes: Routes = [
   {
     path: '',
     component: InvitesPage
+  },  {
+    path: 'manage',
+    loadChildren: () => import('./manage/manage.module').then( m => m.ManagePageModule)
   }
+
 ];
 
 @NgModule({

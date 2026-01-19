@@ -16,7 +16,7 @@ export class UsersPage implements OnInit {
 
   // Search term
   search$ = this.userFacade.search$;
-  total$ = null//this.userFacade.total$;
+  total$ = this.userFacade.total$;
 
   constructor(
     private userFacade: UserFacade,
@@ -26,22 +26,20 @@ export class UsersPage implements OnInit {
 
   ngOnInit() {}
 
-  filter(event: any) {
-    // get search term
-    const searchTerm = event.detail.value;
+  filter(searchTerm: any) {
     // dispatch search term
     this.userFacade.searchText(searchTerm);
   }
 
   // Add new user
-  addUser() {
+  add() {
     // clear selected user
     this.userFacade.selectUser(null);
     // navigate to manage page
 		this.navCtrl.navigateForward(['dashboard', 'users', 'manage']);
   }
 
-  editUser(user: any) {
+  edit(user: any) {
     // set selected user
     this.userFacade.selectUser(user);
     // navigate to manage page

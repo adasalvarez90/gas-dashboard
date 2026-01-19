@@ -6,10 +6,11 @@ import { User } from './user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserFacade {
-	users$ = this.store.select(fromUser.selectUsers);
+	users$ = this.store.select(fromUser.selectFiltered);
 	selectedUser$ = this.store.select(fromUser.selectedUser);
 	loading$ = this.store.select(fromUser.selectLoading);
 	search$ = this.store.select(fromUser.selectSearch);
+	total$ = this.store.select(fromUser.selectUsersTotal);
 
 	constructor(private store: Store) {}
 

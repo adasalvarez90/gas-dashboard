@@ -5,7 +5,7 @@
 		</ion-buttons>
 		<ion-title>Usuarios</ion-title>
 		<ion-buttons slot="end">
-			<ion-button (click)="addUser()">
+			<ion-button (click)="add()">
 				<ion-icon slot="icon-only" name="add"></ion-icon>
 			</ion-button>
 		</ion-buttons>
@@ -40,7 +40,7 @@
 						@for((user of users$ | async); track user.name; let i = $index) {
 						<ion-item lines="inset"
 							[button]="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid)"
-							(click)="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid) ? editUser(user) : null"
+							(click)="auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid) ? edit(user) : null"
 							[disabled]="!(auth.role === 0 || (auth.role === 1 && user.role === 2) || (auth.uid === user.uid))">
 							<ion-label>
 								<h2>

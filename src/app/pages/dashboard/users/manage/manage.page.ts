@@ -1,17 +1,9 @@
-import {
-	Component,
-	OnDestroy,
-	OnInit,
-	ChangeDetectionStrategy,
-	ChangeDetectorRef,
-} from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-// NgRx
-import { Store } from '@ngrx/store';
 // Rxjs
-import { lastValueFrom, Observable } from 'rxjs';
-import { take, map, tap } from 'rxjs/operators';
+import { lastValueFrom } from 'rxjs';
+import { take } from 'rxjs/operators';
 // Store features
 import * as fromUser from 'src/app/store/user';
 // Facades
@@ -35,12 +27,11 @@ export class ManagePage implements OnInit {
 	});
 
 	constructor(
-		private userStore: Store<fromUser.State>,
 		private userFacade: UserFacade,
 		private navCtrl: NavController,
 		private fb: FormBuilder,
 		private ref: ChangeDetectorRef
-	) {}
+	) { }
 
 	async ngOnInit() {
 		// Get last value of selected user
@@ -64,6 +55,8 @@ export class ManagePage implements OnInit {
 	}
 
 	create() {
+		// Parse rol from string to number
+		this.form.value.role = Number(this.form.value.role); 
 		// Create new user
 		this.userFacade.createUser(this.form.value);
 		// Exit
@@ -71,6 +64,8 @@ export class ManagePage implements OnInit {
 	}
 
 	update() {
+		// Parse rol from string to number
+		this.form.value.role = Number(this.form.value.role); 
 		// Update user
 		this.userFacade.updateUser(this.form.value);
 		// Exit

@@ -3,20 +3,11 @@
 		<ion-buttons slot="start">
 			<ion-back-button defaultHref="dashboard/users"></ion-back-button>
 		</ion-buttons>
-		<ion-title>{{ (user) ? 'Editar' : 'Crear' }} usuario</ion-title>
+		<ion-title>Crear invitación</ion-title>
 		<ion-buttons slot="end">
-			@if (user) {
-				<ion-button [disabled]="!form?.valid" (click)="update()">
-					<ion-icon slot="icon-only" name="save"></ion-icon>
-				</ion-button>
-				<ion-button (click)="remove()">
-					<ion-icon slot="icon-only" name="trash"></ion-icon>
-				</ion-button>
-			} @else {
-				<ion-button [disabled]="!form?.valid" (click)="create()">
-					<ion-icon slot="icon-only" name="save"></ion-icon>
-				</ion-button>
-			}
+			<ion-button [disabled]="!form?.valid" (click)="create()">
+				<ion-icon slot="icon-only" name="save"></ion-icon>
+			</ion-button>
 		</ion-buttons>
 	</ion-toolbar>
 </ion-header>
@@ -33,14 +24,11 @@
 							</ion-card-header>
 							<ion-card-content>
 								<ion-item>
-									<ion-input label="Nombre" label-placement="floating" formControlName="name" type="text"></ion-input>
-								</ion-item>
-								<ion-item>
-									<ion-input label="Email" label-placement="floating" formControlName="email" type="email"></ion-input>
+									<ion-input label="Email" label-placement="floating" formControlName="email"
+										type="text"></ion-input>
 								</ion-item>
 								<ion-item>
 									<ion-select label="Rol" label-placement="floating" formControlName="role">
-										<ion-select-option value="0">Soporte</ion-select-option>
 										<ion-select-option value="1">Administrador</ion-select-option>
 										<ion-select-option value="2">Usuario</ion-select-option>
 									</ion-select>

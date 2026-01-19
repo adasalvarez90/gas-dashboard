@@ -14,8 +14,7 @@ export const selectSearchTerm = createSelector(selectors, (state) => state.searc
 export const selectUsers = createSelector(
 	selectors,
 	fromAuth.selectors.selectUser,
-	selectSearchTerm,
-	(state, currentUser, search) => {
+	(state, currentUser) => {
 		const users = state.list;
 		let filteredUsers = [];
 		// Filter users based on current user's role
@@ -29,12 +28,16 @@ export const selectUsers = createSelector(
 			}
 		}
 
-		// Filter by search
-		const filtered = filteredUsers.filter(entity => match(entity, search));
-		
-		return filtered;
+		return filteredUsers;
 	},
 );
+
+export const selectFiltered = createSelector(selectUsers, selectSearchTerm, (entities, search) => {
+	// Return filtered by search
+	return entities.filter(entity => match(entity, search));
+});
+
+export const selectUsersTotal = createSelector(selectUsers, (entites) => entites.length);
 
 export const selectedUser = createSelector(selectors, (state) => state.selected);
 

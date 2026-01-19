@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { NavController } from '@ionic/angular';
+//
 import { InviteFacade } from 'src/app/store/invite/invite.facade';
 import { Invite } from 'src/app/store/invite/invite.model';
 
@@ -19,7 +21,10 @@ export class InvitesPage implements OnInit {
 	email = '';
 	role: 1 | 2 = 2;
 
-	constructor(private inviteFacade: InviteFacade) { }
+	constructor(
+		private inviteFacade: InviteFacade,
+		private navCtrl: NavController
+	) { }
 
 	ngOnInit() {
 		this.inviteFacade.loadInvites();
@@ -30,10 +35,9 @@ export class InvitesPage implements OnInit {
 		this.inviteFacade.searchText(searchTerm);
 	}
 
-	addInivte() {
-		if (!this.email) return;
-		this.inviteFacade.createInvite(this.email, this.role);
-		this.email = '';
+	add() {
+		// navigate to manage page
+		this.navCtrl.navigateForward(['dashboard', 'invites', 'manage']);
 	}
 
 	resend(invite: Invite) {
