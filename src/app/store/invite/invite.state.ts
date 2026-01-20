@@ -1,6 +1,7 @@
 import { Invite } from './invite.model';
+import { createEntityAdapter, EntityState } from '@ngrx/entity';
 
-export interface State {
+export interface State extends EntityState<Invite> {
   searchTerm: string;
   list: Invite[];
   loading: boolean;
@@ -12,4 +13,6 @@ export const initialState: State = {
   list: [],
   loading: false,
   error: null,
+  ids: [],
+  entities: undefined
 };

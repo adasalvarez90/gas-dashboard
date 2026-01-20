@@ -78,7 +78,7 @@ export class InvitesPage implements OnInit {
 
 	isExpired(invite: Invite) {
 		const expired = invite.status === "expired" || Date.now() > invite.expiresAt;
-		if (invite.status !== "expired" && expired) this.inviteFacade.changeStatus(invite.id, "expired");
+		if (invite.status !== "expired" && expired) this.inviteFacade.updateInviteMetrics(invite.id, { status: "expired", expiresAt: Date.now() });
 
 		return expired;
 	}

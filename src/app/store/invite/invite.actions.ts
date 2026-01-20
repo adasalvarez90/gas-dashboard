@@ -15,14 +15,25 @@ export const createInviteSuccess = createAction('[Invites] Create Success', prop
 
 export const createInviteFailure = createAction('[Invites] Create Failure', props<{ error: string }>());
 
+// ===== SEND =====
+export const sendInviteEmail = createAction('[Invite] Send Invite Email', props<{ invite: Invite }>());
+
+export const sendInviteEmailSuccess = createAction('[Invite] Send Invite Email Success', props<{ inviteId: string }>());
+
+export const sendInviteEmailFailure = createAction('[Invite] Send Invite Email Failure', props<{ error: string }>());
+
 // ===== RESEND =====
 export const resendInvite = createAction('[Invites] Resend', props<{ invite: Invite }>());
 
+// ===== METRICS =====
+export const updateInviteMetrics = createAction('[Invites] Update invite metrics', props<{ inviteId: string, changes: Partial<Invite> }>());
+
+export const updateInviteMetricsSuccess = createAction('[Invites] Update Metrics Success', props<{ inviteId: string; changes: Partial<Invite> }>());
+
+export const updateInviteMetricsFailure = createAction('[Invites] Update Metrics Failure', props<{ error: string }>());
+
 // ===== CANCEL =====
 export const cancelInvite = createAction('[Invites] Cancel', props<{ inviteId: string }>());
-
-// ===== CHANGE STATUS =====
-export const changeStatus = createAction('[Invites] Change status', props<{ inviteId: string, status: string }>());
 
 // Search
 export const setSearchTerm = createAction('[Invites] Set Search Term', props<{ searchTerm: string }>());

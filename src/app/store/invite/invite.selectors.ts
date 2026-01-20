@@ -1,11 +1,12 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
-import { inviteAdapter, InviteState } from './invite.reducer';
+import { inviteAdapter } from './invite.reducer';
+import { State } from './invite.state';
 // Store state functions
 import { match } from '../store.state';
 
 export const INVITES_FEATURE_KEY = 'invites';
 
-export const selectors = createFeatureSelector<InviteState>(INVITES_FEATURE_KEY);
+export const selectors = createFeatureSelector<State>(INVITES_FEATURE_KEY);
 
 const { selectAll, selectEntities, selectTotal } = inviteAdapter.getSelectors();
 
