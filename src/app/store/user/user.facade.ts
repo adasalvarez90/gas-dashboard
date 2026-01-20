@@ -10,7 +10,7 @@ export class UserFacade {
 	selectedUser$ = this.store.select(fromUser.selectedUser);
 	loading$ = this.store.select(fromUser.selectLoading);
 	search$ = this.store.select(fromUser.selectSearch);
-	total$ = this.store.select(fromUser.selectUsersTotal);
+	total$ = this.store.select(fromUser.selectTotal);
 
 	constructor(private store: Store) {}
 

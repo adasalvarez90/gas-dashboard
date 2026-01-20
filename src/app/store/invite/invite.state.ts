@@ -1,5 +1,10 @@
+import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
 import { Invite } from './invite.model';
-import { createEntityAdapter, EntityState } from '@ngrx/entity';
+
+export function selectId(invite:Invite) {
+  //
+  return invite.id as string;
+}
 
 export interface State extends EntityState<Invite> {
   searchTerm: string;
@@ -8,11 +13,13 @@ export interface State extends EntityState<Invite> {
   error: string | null;
 }
 
-export const initialState: State = {
+export const adapter: EntityAdapter<Invite> = createEntityAdapter<Invite>({
+  selectId
+});
+
+export const initialState: State = adapter.getInitialState({
   searchTerm: '',
   list: [],
   loading: false,
-  error: null,
-  ids: [],
-  entities: undefined
-};
+  error: null
+});

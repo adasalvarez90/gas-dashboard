@@ -1,5 +1,5 @@
 import { createReducer, on } from '@ngrx/store';
-import { createEntityAdapter, EntityState } from '@ngrx/entity';
+import { createEntityAdapter } from '@ngrx/entity';
 
 import * as InviteActions from './invite.actions';
 import { Invite } from './invite.model';
