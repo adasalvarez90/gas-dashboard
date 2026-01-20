@@ -8,6 +8,7 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { InviteModule } from './invite/invite.module'
+import { AdvisorModule } from './advisor/advisor.module'
 // Custom serializer
 import { CustomSerializer } from './router/router-custom-serializer';
 // Reducers
@@ -20,6 +21,7 @@ import { reducers } from './store.reducer';
 		AuthModule,
 		UserModule,
 		InviteModule,
+		AdvisorModule,
 		// NGRX Modules
 		StoreModule.forRoot(reducers),
 		EffectsModule.forRoot([]),
