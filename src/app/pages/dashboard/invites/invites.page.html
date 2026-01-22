@@ -37,34 +37,23 @@
 			<ion-row>
 				<ion-col size="12">
 					<ion-list class="ion-no-padding" [inset]="true">
-						@for((invite of invites$ | async); track invite.email; let i = $index) {
-						<ion-item button (click)="openInvite(invite)" lines="inset" [class.disabled]="isDisable(invite)">
-							<!-- INFO PRINCIPAL -->
+						@for (invite of invites$ | async; track invite.uid) {
+						<ion-item button (click)="openInvite(invite)">
 							<ion-label>
-								<!-- EMAIL -->
-								<h2>
-									<ion-text>
-										{{ invite.email }}
-									</ion-text>
-								</h2>
-								<!-- META -->
+								<h2>{{ invite.email }}</h2>
+
 								<p>
-									<!-- ROLE -->
 									<ion-chip color="secondary">
 										{{ invite.role === 1 ? 'Admin' : 'User' }}
 									</ion-chip>
 
-									<!-- STATUS -->
 									<ion-chip [color]="
-										invite.status === 'pending' ? 'primary' :
-          								invite.status === 'used' ? 'success' :
-          								invite.status === 'expired' ? 'warning' : 'medium'">
-										{{ invite.status === 'pending' ? 'Pendiente' :
-										invite.status === 'used' ? 'Usada' :
-										invite.status === 'expired' ? 'Expirada' : 'Cancelada' }}
+									invite.status === 'pending' ? 'primary' :
+									invite.status === 'used' ? 'success' :
+									invite.status === 'expired' ? 'warning' : 'medium'">
+										{{ invite.status }}
 									</ion-chip>
 
-									<!-- RESENDS -->
 									@if(invite.resendCount) {
 									<ion-text color="medium">
 										• reenviada {{ invite.resendCount }}x
@@ -73,22 +62,12 @@
 								</p>
 							</ion-label>
 
-							<!-- INDICADOR VISUAL -->
-							<!-- Expire soon -->
-							@if(isNearExpiration(invite)) {
+							@if(invite.isNearExpiration) {
 							<ion-icon slot="end" name="warning-outline" color="warning"></ion-icon>
 							}
-							@if(isExpired(invite)) {
-							<!-- Expired -->
+
+							@if(invite.isExpired) {
 							<ion-icon slot="end" name="skull" color="danger"></ion-icon>
-							}
-							@if(invite.status === "used") {
-							<!-- Used -->
-							<ion-icon slot="end" name="cloud-done" color="success"></ion-icon>
-							}
-							@else if (invite.status === "cancelled") {
-							<!-- Cancelled -->
-							<ion-icon slot="end" name="ban" color="medium"></ion-icon>
 							}
 						</ion-item>
 						}

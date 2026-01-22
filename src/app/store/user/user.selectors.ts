@@ -1,5 +1,3 @@
-import { AuthEffects } from './../auth/auth.effects';
-import { filter } from 'rxjs/operators';
 import { createFeatureSelector, createSelector } from '@ngrx/store';
 import { State, adapter } from './user.state';
 import * as fromAuth from 'src/app/store/auth';

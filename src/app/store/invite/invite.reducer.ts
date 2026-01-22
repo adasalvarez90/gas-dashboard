@@ -1,25 +1,25 @@
 import { createReducer, on } from '@ngrx/store';
-import { createEntityAdapter } from '@ngrx/entity';
 
+import { initialState, adapter } from './invite.state';
 import * as InviteActions from './invite.actions';
-import { Invite } from './invite.model';
-import { initialState } from './invite.state';
-
-export const inviteAdapter = createEntityAdapter<Invite>({ selectId: (invite) => invite.id, sortComparer: (a, b) => b.createdAt - a.createdAt });
 
 export const inviteReducer = createReducer(
 	initialState,
 
-	on(InviteActions.loadInvites, (state) => ({ ...state, loading: true, error: undefined })),
+	on(InviteActions.loadInvites, (state) => ({ ...state, loading: true, selected: null, error: null, })),
 
-	on(InviteActions.loadInvitesSuccess, (state, { invites }) => inviteAdapter.setAll(invites, { ...state, loading: false })),
+	on(InviteActions.loadInvitesSuccess, (state, { invites }) => adapter.setAll(invites, { ...state, selected: null, loading: false })),
 
-	on(InviteActions.loadInvitesFailure, (state, { error }) => ({ ...state, loading: false, error })),
+	on(InviteActions.loadInvitesFailure, (state, { error }) => ({ ...state, loading: false, selected: null, error, })),
 
-	on(InviteActions.createInviteSuccess, (state, { invite }) => inviteAdapter.addOne(invite, state)),
+	on(InviteActions.selectInvite, (state, { invite }) => ({ ...state, selected: invite, })),
 
-	on(InviteActions.updateInviteMetricsSuccess, (state, { inviteId, changes }) => ({ ...state, list: state.list.map(invite => invite.id === inviteId ? { ...invite, ...changes } : invite) })),
+	on(InviteActions.createInviteSuccess, (state, { invite }) => adapter.addOne(invite, state)),
+
+	on(InviteActions.updateInviteMetricsSuccess, (state, { inviteUid, changes }) => adapter.updateOne({ id: inviteUid, changes, }, { ...state, selected: null, loading: false, })),
 
 	// Search actions
 	on(InviteActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),
+
+	on(InviteActions.clearInvites, () => initialState)
 );

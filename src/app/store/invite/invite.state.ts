@@ -1,14 +1,14 @@
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
 import { Invite } from './invite.model';
 
-export function selectId(invite:Invite) {
+export function selectId(invite: Invite) {
   //
-  return invite.id as string;
+  return invite.uid as string;
 }
 
 export interface State extends EntityState<Invite> {
   searchTerm: string;
-  list: Invite[];
+  selected: Invite | null;
   loading: boolean;
   error: string | null;
 }
@@ -19,7 +19,7 @@ export const adapter: EntityAdapter<Invite> = createEntityAdapter<Invite>({
 
 export const initialState: State = adapter.getInitialState({
   searchTerm: '',
-  list: [],
+  selected: null,
   loading: false,
   error: null
 });

@@ -34,7 +34,7 @@ export class ManagePage implements OnInit {
 		// Parse role
 		this.form.value.role = Number(this.form.value.role);
 		// Create
-		this.inviteFacade.createInvite(this.form.value.email, this.form.value.role);
+		this.inviteFacade.createInvite(this.form.value);
 		// Reset form
 		this.form.reset();
 		// Detect changes

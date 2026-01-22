@@ -1,15 +1,18 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StoreModule } from '@ngrx/store';
-import { EffectsModule } from '@ngrx/effects';
 import { inviteReducer } from './invite.reducer';
+import { EffectsModule } from '@ngrx/effects';
 import { InviteEffects } from './invite.effects';
+import { IonicModule } from '@ionic/angular';
 
 @NgModule({
-  imports: [
-    CommonModule,
-    StoreModule.forFeature('invites', inviteReducer),
-    EffectsModule.forFeature([InviteEffects]),
-  ],
+	declarations: [],
+	imports: [
+		CommonModule,
+		IonicModule,
+		EffectsModule.forFeature([InviteEffects]),
+		StoreModule.forFeature('invites', inviteReducer)
+	]
 })
-export class InviteModule {}
+export class InviteModule { }

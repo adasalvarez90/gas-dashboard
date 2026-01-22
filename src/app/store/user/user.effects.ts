@@ -11,71 +11,71 @@ import { User } from './user.model';
 
 @Injectable()
 export class UserEffects {
-  constructor(
-    private actions$: Actions,
-    private userFS: UserFirestoreService,
-    private authFacade: AuthFacade,
-  ) {}
+	constructor(
+		private actions$: Actions,
+		private userFS: UserFirestoreService,
+		private authFacade: AuthFacade,
+	) {}
 
-  // 🔎 Load users
-  loadUsers$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(UserActions.loadUsers),
-      withLatestFrom(this.authFacade.user$),
-      switchMap(([_, currentUser]) => {
-        return from(this.userFS.getUsersByRole(currentUser as User)).pipe(
-          map((users) => UserActions.loadUsersSuccess({ users })),
-          catchError((err) =>
-            of(UserActions.loadUsersFailure({ error: err.message })),
-          ),
-        );
-      }),
-    ),
-  );
+	// 🔎 Load users
+	loadUsers$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(UserActions.loadUsers),
+			withLatestFrom(this.authFacade.user$),
+			switchMap(([_, currentUser]) => {
+				return from(this.userFS.getUsersByRole(currentUser as User)).pipe(
+					map((users) => UserActions.loadUsersSuccess({ users })),
+					catchError((err) =>
+						of(UserActions.loadUsersFailure({ error: err.message })),
+					),
+				);
+			}),
+		),
+	);
 
-  loadUsersOnLogin$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(AuthActions.loginSuccess),
-      map(() => UserActions.loadUsers()),
-    ),
-  );
+	loadUsersOnLogin$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(AuthActions.loginSuccess),
+			map(() => UserActions.loadUsers()),
+		),
+	);
 
-  // ➕ Create user
-  createUser$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(UserActions.createUser),
-      exhaustMap(({ user }) =>
-        this.userFS.createUser(user).then(
-          () => UserActions.createUserSuccess({ user }),
-          (err) => UserActions.createUserFailure({ error: err.message }),
-        ),
-      ),
-    ),
-  );
+	// ➕ Create user
+	createUser$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(UserActions.createUser),
+			exhaustMap(({ user }) =>
+				this.userFS.createUser(user).then(
+					() => UserActions.createUserSuccess({ user }),
+					(err) => UserActions.createUserFailure({ error: err.message }),
+				),
+			),
+		),
+	);
 
-  // ✏️ Update user
-  updateUser$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(UserActions.updateUser),
-      exhaustMap(({ user }) =>
-        this.userFS.updateUser(user).then(
-          () => UserActions.updateUserSuccess({ user }),
-          (err) => UserActions.updateUserFailure({ error: err.message }),
-        ),
-      ),
-    ),
-  );
+	// ✏️ Update user
+	updateUser$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(UserActions.updateUser),
+			exhaustMap(({ user }) =>
+				this.userFS.updateUser(user).then(
+					() => UserActions.updateUserSuccess({ user }),
+					(err) => UserActions.updateUserFailure({ error: err.message }),
+				),
+			),
+		),
+	);
 
-  // 🗑️ Delete user
-  deleteUser$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(UserActions.deleteUser),
-      exhaustMap(({ uid }) =>
-        this.userFS.deleteUser(uid).then(
-          () => UserActions.deleteUserSuccess({ uid }),
-          (err) => UserActions.deleteUserFailure({ error: err.message }),
-        ),
-      ),
-    ),
-  );
+	// 🗑️ Delete user
+	deleteUser$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(UserActions.deleteUser),
+			exhaustMap(({ uid }) =>
+				this.userFS.deleteUser(uid).then(
+					() => UserActions.deleteUserSuccess({ uid }),
+					(err) => UserActions.deleteUserFailure({ error: err.message }),
+				),
+			),
+		),
+	);
 }

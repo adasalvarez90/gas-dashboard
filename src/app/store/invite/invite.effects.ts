@@ -1,13 +1,12 @@
-import { AppComponent } from './../../app.component';
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { withLatestFrom, map, exhaustMap, switchMap, catchError } from 'rxjs/operators';
-import { of, from } from 'rxjs';
+import { exhaustMap, switchMap, map, catchError, withLatestFrom, mergeMap } from 'rxjs/operators';
+import { from, of } from 'rxjs';
 
 import * as InviteActions from './invite.actions';
-import { InviteFirestoreService } from '../../services/invite-firestore.service';
-import { AuthFacade } from 'src/app/store/auth/auth.facade';
-
+import * as AuthActions from '../auth/auth.actions';
+import { InviteFirestoreService } from 'src/app/services/invite-firestore.service';
+import { AuthFacade } from '../auth/auth.facade';
 // Services
 import { InviteEmailService } from 'src/app/services/invite-email.service'
 
@@ -23,6 +22,7 @@ export class InviteEffects {
 		private emailService: InviteEmailService
 	) { }
 
+	// 🔎 Load invites
 	loadInvites$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(InviteActions.loadInvites),
@@ -36,14 +36,21 @@ export class InviteEffects {
 		),
 	);
 
+	loadInvitesOnLogin$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(AuthActions.loginSuccess),
+			map(() => InviteActions.loadInvites()),
+		),
+	);
+
+	// ➕ Create invite
 	createInvite$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(InviteActions.createInvite),
-			withLatestFrom(this.authFacade.user$),
-			exhaustMap(([{ email, role }, user]) =>
-				this.inviteFS.createInvite(email, role, user!.uid).then(
-					invite => InviteActions.createInviteSuccess({ invite }),
-					err => InviteActions.createInviteFailure({ error: err.message }),
+			exhaustMap(({ invite }) =>
+				this.inviteFS.createInvite(invite).then(
+					() => InviteActions.createInviteSuccess({ invite }),
+					(err) => InviteActions.createInviteFailure({ error: err.message }),
 				),
 			),
 		),
@@ -64,9 +71,9 @@ export class InviteEffects {
 
 				return from(this.emailService.sendInvite(invite, link)).pipe(
 					switchMap(() => [
-						InviteActions.sendInviteEmailSuccess({ inviteId: invite.id }),
+						InviteActions.sendInviteEmailSuccess({ inviteUid: invite.uid }),
 						InviteActions.updateInviteMetrics({
-							inviteId: invite.id,
+							inviteUid: invite.uid,
 							changes: {
 								resendCount: invite.resendCount + 1,
 								lastSentAt: Date.now(),
@@ -90,19 +97,36 @@ export class InviteEffects {
 			),
 		{ dispatch: false },
 	);
-
 	updateInviteMetrics$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(InviteActions.updateInviteMetrics),
-			switchMap(({ inviteId, changes }) =>
-				from(this.inviteFS.updateInviteMetrics(inviteId, changes)).pipe(
-					map(() =>
-						InviteActions.updateInviteMetricsSuccess({ inviteId, changes })
-					),
-					catchError((err) =>
-						of(InviteActions.updateInviteMetricsFailure({ error: err.message }))
+			exhaustMap(({ inviteUid, changes }) =>
+				this.inviteFS.updateInviteMetrics(inviteUid, changes).then(
+					() => InviteActions.updateInviteMetricsSuccess({ inviteUid, changes }),
+					(err) => InviteActions.updateInviteMetricsFailure({ error: err.message }),
+				),
+			),
+		),
+	);
+
+	expireInvites$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(InviteActions.loadInvitesSuccess),
+			mergeMap(({ invites }) =>
+				invites
+					.filter(invite =>
+						invite.status !== 'expired' &&
+						Date.now() > invite.expiresAt
 					)
-				)
+					.map(invite =>
+						InviteActions.updateInviteMetrics({
+							inviteUid: invite.uid,
+							changes: {
+								status: 'expired',
+								expiretedAt: Date.now()
+							}
+						})
+					)
 			)
 		)
 	);
@@ -111,7 +135,7 @@ export class InviteEffects {
 		() =>
 			this.actions$.pipe(
 				ofType(InviteActions.cancelInvite),
-				exhaustMap(({ inviteId }) => this.inviteFS.cancelInvite(inviteId)),
+				exhaustMap(({ inviteUid }) => this.inviteFS.cancelInvite(inviteUid)),
 			),
 		{ dispatch: false },
 	);

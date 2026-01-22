@@ -105,19 +105,32 @@
 					</ion-text>
 				</ion-item>
 
-				<ion-item *ngIf="invite.usedAt">
-					<ion-label>Usada</ion-label>
-					<ion-text>
-						{{ invite.usedAt | date:'medium' }}
-					</ion-text>
-				</ion-item>
+				@if(invite.usedAt) {
+					<ion-item>
+						<ion-label>Usada</ion-label>
+						<ion-text>
+							{{ invite.usedAt | date:'medium' }}
+						</ion-text>
+					</ion-item>
+				}
 
-				<ion-item *ngIf="invite.cancelledAt">
-					<ion-label>Cancelada</ion-label>
-					<ion-text>
-						{{ invite.cancelledAt | date:'medium' }}
-					</ion-text>
-				</ion-item>
+				@if(invite.cancelledAt) {
+					<ion-item>
+						<ion-label>Cancelada</ion-label>
+						<ion-text>
+							{{ invite.cancelledAt | date:'medium' }}
+						</ion-text>
+					</ion-item>
+				}
+
+				@if(invite.expiretedAt) {
+					<ion-item>
+						<ion-label>Expirada</ion-label>
+						<ion-text>
+							{{ invite.expiretedAt | date:'medium' }}
+						</ion-text>
+					</ion-item>
+				}
 
 				<ion-item>
 					<ion-label>Reenvíos</ion-label>

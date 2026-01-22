@@ -4,6 +4,8 @@ import { User } from 'src/app/store/user/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserFirestoreService {
+	private readonly collectionName = 'users';
+	
 	constructor(private firestore: Firestore) { }
 
 	// 🔍 Get single user

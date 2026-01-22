@@ -30,6 +30,15 @@ const routes: Routes = [
 				path: 'invites',
 				loadChildren: () =>
 					import('./invites/invites.module').then((m) => m.InvitesPageModule),
+				canActivate: [RoleGuard],
+				data: {
+					roles: [0, 1], // Support and Admin
+				},
+			},
+			{
+				path: 'advisors',
+				loadChildren: () => import('./advisors/advisors.module').then(m => m.AdvisorsPageModule),
+				canActivate: [RoleGuard],
 				data: {
 					roles: [0, 1], // Support and Admin
 				},

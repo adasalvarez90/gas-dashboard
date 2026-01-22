@@ -13,7 +13,7 @@ import { Invite } from 'src/app/store/invite/invite.model';
 	styleUrls: ['./invites.page.scss'],
 })
 export class InvitesPage implements OnInit {
-	invites$ = this.inviteFacade.invites$;
+	invites$ = this.inviteFacade.selectInvitesWithComputedFlags$
 	loading$ = this.inviteFacade.loading$;
 
 	// Search term
@@ -29,9 +29,7 @@ export class InvitesPage implements OnInit {
 		private modalCtrl: ModalController
 	) { }
 
-	ngOnInit() {
-		this.inviteFacade.loadInvites();
-	}
+	ngOnInit() {}
 
 	filter(searchTerm: any) {
 		// dispatch search term
@@ -57,30 +55,12 @@ export class InvitesPage implements OnInit {
 	}
 
 	cancel(invite: Invite) {
-		this.inviteFacade.cancelInvite(invite.id);
+		this.inviteFacade.cancelInvite(invite.uid);
 	}
 
 	copyLink(invite: Invite) {
 		const url = `${window.location.origin}/register?token=${invite.token}`;
 		navigator.clipboard.writeText(url);
-	}
-
-	isNearExpiration(invite: Invite, hours = 24): boolean {
-		const now = Date.now();
-		const threshold = hours * 60 * 60 * 1000;
-		return (
-			invite.status === 'pending' &&
-			invite.expiresAt - now <= threshold &&
-			invite.expiresAt > now
-		);
-	}
-
-
-	isExpired(invite: Invite) {
-		const expired = invite.status === "expired" || Date.now() > invite.expiresAt;
-		if (invite.status !== "expired" && expired) this.inviteFacade.updateInviteMetrics(invite.id, { status: "expired", expiresAt: Date.now() });
-
-		return expired;
 	}
 
 	isDisable(invite: Invite) {

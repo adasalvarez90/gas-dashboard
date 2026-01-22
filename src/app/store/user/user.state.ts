@@ -1,5 +1,5 @@
 // Libraries
-import { EntityState, EntityAdapter, createEntityAdapter, Dictionary } from '@ngrx/entity';
+import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
 import { User } from './user.model';
 
 export function selectId(user: User) {
@@ -9,8 +9,6 @@ export function selectId(user: User) {
 
 export interface State extends EntityState<User> {
   searchTerm: string;
-  ids: string[];
-  entities: Record<string, User>;
   selected: User | null;
   loading: boolean;
   error: string | null;

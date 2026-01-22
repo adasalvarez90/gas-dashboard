@@ -8,7 +8,6 @@ export enum Role {
 }
 //
 export interface User extends Metadata {
-  uid: string;
   email: string;
   name: string;
   role: Role; // 0=dev, 1=admin, 2=user

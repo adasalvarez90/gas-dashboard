@@ -1,11 +1,13 @@
+// Interfaces
+import { Metadata } from 'src/app/models/metadata.model';
+
 export type InviteStatus =
   | 'pending'     // creada, no usada
   | 'used'        // ya registrada
   | 'expired'     // pasó el tiempo
   | 'cancelled';  // cancelada por admin/dev
 
-export interface Invite {
-  id: string;             // UUID
+export interface Invite extends Metadata {
   email: string;
   role: 1 | 2;            // admin | user
   token: string;          // random secure token
@@ -15,7 +17,7 @@ export interface Invite {
   createdAt: number;      // Date.now()
 
   expiresAt: number;      // Date.now() + TTL
-
+  expiretedAt?: number;
   usedAt?: number;
   cancelledAt?: number;
 

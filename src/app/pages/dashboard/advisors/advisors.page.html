@@ -1,0 +1,56 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-menu-button></ion-menu-button>
+		</ion-buttons>
+		<ion-title>Asesores</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="openAdvisor()">
+				<ion-icon slot="icon-only" name="add"></ion-icon>
+			</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+	<ion-toolbar>
+		<ion-searchbar #searchBar (ionInput)="filter(searchBar.value)" debounce="500"
+			placeholder="Buscar asesors"></ion-searchbar>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<div class="scrollbar">
+		@if ((advisors$ | async); as advisors) {
+		<ion-list-header>
+			<p>
+				@if ((search$ | async); as search) {
+				<span>
+					{{ advisors.length }} de {{ total$ | async }} {{ 'asesor' | plural
+					:(total$ | async) :'s' :'' }} con <ion-text>"{{ search }}" </ion-text>
+				</span>
+				} @else {
+				<span>{{ advisors.length }} {{ 'asesor' | plural :advisors.length :'s' :''
+					}}</span>
+				}
+			</p>
+		</ion-list-header>
+		}
+		<ion-grid>
+			<ion-row>
+				<ion-col size="12">
+					<ion-list class="ion-no-padding" [inset]="true">
+						@for((advisor of advisors$ | async); track advisor.name; let i = $index) {
+						<ion-item lines="inset" button (click)="openAdvisor(advisor)">
+							<ion-label>
+								<h2>
+									<ion-text>
+										<b>{{ advisor.name }}</b>
+									</ion-text>
+								</h2>
+							</ion-label>
+						</ion-item>
+						}
+					</ion-list>
+				</ion-col>
+			</ion-row>
+		</ion-grid>
+	</div>
+</ion-content>

@@ -8,9 +8,10 @@ import { Invite } from './invite.model';
 @Injectable({ providedIn: 'root' })
 export class InviteFacade {
 	invites$ = this.store.select(InviteSelectors.selectFiltered);
-	loading$ = this.store.select(InviteSelectors.selectInvitesLoading);
+	loading$ = this.store.select(InviteSelectors.selectLoading);
 	search$ = this.store.select(InviteSelectors.selectSearch);
-	total$ = this.store.select(InviteSelectors.selectInvitesTotal);
+	total$ = this.store.select(InviteSelectors.selectTotal);
+	selectInvitesWithComputedFlags$ = this.store.select(InviteSelectors.selectInvitesWithComputedFlags);
 
 	constructor(private store: Store) { }
 
@@ -18,23 +19,23 @@ export class InviteFacade {
 		this.store.dispatch(InviteActions.loadInvites());
 	}
 
-	createInvite(email: string, role: 1 | 2) {
-		this.store.dispatch(InviteActions.createInvite({ email, role }));
+	createInvite(invite) {
+		this.store.dispatch(InviteActions.createInvite({ invite }));
 	}
 
 	resendInvite(invite: Invite) {
 		this.store.dispatch(InviteActions.resendInvite({ invite }));
 	}
 
-	cancelInvite(inviteId: string) {
-		this.store.dispatch(InviteActions.cancelInvite({ inviteId }));
+	cancelInvite(inviteUid: string) {
+		this.store.dispatch(InviteActions.cancelInvite({ inviteUid }));
 	}
 
 	searchText(searchTerm: string) {
 		this.store.dispatch(InviteActions.setSearchTerm({ searchTerm }));
 	}
 
-	updateInviteMetrics(inviteId: string, changes: Partial<Invite>) {
-		this.store.dispatch(InviteActions.updateInviteMetrics({inviteId, changes}));
+	updateInviteMetrics(inviteUid: string, changes: Partial<Invite>) {
+		this.store.dispatch(InviteActions.updateInviteMetrics({inviteUid, changes}));
 	}
 }

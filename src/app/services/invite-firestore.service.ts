@@ -1,67 +1,60 @@
 import { Injectable } from '@angular/core';
-import {
-	Firestore,
-	collection,
-	doc,
-	setDoc,
-	getDoc,
-	getDocs,
-	updateDoc,
-	query,
-	where,
-} from '@angular/fire/firestore';
+import { Firestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, } from '@angular/fire/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
 import { Invite } from 'src/app/store/invite/invite.model';
 
 @Injectable({ providedIn: 'root' })
 export class InviteFirestoreService {
-	private readonly collectionName = 'invites';
 
 	constructor(private firestore: Firestore) { }
 
 	// ===== CREATE =====
-	async createInvite(
-		email: string,
-		role: 1 | 2,
-		createdBy: string,
-		ttlHours = 48,
-	): Promise<Invite> {
-		const id = uuidv4();
+	async createInvite(invite: Invite, ttlHours = 48): Promise<Invite> {
+		const uid = uuidv4();
 		const token = uuidv4();
 
 		const now = Date.now();
 		const expiresAt = now + ttlHours * 60 * 60 * 1000;
 
-		const invite: Invite = {
-			id,
-			email,
-			role,
+		const newInvite: Invite = {
+			uid,
+			email: invite.email,
+			role: invite.role,
 			token,
 			status: 'pending',
-			createdBy,
+			createdBy: invite.createdBy,
 			createdAt: now,
 			expiresAt,
+			expiretedAt: null,
 			resendCount: 0,
 		};
 
-		const ref = doc(this.firestore, this.collectionName, id);
-		await setDoc(ref, invite);
+		const ref = doc(this.firestore, `invites/${uid}`);
+		await setDoc(ref, newInvite);
 
-		return invite;
+		return newInvite;
 	}
 
 	// ===== GET ALL =====
 	async getInvites(): Promise<Invite[]> {
-		const ref = collection(this.firestore, this.collectionName);
+		const ref = collection(this.firestore, 'invites');
 		const snap = await getDocs(ref);
 
-		return snap.docs.map(d => d.data() as Invite);
+		return snap.docs.map(d => {
+			const data = d.data() as Invite;
+
+			return {
+				...data,
+				uid: data.uid ?? d.id, // 🛡️ fallback seguro
+			};
+		});
 	}
+
 
 	// ===== GET BY TOKEN =====
 	async getInviteByToken(token: string): Promise<Invite | null> {
-		const ref = collection(this.firestore, this.collectionName);
+		const ref = collection(this.firestore, 'invites');
 		const q = query(ref, where('token', '==', token));
 		const snap = await getDocs(q);
 
@@ -71,7 +64,7 @@ export class InviteFirestoreService {
 
 	// ===== RESEND =====
 	async markResent(invite: Invite): Promise<void> {
-		const ref = doc(this.firestore, this.collectionName, invite.id);
+		const ref = doc(this.firestore, `invites/${invite.uid}`);
 
 		await updateDoc(ref, {
 			resendCount: invite.resendCount + 1,
@@ -80,8 +73,8 @@ export class InviteFirestoreService {
 	}
 
 	// ===== CANCEL =====
-	async cancelInvite(inviteId: string): Promise<void> {
-		const ref = doc(this.firestore, this.collectionName, inviteId);
+	async cancelInvite(inviteUid: string): Promise<void> {
+		const ref = doc(this.firestore, `invites/${inviteUid}`);
 
 		await updateDoc(ref, {
 			status: 'cancelled',
@@ -90,8 +83,8 @@ export class InviteFirestoreService {
 	}
 
 	// ===== CHANGE STATUS =====
-	async changeStatus(inviteId: string, status: string): Promise<void> {
-		const ref = doc(this.firestore, this.collectionName, inviteId);
+	async changeStatus(inviteUid: string, status: string): Promise<void> {
+		const ref = doc(this.firestore, `invites/${inviteUid}`);
 
 		await updateDoc(ref, {
 			status,
@@ -100,8 +93,8 @@ export class InviteFirestoreService {
 	}
 
 	// ===== MARK AS USED =====
-	async markAsUsed(inviteId: string): Promise<void> {
-		const ref = doc(this.firestore, this.collectionName, inviteId);
+	async markAsUsed(inviteUid: string): Promise<void> {
+		const ref = doc(this.firestore, `invites/${inviteUid}`);
 
 		await updateDoc(ref, {
 			status: 'used',
@@ -109,8 +102,18 @@ export class InviteFirestoreService {
 		});
 	}
 
-	updateInviteMetrics(inviteId: string, changes: Partial<Invite>) {
-		const ref = doc(this.firestore, 'invites', inviteId);
-		return updateDoc(ref, changes);
+	async updateInviteMetrics(inviteUid: string, changes: Partial<Invite>) {
+		const ref = doc(this.firestore, 'invites', inviteUid);
+
+		const snap = await getDoc(ref);
+		console.log('🔥 DOC EXISTS?', snap.exists(), snap.id);
+
+		if (!snap.exists()) {
+			console.error('❌ DOCUMENT DOES NOT EXIST:', inviteUid);
+			return;
+		}
+
+		await updateDoc(ref, changes);
 	}
+
 }

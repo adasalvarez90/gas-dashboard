@@ -54,7 +54,7 @@ export class InviteDetailComponent {
 	}
 
 	cancel() {
-		// facade.cancelInvite(this.invite.id)
+		// facade.cancelInvite(this.invite.uid)
 	}
 
 	isNearExpiration(invite: Invite): boolean {
