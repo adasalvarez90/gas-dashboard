@@ -43,6 +43,14 @@ const routes: Routes = [
 					roles: [0, 1], // Support and Admin
 				},
 			},
+			{
+				path: 'contracts',
+				loadChildren: () => import('./contracts/contracts.module').then(m => m.ContractsPageModule),
+				canActivate: [RoleGuard],
+				data: {
+					roles: [0, 1], // Support and Admin
+				},
+			},
 		],
 	},
 ];
