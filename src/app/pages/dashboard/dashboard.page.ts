@@ -23,8 +23,8 @@ export class DashboardPage implements OnInit {
 			name: 'Admin',
 			role: 1,
 			pages: [
-				{ name: 'Invitaciones', url: '/dashboard/invites', icon: 'people', role: 1, hidden: false, badge: '' },
 				{ name: 'Asesoras', url: '/dashboard/advisors', icon: 'people', role: 1, hidden: false, badge: '' },
+				{ name: 'Invitaciones', url: '/dashboard/invites', icon: 'people', role: 1, hidden: true, badge: '' },
 			]
 		}
 	];
