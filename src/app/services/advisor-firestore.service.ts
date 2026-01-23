@@ -3,7 +3,9 @@ import { Firestore, collection, getDocs, doc, updateDoc, setDoc } from '@angular
 import { Advisor } from 'src/app/store/advisor/advisor.model';
 import { v4 as uuidv4 } from 'uuid';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ 
+	providedIn: 'root'
+})
 export class AdvisorFirestoreService {
 
 	private readonly collectionName = 'advisors';
@@ -27,8 +29,6 @@ export class AdvisorFirestoreService {
 			name: advisor.name
 		};
 
-		console.log("service/Create:", newAdvisor)
-
 		const ref = doc(this.firestore, this.collectionName, uid);
 		await setDoc(ref, newAdvisor);
 
@@ -37,7 +37,6 @@ export class AdvisorFirestoreService {
 
 	// ✏️ Update advisor
 	async updateAdvisor(advisor: Advisor): Promise<void> {
-		console.log("service/Update:", advisor)
 		const ref = doc(this.firestore, this.collectionName, advisor.uid);
 		await updateDoc(ref, { ...advisor });
 	}

@@ -1,21 +1,21 @@
 // Libraries
 import { EntityState, EntityAdapter, createEntityAdapter, Dictionary } from '@ngrx/entity';
-import { Advisor } from './advisor.model';
+import { Contract } from './contract.model';
 
-export function selectId(advisor: Advisor) {
+export function selectId(contract: Contract) {
 	//
-	return advisor.uid as string;
+	return contract.uid as string;
 }
 
-export interface State extends EntityState<Advisor> {
+export interface State extends EntityState<Contract> {
   searchTerm: string;
-  selected: Advisor | null;
+  selected: Contract | null;
   loading: boolean;
   error: string | null;
 }
 
 // Create the entity adapter
-export const adapter: EntityAdapter<Advisor> = createEntityAdapter<Advisor>({
+export const adapter: EntityAdapter<Contract> = createEntityAdapter<Contract>({
 	selectId
 });
 
