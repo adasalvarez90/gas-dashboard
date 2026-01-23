@@ -1,11 +1,5 @@
 import { Injectable } from '@angular/core';
-import {
-  Auth,
-  signInWithEmailAndPassword,
-  signOut,
-  User,
-  onAuthStateChanged,
-} from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword, signOut, User, onAuthStateChanged} from '@angular/fire/auth';
 import { BehaviorSubject, Observable, concat, map } from 'rxjs';
 
 @Injectable({

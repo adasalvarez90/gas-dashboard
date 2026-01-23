@@ -45,9 +45,4 @@ export class UsersPage implements OnInit {
 		// navigate to manage page
 		this.navCtrl.navigateForward(['dashboard', 'users', 'manage']);
 	}
-
-	delete(uid: string) {
-		// delete user
-		this.userFacade.deleteUser(uid);
-	}
 }

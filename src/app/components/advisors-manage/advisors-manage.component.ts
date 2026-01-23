@@ -62,7 +62,6 @@ export class AdvisorsManageComponent {
 	}
 
 	create() {
-		console.log('Crear')
 		// Create new advisor
 		this.advisorFacade.createAdvisor(this.form.value);
 		// Exit
@@ -70,7 +69,6 @@ export class AdvisorsManageComponent {
 	}
 
 	update() {
-		console.log('Update')
 		// Update advisor
 		this.advisorFacade.updateAdvisor(this.form.value);
 		// Exit

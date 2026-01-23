@@ -8,10 +8,13 @@ import { ContractsPageRoutingModule } from './contracts-routing.module';
 
 import { ContractsPage } from './contracts.page';
 
+import { PipesModule } from 'src/app/pipes/pipes.module';
+
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
+    PipesModule,
     IonicModule,
     ContractsPageRoutingModule
   ],

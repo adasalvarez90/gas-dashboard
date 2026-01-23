@@ -1,13 +1,92 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>contracts</ion-title>
-  </ion-toolbar>
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-menu-button></ion-menu-button>
+		</ion-buttons>
+		<ion-title>Contratos</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="addOrEdit()">
+				<ion-icon slot="icon-only" name="add"></ion-icon>
+			</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+	<ion-toolbar>
+		<ion-searchbar #searchBar (ionInput)="filter(searchBar.value)" debounce="500"
+			placeholder="Buscar contratos"></ion-searchbar>
+	</ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">contracts</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content>
+	<div class="scrollbar">
+		@if ((contracts$ | async); as contracts) {
+		<ion-list-header>
+			<p>
+				@if ((search$ | async); as search) {
+				<span>
+					{{ contracts.length }} de {{ total$ | async }} {{ 'contrato' | plural
+					:(total$ | async) :'s' :'' }} con <ion-text>"{{ search }}" </ion-text>
+				</span>
+				} @else {
+				<span>{{ contracts.length }} {{ 'contrato' | plural :contracts.length :'s' :''
+					}}</span>
+				}
+			</p>
+		</ion-list-header>
+		}
+		<ion-grid>
+			<ion-row>
+				<ion-col size="12">
+					<ion-list class="ion-no-padding" [inset]="true">
+						@if ((advisorsDic$ | async); as advisorsDic) {
+						@for (contract of contracts$ | async; track contract.uid) {
+						<ion-item lines="inset" button (click)="openContractDetail(contract)">
+							<ion-label>
+
+								<!-- Inversionista -->
+								<h2 class="ion-text-wrap">
+									<strong>{{ contract.investor }}</strong>
+								</h2>
+
+								<!-- Asesora (VISIBLE) -->
+								<p class="ion-text-wrap">
+									<ion-text color="primary">
+										{{ advisorsDic[contract.advisorUid].name || 'Sin asesora' }}
+									</ion-text>
+								</p>
+
+								<!-- Capital -->
+								<p>
+									<ion-text color="success">
+										${{ contract.capitalMXN | number:'1.2-2' }} MXN
+									</ion-text>
+								</p>
+
+								<!-- Rendimiento -->
+								<p class="ion-text-wrap">
+									{{ contract.yieldPercent }}%
+									· {{ contract.term }} meses
+									· {{ contract.yieldFrequency }}
+								</p>
+
+							</ion-label>
+
+							<!-- Estado -->
+							<ion-note slot="end">
+								<ion-chip [color]="contract.accountStatus === 'active' ? 'success' : 'warning'" outline>
+									{{ contract.accountStatus | titlecase }}
+								</ion-chip>
+								<ion-chip color="secondary" outline>
+									{{ contract.scheme | titlecase }}
+								</ion-chip>
+							</ion-note>
+
+						</ion-item>
+						}
+						}
+					</ion-list>
+
+				</ion-col>
+			</ion-row>
+		</ion-grid>
+	</div>
 </ion-content>

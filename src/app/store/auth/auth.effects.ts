@@ -2,15 +2,14 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular';
 //NgRx
+import { Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 //Rxjs
 import { from, of } from 'rxjs';
-import { map, tap, take, catchError, exhaustMap, switchMap } from 'rxjs/operators';
+import { map, tap, take, catchError, exhaustMap } from 'rxjs/operators';
 // Features
 import * as AuthActions from './auth.actions';
-import * as UserActions from '../user/user.actions';
-import * as InviteActions from '../invite/invite.actions';
-import * as AdvisorActions from '../advisor/advisor.actions';
+import * as UtilActions from '../util/util.actions';
 // Services
 import { FirebaseAuthService } from 'src/app/services/firebase-auth.service';
 import { UserFirestoreService } from 'src/app/services/user-firestore.service';
@@ -18,6 +17,7 @@ import { UserFirestoreService } from 'src/app/services/user-firestore.service';
 @Injectable()
 export class AuthEffects {
 	constructor(
+		private store: Store,
 		private router: Router,
 		private actions$: Actions,
 		private authService: FirebaseAuthService,
@@ -102,12 +102,8 @@ export class AuthEffects {
 			this.actions$.pipe(
 				ofType(AuthActions.loginSuccess),
 				tap(() => {
-					// Load the users after login
-					UserActions.loadUsers();
-					// Load the invites
-					InviteActions.loadInvites();
-					// Load the advisors
-					AdvisorActions.loadAdvisors();
+					// Load after auth
+					this.store.dispatch(UtilActions.loadAfterAuth());
 					// Navigate to dashboard
 					this.router.navigate(['/dashboard']);
 				}),
@@ -171,11 +167,7 @@ export class AuthEffects {
 	restoreSessionSuccess$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(AuthActions.restoreSessionSuccess),
-			switchMap(() => [
-				InviteActions.loadInvites(),
-				AdvisorActions.loadAdvisors(),
-				UserActions.loadUsers(),
-			]),
+			map(() => UtilActions.loadAfterAuth()),
 		),
 	);
 }

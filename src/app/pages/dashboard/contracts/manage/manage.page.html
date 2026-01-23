@@ -1,13 +1,174 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>manage</ion-title>
-  </ion-toolbar>
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-back-button defaultHref="dashboard/contracts"></ion-back-button>
+		</ion-buttons>
+		<ion-title>{{ (contract) ? 'Editar' : 'Crear' }} contrato</ion-title>
+		<ion-buttons slot="end">
+			@if (contract) {
+			<ion-button [disabled]="!form?.valid" (click)="update()">
+				<ion-icon slot="icon-only" name="save"></ion-icon>
+			</ion-button>
+			<ion-button (click)="remove()">
+				<ion-icon slot="icon-only" name="trash"></ion-icon>
+			</ion-button>
+			} @else {
+			<ion-button [disabled]="!form?.valid" (click)="create()">
+				<ion-icon slot="icon-only" name="save"></ion-icon>
+			</ion-button>
+			}
+		</ion-buttons>
+	</ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">manage</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content class="ion-padding">
+	<form [formGroup]="form">
+
+		<!-- INFORMACIÓN GENERAL -->
+		<ion-card>
+			<ion-card-header>
+				<ion-card-title>Información general</ion-card-title>
+			</ion-card-header>
+
+			<ion-card-content>
+				<ion-item>
+					<ion-label position="stacked">Asesora</ion-label>
+
+					<ion-select formControlName="advisorUid" interface="popover" placeholder="Selecciona una asesora">
+						@for (advisor of advisors$ | async; track advisor.uid) {
+							<ion-select-option [value]="advisor.uid">
+								{{ advisor.name }}
+							</ion-select-option>
+						}
+					</ion-select>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Inversionista</ion-label>
+					<ion-input formControlName="investor"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Correo</ion-label>
+					<ion-input type="email" formControlName="email"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Cuenta Cliente</ion-label>
+					<ion-input type="text" formControlName="clientAccount"></ion-input>
+				</ion-item>
+			</ion-card-content>
+		</ion-card>
+
+		<ion-card>
+			<ion-card-header>
+				<ion-card-title>Firma del contrato</ion-card-title>
+			</ion-card-header>
+
+			<ion-card-content>
+				<ion-item>
+					<ion-label position="stacked">Firma</ion-label>
+					<ion-input type="text" formControlName="signature"></ion-input>
+				</ion-item>
+				
+				<ion-item>
+					<ion-label position="stacked">Deposito</ion-label>
+					<ion-input type="text" formControlName="deposit"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Cuenta de Deposito</ion-label>
+					<ion-input type="text" formControlName="depositAccount"></ion-input>
+				</ion-item>
+			</ion-card-content>
+		</ion-card>
+
+		<!-- DATOS FINANCIEROS -->
+		<ion-card>
+			<ion-card-header>
+				<ion-card-title>Datos financieros</ion-card-title>
+			</ion-card-header>
+
+			<ion-card-content>
+				<ion-item>
+					<ion-label position="stacked">Capital (MXN)</ion-label>
+					<ion-input type="number" formControlName="capitalMXN"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Rendimiento (%)</ion-label>
+					<ion-input type="number" formControlName="yieldPercent"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Liquidez</ion-label>
+					<ion-input type="number" formControlName="liquidity"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Plazo (meses)</ion-label>
+					<ion-input type="number" formControlName="term"></ion-input>
+				</ion-item>
+			</ion-card-content>
+		</ion-card>
+
+		<!-- CONDICIONES -->
+		<ion-card>
+			<ion-card-header>
+				<ion-card-title>Condiciones</ion-card-title>
+			</ion-card-header>
+
+			<ion-card-content>
+				<ion-item>
+					<ion-label position="stacked">Periodicidad</ion-label>
+					<ion-input formControlName="yieldFrequency"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Pagos</ion-label>
+					<ion-input formControlName="payments"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Estado de cuenta</ion-label>
+					<ion-input formControlName="accountStatus"></ion-input>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Esquema</ion-label>
+					<ion-input formControlName="scheme"></ion-input>
+				</ion-item>
+			</ion-card-content>
+		</ion-card>
+
+		<!-- DOCUMENTOS -->
+		<ion-card>
+			<ion-card-header>
+				<ion-card-title>Documentación</ion-card-title>
+			</ion-card-header>
+
+			<ion-card-content>
+				<ion-item lines="none">
+					<ion-checkbox slot="start" formControlName="docs"></ion-checkbox>
+					<ion-label>Documentación completa</ion-label>
+				</ion-item>
+
+				<ion-item>
+					<ion-label position="stacked">Comentarios</ion-label>
+					<ion-textarea formControlName="docsComments"></ion-textarea>
+				</ion-item>
+			</ion-card-content>
+		</ion-card>
+
+		<!-- BENEFICIARIOS -->
+		<ion-card>
+			<ion-card-header>
+				<ion-card-title>Beneficiarios</ion-card-title>
+			</ion-card-header>
+
+			<ion-card-content>
+				<ion-textarea formControlName="beneficiaries"></ion-textarea>
+			</ion-card-content>
+		</ion-card>
+	</form>
 </ion-content>

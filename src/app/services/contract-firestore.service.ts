@@ -22,10 +22,27 @@ export class ContractFirestoreService {
 	// ➕ Create contract
 	async createContract(contract: Contract): Promise<Contract> {
 		const uid = uuidv4();
-
+		
 		const newContract: Contract = {
 			uid,
-			name: contract.name
+			advisorUid: contract.advisorUid,
+			investor: contract.investor,
+			signature: contract.signature,
+			deposit: contract.deposit,
+			depositAccount: contract.depositAccount,
+			capitalMXN: contract.capitalMXN,
+			yieldPercent: contract.yieldPercent,
+			liquidity: contract.liquidity,
+			term: contract.term,
+			yieldFrequency: contract.yieldFrequency,
+			payments: contract.payments,
+			accountStatus: contract.accountStatus,
+			scheme: contract.scheme,
+			docs: contract.docs,
+			docsComments: contract.docsComments,
+			email: contract.email,
+			clientAccount: contract.clientAccount,
+			beneficiaries: contract.beneficiaries,
 		};
 
 		const ref = doc(this.firestore, this.collectionName, uid);

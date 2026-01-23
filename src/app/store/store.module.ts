@@ -5,6 +5,7 @@ import { EffectsModule } from '@ngrx/effects';
 import { StoreRouterConnectingModule, NavigationActionTiming } from '@ngrx/router-store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 // Modules
+import { UtilModule } from './util/util.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { InviteModule } from './invite/invite.module'
@@ -19,6 +20,7 @@ import { reducers } from './store.reducer';
 	declarations: [],
 	imports: [
 		CommonModule,
+		UtilModule,
 		AuthModule,
 		UserModule,
 		InviteModule,

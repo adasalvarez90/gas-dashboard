@@ -20,9 +20,6 @@ export class InvitesPage implements OnInit {
 	search$ = this.inviteFacade.search$;
 	total$ = this.inviteFacade.total$;
 
-	email = '';
-	role: 1 | 2 = 2;
-
 	constructor(
 		private inviteFacade: InviteFacade,
 		private navCtrl: NavController,

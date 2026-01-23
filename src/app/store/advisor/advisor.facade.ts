@@ -7,6 +7,7 @@ import { Advisor } from './advisor.model';
 @Injectable({ providedIn: 'root' })
 export class AdvisorFacade {
 	advisors$ = this.store.select(fromAdvisor.selectFiltered);
+	entities$ = this.store.select(fromAdvisor.selectEntities);
 	selectedAdvisor$ = this.store.select(fromAdvisor.selectedAdvisor);
 	loading$ = this.store.select(fromAdvisor.selectLoading);
 	search$ = this.store.select(fromAdvisor.selectSearch);
