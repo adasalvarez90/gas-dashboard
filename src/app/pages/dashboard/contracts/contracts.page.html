@@ -78,6 +78,12 @@
 								<ion-chip color="secondary" outline>
 									{{ contract.scheme | titlecase }}
 								</ion-chip>
+								@if(contract.signed) {
+									<ion-chip color="success" outline>
+										Firmado
+										<ion-icon name="checkmark-circle"></ion-icon>
+									</ion-chip>
+								}
 							</ion-note>
 
 						</ion-item>

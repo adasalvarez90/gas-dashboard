@@ -21,4 +21,5 @@ export interface Contract extends Metadata {
 	email: string;
 	clientAccount: string;
 	beneficiaries: string;
+	signed: boolean;
 }

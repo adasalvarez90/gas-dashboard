@@ -58,6 +58,7 @@ export class ManagePage implements OnInit {
 		docsComments: [''],
 
 		beneficiaries: [''],
+		signed: [false],
 	});
 
 	constructor(

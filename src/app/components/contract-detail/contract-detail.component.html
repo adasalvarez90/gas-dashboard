@@ -1,12 +1,17 @@
+@if ((contract$ | async); as contract) {
 <ion-header>
 	<ion-toolbar>
 		<ion-title>Detalle del contrato</ion-title>
 		<ion-buttons slot="end">
+			<ion-button (click)="toggleSign(contract)">
+				<ion-icon slot="icon-only" [color]="contract.signed ? 'success' : 'medium'"
+					[name]="contract.signed ? 'checkbox' : 'square-outline'"></ion-icon>
+			</ion-button>
 			<ion-button (click)="edit()">
-				<ion-icon name="create"></ion-icon>
+				<ion-icon slot="icon-only" name="create"></ion-icon>
 			</ion-button>
 			<ion-button (click)="close()">
-				<ion-icon name="close-outline"></ion-icon>
+				<ion-icon slot="icon-only" name="close-outline"></ion-icon>
 			</ion-button>
 		</ion-buttons>
 	</ion-toolbar>
@@ -196,3 +201,4 @@
 	</ion-card>
 
 </ion-content>
+}

@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ModalController, NavController,ToastController } from '@ionic/angular';
+import { IonicModule, ModalController, NavController } from '@ionic/angular';
+import * as _ from 'lodash';
 
 // Models
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
@@ -19,7 +20,7 @@ import { Contract } from '../../store/contract/contract.model';
 })
 export class ContractDetailComponent {
 
-	@Input() contract!: Contract;
+	contract$ = this.contractFacade.selectedContract$;
 
 	advisorsDic$ = this.advisorFacade.entities$
 
@@ -35,12 +36,21 @@ export class ContractDetailComponent {
 	}
 
 	edit() {
-		// set selected contract
-		this.contractFacade.selectContract(this.contract);
 		// Close modal
 		this.close();
 		// navigate to manage page
 		this.navCtrl.navigateForward(['dashboard', 'contracts', 'manage']);
+	}
+
+	toggleSign(contract: Contract) {
+		// Create clone
+		let updated = _.cloneDeep(contract);
+
+		// Update signed
+		updated.signed = !contract.signed;
+
+		// Update contract
+		this.contractFacade.updateContract(updated);
 	}
 
 }

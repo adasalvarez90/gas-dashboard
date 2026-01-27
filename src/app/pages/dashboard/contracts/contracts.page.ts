@@ -38,9 +38,11 @@ export class ContractsPage implements OnInit {
 	}
 
 	async openContractDetail(contract: Contract) {
+		this.contractFacade.selectContract(contract);
+		
 		const modal = await this.modalCtrl.create({
 			component: ContractDetailComponent,
-			componentProps: { contract },
+			componentProps: { },
 		});
 
 		await modal.present();
