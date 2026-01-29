@@ -26,7 +26,8 @@ export class AdvisorFirestoreService {
 
 		const newAdvisor: Advisor = {
 			uid,
-			name: advisor.name
+			name: advisor.name,
+			_on: true
 		};
 
 		const ref = doc(this.firestore, this.collectionName, uid);

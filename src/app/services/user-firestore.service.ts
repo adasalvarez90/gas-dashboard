@@ -48,8 +48,9 @@ export class UserFirestoreService {
 
 	// ➕ Create user
 	async createUser(user: User): Promise<void> {
-		const ref = doc(this.firestore, `users/${user.uid}`);
-		await updateDoc(ref, { ...user });
+		const newUser = { ...user, _on: true };
+		const ref = doc(this.firestore, `users/${newUser.uid}`);
+		await updateDoc(ref, { ...newUser });
 	}
 
 	// ✏️ Update user

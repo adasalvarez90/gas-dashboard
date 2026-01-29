@@ -43,7 +43,8 @@ export class ContractFirestoreService {
 			email: contract.email,
 			clientAccount: contract.clientAccount,
 			beneficiaries: contract.beneficiaries,
-			signed: contract.signed
+			signed: contract.signed,
+			_on: true
 		};
 
 		const ref = doc(this.firestore, this.collectionName, uid);
