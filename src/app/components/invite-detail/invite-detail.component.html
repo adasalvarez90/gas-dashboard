@@ -123,11 +123,11 @@
 					</ion-item>
 				}
 
-				@if(invite.expiretedAt) {
+				@if(invite.expiredAt) {
 					<ion-item>
 						<ion-label>Expirada</ion-label>
 						<ion-text>
-							{{ invite.expiretedAt | date:'medium' }}
+							{{ invite.expiredAt | date:'medium' }}
 						</ion-text>
 					</ion-item>
 				}

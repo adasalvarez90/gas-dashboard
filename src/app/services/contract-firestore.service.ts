@@ -44,6 +44,9 @@ export class ContractFirestoreService {
 			clientAccount: contract.clientAccount,
 			beneficiaries: contract.beneficiaries,
 			signed: contract.signed,
+			regularComision: contract.regularComision,
+			dinamicComision: contract.dinamicComision,
+			_create: Date.now(),
 			_on: true
 		};
 
@@ -55,6 +58,7 @@ export class ContractFirestoreService {
 
 	// ✏️ Update contract
 	async updateContract(contract: Contract): Promise<void> {
+		contract._update = Date.now();
 		const ref = doc(this.firestore, this.collectionName, contract.uid);
 		await updateDoc(ref, { ...contract });
 	}
@@ -62,6 +66,6 @@ export class ContractFirestoreService {
 	// 🗑️ Delete contract
 	async deleteContract(uid: string): Promise<void> {
 		const ref = doc(this.firestore, this.collectionName, uid);
-		await updateDoc(ref, { _on: false });
+		await updateDoc(ref, { _remove: Date.now(), _on: false });
 	}
 }

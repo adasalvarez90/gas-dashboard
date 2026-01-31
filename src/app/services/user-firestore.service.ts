@@ -48,13 +48,14 @@ export class UserFirestoreService {
 
 	// ➕ Create user
 	async createUser(user: User): Promise<void> {
-		const newUser = { ...user, _on: true };
+		const newUser = { ...user, _on: true, _create: Date.now() };
 		const ref = doc(this.firestore, `users/${newUser.uid}`);
 		await updateDoc(ref, { ...newUser });
 	}
 
 	// ✏️ Update user
 	async updateUser(user: User): Promise<void> {
+		user._update = Date.now();
 		const ref = doc(this.firestore, `users/${user.uid}`);
 		await updateDoc(ref, { ...user });
 	}
@@ -62,6 +63,6 @@ export class UserFirestoreService {
 	// 🗑️ Delete user
 	async deleteUser(uid: string): Promise<void> {
 		const ref = doc(this.firestore, `users/${uid}`);
-		await updateDoc(ref, { _on: false });
+		await updateDoc(ref, { _remove: Date.now(), _on: false });
 	}
 }

@@ -27,7 +27,8 @@ export class AdvisorFirestoreService {
 		const newAdvisor: Advisor = {
 			uid,
 			name: advisor.name,
-			_on: true
+			_create: Date.now(),
+			_on: true,
 		};
 
 		const ref = doc(this.firestore, this.collectionName, uid);
@@ -38,6 +39,7 @@ export class AdvisorFirestoreService {
 
 	// ✏️ Update advisor
 	async updateAdvisor(advisor: Advisor): Promise<void> {
+		advisor._update = Date.now();
 		const ref = doc(this.firestore, this.collectionName, advisor.uid);
 		await updateDoc(ref, { ...advisor });
 	}
@@ -45,6 +47,6 @@ export class AdvisorFirestoreService {
 	// 🗑️ Delete advisor
 	async deleteAdvisor(uid: string): Promise<void> {
 		const ref = doc(this.firestore, this.collectionName, uid);
-		await updateDoc(ref, { _on: false });
+		await updateDoc(ref, { _remove: Date.now(), _on: false });
 	}
 }

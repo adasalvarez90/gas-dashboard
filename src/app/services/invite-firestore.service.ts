@@ -26,8 +26,10 @@ export class InviteFirestoreService {
 			createdBy: invite.createdBy,
 			createdAt: now,
 			expiresAt,
-			expiretedAt: null,
+			expiredAt: null,
 			resendCount: 0,
+			_on: true,
+			_create: now,
 		};
 
 		const ref = doc(this.firestore, `invites/${uid}`);
@@ -79,6 +81,7 @@ export class InviteFirestoreService {
 		await updateDoc(ref, {
 			status: 'cancelled',
 			cancelledAt: Date.now(),
+			_updqate: Date.now(),
 		});
 	}
 
@@ -89,6 +92,7 @@ export class InviteFirestoreService {
 		await updateDoc(ref, {
 			status,
 			cancelledAt: Date.now(),
+			_update: Date.now(),
 		});
 	}
 
@@ -99,6 +103,7 @@ export class InviteFirestoreService {
 		await updateDoc(ref, {
 			status: 'used',
 			usedAt: Date.now(),
+			_update: Date.now(),
 		});
 	}
 
@@ -113,7 +118,7 @@ export class InviteFirestoreService {
 			return;
 		}
 
-		await updateDoc(ref, changes);
+		await updateDoc(ref, { ...changes, _update: Date.now() });
 	}
 
 }

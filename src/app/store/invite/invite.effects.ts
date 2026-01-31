@@ -123,7 +123,7 @@ export class InviteEffects {
 							inviteUid: invite.uid,
 							changes: {
 								status: 'expired',
-								expiretedAt: Date.now()
+								expiredAt: Date.now()
 							}
 						})
 					)

@@ -17,7 +17,7 @@ export interface Invite extends Metadata {
   createdAt: number;      // Date.now()
 
   expiresAt: number;      // Date.now() + TTL
-  expiretedAt?: number;
+  expiredAt?: number;
   usedAt?: number;
   cancelledAt?: number;
 

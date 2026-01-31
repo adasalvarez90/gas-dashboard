@@ -22,4 +22,6 @@ export interface Contract extends Metadata {
 	clientAccount: string;
 	beneficiaries: string;
 	signed: boolean;
+	regularComision: number;
+	dinamicComision: number;
 }
