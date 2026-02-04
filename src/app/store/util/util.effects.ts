@@ -10,7 +10,6 @@ import * as UserActions from '../user/user.actions';
 import * as InviteActions from '../invite/invite.actions';
 import * as AdvisorActions from '../advisor/advisor.actions';
 import * as ContractActions from '../contract/contract.actions';
-import * as TagActions from '../tag/tag.actions';
 
 @Injectable()
 export class UtilEffects {
@@ -23,7 +22,6 @@ export class UtilEffects {
                 InviteActions.loadInvites(),
                 AdvisorActions.loadAdvisors(),
                 ContractActions.loadContracts(),
-                TagActions.loadTags(),
             ])
         )
     );

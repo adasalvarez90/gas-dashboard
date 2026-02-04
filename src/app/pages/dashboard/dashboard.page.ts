@@ -23,7 +23,6 @@ export class DashboardPage implements OnInit {
 			name: 'Admin',
 			role: 1,
 			pages: [
-				{ name: 'Roles Accesible', url: '/dashboard/tags', icon: 'people', role: 1, hidden: false, badge: '' },
 				{ name: 'Equipo Futuro es Femenino', url: '/dashboard/advisors', icon: 'people', role: 1, hidden: false, badge: '' },
 				{ name: 'Contratos', url: '/dashboard/contracts', icon: 'people', role: 1, hidden: false, badge: '' },
 				{ name: 'Invitaciones', url: '/dashboard/invites', icon: 'people', role: 1, hidden: true, badge: '' },

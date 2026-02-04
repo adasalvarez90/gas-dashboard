@@ -51,14 +51,6 @@ const routes: Routes = [
 					roles: [0, 1], // Support and Admin
 				},
 			},
-			{
-				path: 'tags',
-				loadChildren: () => import('./tags/tags.module').then(m => m.TagsPageModule),
-				canActivate: [RoleGuard],
-				data: {
-					roles: [0, 1], // Support and Admin
-				},
-			},
 		],
 	},
 

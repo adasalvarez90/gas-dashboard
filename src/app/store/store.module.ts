@@ -11,7 +11,6 @@ import { UserModule } from './user/user.module';
 import { InviteModule } from './invite/invite.module'
 import { AdvisorModule } from './advisor/advisor.module'
 import { ContractModule } from './contract/contract.module'
-import { TagModule } from './tag/tag.module'
 // Custom serializer
 import { CustomSerializer } from './router/router-custom-serializer';
 // Reducers
@@ -27,7 +26,6 @@ import { reducers } from './store.reducer';
 		InviteModule,
 		AdvisorModule,
 		ContractModule,
-		TagModule,
 		// NGRX Modules
 		StoreModule.forRoot(reducers),
 		EffectsModule.forRoot([]),
