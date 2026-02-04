@@ -1,14 +1,9 @@
-import {
-	Component,
-	OnInit,
-	ChangeDetectionStrategy,
-	ChangeDetectorRef,
-} from '@angular/core';
-import { NavController } from '@ionic/angular';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { AlertController, NavController } from '@ionic/angular';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 
 // RxJS
-import { Observable, lastValueFrom } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
 // Store
@@ -16,7 +11,6 @@ import * as fromContract from 'src/app/store/contract';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
-import { Advisor } from 'src/app/store/advisor/advisor.model';
 
 @Component({
 	selector: 'app-manage-contract',
@@ -29,7 +23,6 @@ export class ManagePage implements OnInit {
 	advisors$ = this.advisorFacade.advisors$;
 	contract$ = this.contractFacade.selectedContract$;
 	contract: fromContract.Contract | null;
-
 
 	form: FormGroup = this.fb.group({
 		uid: [''],
@@ -66,6 +59,7 @@ export class ManagePage implements OnInit {
 		private advisorFacade: AdvisorFacade,
 		private navCtrl: NavController,
 		private fb: FormBuilder,
+		private alertCtrl: AlertController,
 		private ref: ChangeDetectorRef,
 	) { }
 
@@ -84,19 +78,76 @@ export class ManagePage implements OnInit {
 		this.ref.detectChanges();
 	}
 
-	create() {
-		this.contractFacade.createContract(this.form.value);
-		this.exit();
+	async create() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Crear contrato`,
+			message: `¿Desea crear el contrato para ${form.investor}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Create new user
+					this.contractFacade.createContract(form);
+					// Exit
+					this.exit();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
-	update() {
-		this.contractFacade.updateContract(this.form.value);
-		this.exit();
+	async update() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Editar contrato`,
+			message: `¿Desea editar el contrato para ${form.investor}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Create new user
+					this.contractFacade.updateContract(form);
+					// Exit
+					this.exit();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
-	remove() {
-		this.contractFacade.deleteContract(this.form.value.id);
-		this.exit();
+	async remove() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Eliminar contrato`,
+			message: `¿Desea eliminar el contrato para ${form.investor}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Create new user
+					this.contractFacade.deleteContract(form.uid);
+					// Exit
+					this.exit();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
 	exit() {

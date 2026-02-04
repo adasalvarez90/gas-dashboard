@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { NavController } from '@ionic/angular';
+import { AlertController, NavController } from '@ionic/angular';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 // Rxjs
 import { lastValueFrom } from 'rxjs';
@@ -30,6 +30,7 @@ export class ManagePage implements OnInit {
 		private userFacade: UserFacade,
 		private navCtrl: NavController,
 		private fb: FormBuilder,
+		private alertCtrl: AlertController,
 		private ref: ChangeDetectorRef
 	) { }
 
@@ -54,29 +55,80 @@ export class ManagePage implements OnInit {
 		this.ref.detectChanges();
 	}
 
-	create() {
-		// Parse rol from string to number
-		this.form.value.role = Number(this.form.value.role); 
-		// Create new user
-		this.userFacade.createUser(this.form.value);
-		// Exit
-		this.exit();
+	async create() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Crear usuario`,
+			message: `¿Desea crear el usuario ${form.name}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Parse rol from string to number
+					form.role = Number(form.role);
+					// Create new user
+					this.userFacade.createUser(form);
+					// Exit
+					this.exit();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
-	update() {
-		// Parse rol from string to number
-		this.form.value.role = Number(this.form.value.role); 
-		// Update user
-		this.userFacade.updateUser(this.form.value);
-		// Exit
-		this.exit();
+	async update() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Editar usuario`,
+			message: `¿Desea editar el usuario ${form.name}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Parse rol from string to number
+					form.role = Number(form.role);
+					// Create new user
+					this.userFacade.updateUser(form);
+					// Exit
+					this.exit();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
-	remove() {
-		// Delete user
-		this.userFacade.deleteUser(this.form.value.uid);
-		// Exit
-		this.exit();
+	async remove() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Eliminar usuario`,
+			message: `¿Desea eliminar el usuario ${form.name}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Create new user
+					this.userFacade.deleteUser(form.uid);
+					// Exit
+					this.exit();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
 	exit() {

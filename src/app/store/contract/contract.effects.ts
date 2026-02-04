@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
+import { LoadingController, ToastController } from '@ionic/angular';
+//NgRx
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { exhaustMap, switchMap, map, catchError, withLatestFrom } from 'rxjs/operators';
-import { from, of } from 'rxjs';
+import { exhaustMap, switchMap, map, withLatestFrom } from 'rxjs/operators';
 
 import * as ContractActions from './contract.actions';
 import * as AuthActions from '../auth/auth.actions';
+// Services
 import { ContractFirestoreService } from 'src/app/services/contract-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
-import { Contract } from './contract.model';
 
 @Injectable()
 export class ContractEffects {
@@ -15,6 +16,8 @@ export class ContractEffects {
 		private actions$: Actions,
 		private contractFS: ContractFirestoreService,
 		private authFacade: AuthFacade,
+		private loadingCtrl: LoadingController,
+		private toastCtrl: ToastController,
 	) { }
 
 	// 🔎 Load contracts
@@ -42,11 +45,44 @@ export class ContractEffects {
 	createContract$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(ContractActions.createContract),
-			exhaustMap(({ contract }) =>
-				this.contractFS.createContract(contract).then(
-					() => ContractActions.createContractSuccess({ contract }),
-					(err) => ContractActions.createContractFailure({ error: err.message }),
-				),
+			exhaustMap(
+				async ({ contract }) => {
+					// Create the loading
+					const loading = await this.loadingCtrl.create({
+						cssClass: 'my-custom-class',
+						message: 'Creando contrato. Espere, por favor.'
+					});
+					// Create the toast
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: `El contrato de "${contract.investor}" fue creado con éxito.`,
+						duration: 3000,
+						position: 'middle'
+					});
+
+					// Present the loading
+					await loading.present();
+
+					return this.contractFS.createContract(contract).then(
+						async () => {
+							// Hide the loading
+							await loading.dismiss();
+							// Show the toast
+							await toast.present();
+
+							return ContractActions.createContractSuccess({ contract })
+						},
+						async (err) => {
+							await loading.dismiss();
+							// Change the toast message and show it
+							toast.message = `Error al crear el contrato de "${contract.investor}": ${err.message}`;
+							// Present the toast
+							toast.present();
+
+							return ContractActions.createContractFailure({ error: err.message })
+						},
+					)
+				},
 			),
 		),
 	);
@@ -55,11 +91,44 @@ export class ContractEffects {
 	updateContract$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(ContractActions.updateContract),
-			exhaustMap(({ contract }) =>
-				this.contractFS.updateContract(contract).then(
-					() => ContractActions.updateContractSuccess({ contract }),
-					(err) => ContractActions.updateContractFailure({ error: err.message }),
-				),
+			exhaustMap(
+				async ({ contract }) => {
+					// Create the loading
+					const loading = await this.loadingCtrl.create({
+						cssClass: 'my-custom-class',
+						message: 'Editando contrato. Espere, por favor.'
+					});
+					// Create the toast
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: `El contrato de "${contract.investor}" fue editado con éxito.`,
+						duration: 3000,
+						position: 'middle'
+					});
+
+					// Present the loading
+					await loading.present();
+
+					return this.contractFS.updateContract(contract).then(
+						async () => {
+							// Hide the loading
+							await loading.dismiss();
+							// Show the toast
+							await toast.present();
+
+							return ContractActions.updateContractSuccess({ contract })
+						},
+						async (err) => {
+							await loading.dismiss();
+							// Change the toast message and show it
+							toast.message = `Error al editar el contrato de "${contract.investor}": ${err.message}`;
+							// Present the toast
+							toast.present();
+
+							return ContractActions.updateContractFailure({ error: err.message })
+						},
+					)
+				},
 			),
 		),
 	);
@@ -68,11 +137,44 @@ export class ContractEffects {
 	deleteContract$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(ContractActions.deleteContract),
-			exhaustMap(({ uid }) =>
-				this.contractFS.deleteContract(uid).then(
-					() => ContractActions.deleteContractSuccess({ uid }),
-					(err) => ContractActions.deleteContractFailure({ error: err.message }),
-				),
+			exhaustMap(
+				async ({ uid }) => {
+					// Create the loading
+					const loading = await this.loadingCtrl.create({
+						cssClass: 'my-custom-class',
+						message: 'Eliminando contrato. Espere, por favor.'
+					});
+					// Create the toast
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: `El contrato fue eliminado con éxito.`,
+						duration: 3000,
+						position: 'middle'
+					});
+
+					// Present the loading
+					await loading.present();
+
+					return this.contractFS.deleteContract(uid).then(
+						async () => {
+							// Hide the loading
+							await loading.dismiss();
+							// Show the toast
+							await toast.present();
+
+							return ContractActions.deleteContractSuccess({ uid })
+						},
+						async (err) => {
+							await loading.dismiss();
+							// Change the toast message and show it
+							toast.message = `Error al eliminar el contrato: ${err.message}`;
+							// Present the toast
+							toast.present();
+
+							return ContractActions.deleteContractFailure({ error: err.message })
+						},
+					)
+				},
 			),
 		),
 	);

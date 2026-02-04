@@ -23,7 +23,7 @@ const routes: Routes = [
 					import('./users/users.module').then((m) => m.UsersPageModule),
 				canActivate: [RoleGuard],
 				data: {
-					roles: [0, 1, 2], // Admin, Manager, Support
+					roles: [0, 1], // Support and Admin
 				},
 			},
 			{
@@ -51,8 +51,17 @@ const routes: Routes = [
 					roles: [0, 1], // Support and Admin
 				},
 			},
+			{
+				path: 'tags',
+				loadChildren: () => import('./tags/tags.module').then(m => m.TagsPageModule),
+				canActivate: [RoleGuard],
+				data: {
+					roles: [0, 1], // Support and Admin
+				},
+			},
 		],
 	},
+
 ];
 
 @NgModule({

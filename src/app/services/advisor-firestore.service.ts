@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, getDocs, doc, updateDoc, setDoc } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where } from '@angular/fire/firestore';
+import * as _ from 'lodash';
+
 import { Advisor } from 'src/app/store/advisor/advisor.model';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,7 +17,9 @@ export class AdvisorFirestoreService {
 	// ===== GET ALL =====
 	async getAdvisors(): Promise<Advisor[]> {
 		const ref = collection(this.firestore, this.collectionName);
-		const snap = await getDocs(ref);
+		const q = query(ref, where('_on', '==', true));
+		
+		const snap = await getDocs(q);
 
 		return snap.docs.map(d => d.data() as Advisor);
 	}
@@ -39,9 +43,12 @@ export class AdvisorFirestoreService {
 
 	// ✏️ Update advisor
 	async updateAdvisor(advisor: Advisor): Promise<void> {
-		advisor._update = Date.now();
+		let updateAdvisor = _.cloneDeep(advisor);
+		
+		updateAdvisor._update = Date.now();
+
 		const ref = doc(this.firestore, this.collectionName, advisor.uid);
-		await updateDoc(ref, { ...advisor });
+		await updateDoc(ref, { ...updateAdvisor });
 	}
 
 	// 🗑️ Delete advisor

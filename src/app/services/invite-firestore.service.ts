@@ -41,7 +41,9 @@ export class InviteFirestoreService {
 	// ===== GET ALL =====
 	async getInvites(): Promise<Invite[]> {
 		const ref = collection(this.firestore, 'invites');
-		const snap = await getDocs(ref);
+		const q = query(ref, where('_on', '==', true));
+		
+		const snap = await getDocs(q);
 
 		return snap.docs.map(d => {
 			const data = d.data() as Invite;

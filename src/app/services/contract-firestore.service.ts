@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, getDocs, doc, updateDoc, setDoc } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where } from '@angular/fire/firestore';
+
+import * as _ from 'lodash';
+
 import { Contract } from 'src/app/store/contract/contract.model';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,7 +17,9 @@ export class ContractFirestoreService {
 	// ===== GET ALL =====
 	async getContracts(): Promise<Contract[]> {
 		const ref = collection(this.firestore, this.collectionName);
-		const snap = await getDocs(ref);
+		const q = query(ref, where('_on', '==', true));
+		
+		const snap = await getDocs(q);
 
 		return snap.docs.map(d => d.data() as Contract);
 	}
@@ -58,9 +63,12 @@ export class ContractFirestoreService {
 
 	// ✏️ Update contract
 	async updateContract(contract: Contract): Promise<void> {
-		contract._update = Date.now();
+		let updateContract = _.cloneDeep(contract);
+
+		updateContract._update = Date.now();
+		
 		const ref = doc(this.firestore, this.collectionName, contract.uid);
-		await updateDoc(ref, { ...contract });
+		await updateDoc(ref, { ...updateContract });
 	}
 
 	// 🗑️ Delete contract

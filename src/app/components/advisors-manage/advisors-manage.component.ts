@@ -1,7 +1,7 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { IonicModule, ModalController, ToastController } from '@ionic/angular';
+import { IonicModule, ModalController, AlertController } from '@ionic/angular';
 // Rxjs
 import { lastValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
@@ -34,7 +34,7 @@ export class AdvisorsManageComponent {
 		private advisorFacade: AdvisorFacade,
 		private fb: FormBuilder,
 		private modalCtrl: ModalController,
-		private toastCtrl: ToastController,
+		private alertCtrl: AlertController,
 		private ref: ChangeDetectorRef,
 	) { }
 
@@ -61,25 +61,74 @@ export class AdvisorsManageComponent {
 		this.modalCtrl.dismiss();
 	}
 
-	create() {
-		// Create new advisor
-		this.advisorFacade.createAdvisor(this.form.value);
-		// Exit
-		this.close();
+	async create() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Crear consultora`,
+			message: `¿Desea crear la consultora ${form.name}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Create new user
+					this.advisorFacade.createAdvisor(form);
+					// Exit
+					this.close();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
-	update() {
-		// Update advisor
-		this.advisorFacade.updateAdvisor(this.form.value);
-		// Exit
-		this.close();
+	async update() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Editar consultora`,
+			message: `¿Desea editar la consultora ${form.name}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					// Update advisor
+					this.advisorFacade.updateAdvisor(form);
+					// Exit
+					this.close();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
 
-	remove() {
-		// Delete advisor
-		this.advisorFacade.deleteAdvisor(this.form.value.uid);
-		// Exit
-		this.close();
+	async remove() {
+		// Get the form value
+		const form = this.form.value;
+		// Create the update alert
+		const prompt = await this.alertCtrl.create({
+			header: `Eliminar consultora`,
+			message: `¿Desea eliminar la consultora ${form.name}?`,
+			buttons: [{
+				text: 'No',
+				role: 'cancel'
+			}, {
+				text: 'Sí',
+				handler: () => {
+					this.advisorFacade.deleteAdvisor(form.uid);
+					// Exit
+					this.close();
+				}
+			}]
+		});
+		// Present the prompt
+		await prompt.present();
 	}
-
 }

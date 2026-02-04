@@ -1,13 +1,15 @@
 import { Injectable } from '@angular/core';
+import { LoadingController, ToastController } from '@ionic/angular';
+//NgRx
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { exhaustMap, switchMap, map, catchError, withLatestFrom } from 'rxjs/operators';
-import { from, of } from 'rxjs';
+import { exhaustMap, switchMap, map, withLatestFrom } from 'rxjs/operators';
 
 import * as AdvisorActions from './advisor.actions';
 import * as AuthActions from '../auth/auth.actions';
+// Services
 import { AdvisorFirestoreService } from 'src/app/services/advisor-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
-import { Advisor } from './advisor.model';
+
 
 @Injectable()
 export class AdvisorEffects {
@@ -15,6 +17,8 @@ export class AdvisorEffects {
 		private actions$: Actions,
 		private advisorFS: AdvisorFirestoreService,
 		private authFacade: AuthFacade,
+		private loadingCtrl: LoadingController,
+		private toastCtrl: ToastController,
 	) { }
 
 	// 🔎 Load advisors
@@ -42,11 +46,44 @@ export class AdvisorEffects {
 	createAdvisor$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(AdvisorActions.createAdvisor),
-			exhaustMap(({ advisor }) =>
-				this.advisorFS.createAdvisor(advisor).then(
-					() => AdvisorActions.createAdvisorSuccess({ advisor }),
-					(err) => AdvisorActions.createAdvisorFailure({ error: err.message }),
-				),
+			exhaustMap(
+				async ({ advisor }) => {
+					// Create the loading
+					const loading = await this.loadingCtrl.create({
+						cssClass: 'my-custom-class',
+						message: 'Creando consultora. Espere, por favor.'
+					});
+					// Create the toast
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: `La consultora "${advisor.name}" fue creada con éxito.`,
+						duration: 3000,
+						position: 'middle'
+					});
+
+					// Present the loading
+					await loading.present();
+
+					return this.advisorFS.createAdvisor(advisor).then(
+						async () => {
+							// Hide the loading
+							await loading.dismiss();
+							// Show the toast
+							await toast.present();
+
+							return AdvisorActions.createAdvisorSuccess({ advisor })
+						},
+						async (err) => {
+							await loading.dismiss();
+							// Change the toast message and show it
+							toast.message = `Error al crear la consultora "${advisor.name}": ${err.message}`;
+							// Present the toast
+							toast.present();
+
+							return AdvisorActions.createAdvisorFailure({ error: err.message })
+						},
+					)
+				},
 			),
 		),
 	);
@@ -55,11 +92,44 @@ export class AdvisorEffects {
 	updateAdvisor$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(AdvisorActions.updateAdvisor),
-			exhaustMap(({ advisor }) =>
-				this.advisorFS.updateAdvisor(advisor).then(
-					() => AdvisorActions.updateAdvisorSuccess({ advisor }),
-					(err) => AdvisorActions.updateAdvisorFailure({ error: err.message }),
-				),
+			exhaustMap(
+				async ({ advisor }) => {
+					// Create the loading
+					const loading = await this.loadingCtrl.create({
+						cssClass: 'my-custom-class',
+						message: 'Editando consultora. Espere, por favor.'
+					});
+					// Create the toast
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: `La consultora "${advisor.name}" fue editada con éxito.`,
+						duration: 3000,
+						position: 'middle'
+					});
+
+					// Present the loading
+					await loading.present();
+
+					return this.advisorFS.updateAdvisor(advisor).then(
+						async () => {
+							// Hide the loading
+							await loading.dismiss();
+							// Show the toast
+							await toast.present();
+
+							return AdvisorActions.updateAdvisorSuccess({ advisor })
+						},
+						async (err) => {
+							await loading.dismiss();
+							// Change the toast message and show it
+							toast.message = `Error al editar la consultora "${advisor.name}": ${err.message}`;
+							// Present the toast
+							toast.present();
+
+							return AdvisorActions.updateAdvisorFailure({ error: err.message })
+						},
+					)
+				},
 			),
 		),
 	);
@@ -68,11 +138,44 @@ export class AdvisorEffects {
 	deleteAdvisor$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(AdvisorActions.deleteAdvisor),
-			exhaustMap(({ uid }) =>
-				this.advisorFS.deleteAdvisor(uid).then(
-					() => AdvisorActions.deleteAdvisorSuccess({ uid }),
-					(err) => AdvisorActions.deleteAdvisorFailure({ error: err.message }),
-				),
+			exhaustMap(
+				async ({ uid }) => {
+					// Create the loading
+					const loading = await this.loadingCtrl.create({
+						cssClass: 'my-custom-class',
+						message: 'Eliminando consultora. Espere, por favor.'
+					});
+					// Create the toast
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: `La consultora fue eliminada con éxito.`,
+						duration: 3000,
+						position: 'middle'
+					});
+
+					// Present the loading
+					await loading.present();
+
+					return this.advisorFS.deleteAdvisor(uid).then(
+						async () => {
+							// Hide the loading
+							await loading.dismiss();
+							// Show the toast
+							await toast.present();
+
+							return AdvisorActions.deleteAdvisorSuccess({ uid })
+						},
+						async (err) => {
+							await loading.dismiss();
+							// Change the toast message and show it
+							toast.message = `Error al eliminar la consultora: ${err.message}`;
+							// Present the toast
+							toast.present();
+
+							return AdvisorActions.deleteAdvisorFailure({ error: err.message })
+						},
+					)
+				},
 			),
 		),
 	);

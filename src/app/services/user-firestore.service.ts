@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, getDocs, doc, updateDoc, getDoc } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, doc, updateDoc, getDoc, query, where } from '@angular/fire/firestore';
+import * as _ from 'lodash';
+
 import { User } from 'src/app/store/user/user.model';
 
 @Injectable({ providedIn: 'root' })
@@ -12,6 +14,7 @@ export class UserFirestoreService {
 	async getUser(uid: string): Promise<Partial<User> | null> {
 		try {
 			const ref = doc(this.firestore, `users/${uid}`);
+			
 			const snap = await getDoc(ref);
 
 			if (!snap.exists()) return null;
@@ -24,10 +27,15 @@ export class UserFirestoreService {
 
 	// 🔎 Load users
 	async getUsersByRole(currentUser: User): Promise<User[]> {
-		const usersRef = collection(this.firestore, 'users');
-		const querySnapshot = await getDocs(usersRef);
+		const ref = collection(this.firestore, 'users');
+		
+		const q = query(ref, where('_on', '==', true));
+		
+		const snap = await getDocs(q);
+
 		const users: User[] = [];
-		querySnapshot.forEach((docSnap) => {
+
+		snap.forEach((docSnap) => {
 			const userData = docSnap.data() as User;
 			// Filtrar usuarios según rol del usuario actual
 			if (userData._on !== false) {
@@ -55,9 +63,13 @@ export class UserFirestoreService {
 
 	// ✏️ Update user
 	async updateUser(user: User): Promise<void> {
-		user._update = Date.now();
+		let updateUser = _.cloneDeep(user);
+
+		updateUser._update = Date.now();
+		
 		const ref = doc(this.firestore, `users/${user.uid}`);
-		await updateDoc(ref, { ...user });
+		
+		await updateDoc(ref, { ...updateUser });
 	}
 
 	// 🗑️ Delete user

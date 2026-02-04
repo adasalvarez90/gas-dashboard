@@ -71,8 +71,6 @@ export class AuthEffects {
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
-							// Initialize session
-							// setTimeout(() => location.reload(), 2000);
 							// Return the success action
 							return AuthActions.loginSuccess({ user });
 							// In case of error
