@@ -3,5 +3,6 @@ import { Metadata } from 'src/app/models/metadata.model';
 
 //
 export interface Tag extends Metadata {
-  name: string;
+	name: string;
+	level: number;
 }

@@ -28,6 +28,8 @@ export class TagsManageComponent {
 	form: FormGroup = this.fb.group({
 		uid: [''],
 		name: ['', [Validators.required]],
+		level: [1, [Validators.required, Validators.min(0)]],
+		description: [''],
 	});
 
 	constructor(
@@ -48,6 +50,7 @@ export class TagsManageComponent {
 			this.form.patchValue({
 				uid: this.tag.uid,
 				name: this.tag.name,
+				level: this.tag.level
 			});
 		} else {
 			this.form.reset();

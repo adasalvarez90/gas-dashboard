@@ -22,7 +22,7 @@ export class TagFirestoreService {
 		
 		const snap = await getDocs(q);
 
-		return snap.docs.map(d => d.data() as Tag);
+		return snap.docs.map(d => d.data() as Tag).sort((a, b) => a.level - b.level) ;
 	}
 
 	// ➕ Create tag
@@ -32,6 +32,7 @@ export class TagFirestoreService {
 		const newTag: Tag = {
 			uid,
 			name: tag.name,
+			level: tag.level,
 			_create: Date.now(),
 			_on: true,
 		};
