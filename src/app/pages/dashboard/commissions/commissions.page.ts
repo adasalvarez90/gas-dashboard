@@ -60,7 +60,7 @@ export class CommissionsPage implements OnInit {
 			if (!this.matrixLocal[role]) {
 				this.matrixLocal[role] = {};
 				if (!this.matrixLocal[role][source]) {
-					this.matrixLocal[role][source] = 0;
+					this.matrixLocal[role][source] = -1;
 				}
 			}
 
@@ -82,7 +82,7 @@ export class CommissionsPage implements OnInit {
 				if (!this.originalMatrix[role]) {
 					this.originalMatrix[role] = {};
 					if (!this.originalMatrix[role][source]) {
-						this.originalMatrix[role][source] = 0;
+						this.originalMatrix[role][source] = -1;
 					}
 				}
 
