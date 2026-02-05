@@ -17,82 +17,94 @@
 </ion-header>
 
 <ion-content>
-	<div class="scrollbar">
+	<div class="scrollbar team-page">
+
+		<!-- CONTADOR -->
 		@if ((advisors$ | async); as advisors) {
-		<ion-list-header>
-			<p>
-				@if ((search$ | async); as search) {
-				<span>
-					{{ advisors.length }} de {{ total$ | async }} {{ 'persona' | plural
-					:(total$ | async) :'s' :'' }} con <ion-text>"{{ search }}" </ion-text>
-				</span>
-				} @else {
-				<span>{{ advisors.length }} {{ 'persona' | plural :advisors.length :'s' :''
-					}}</span>
-				}
-			</p>
-		</ion-list-header>
+		<div class="counter">
+			@if ((search$ | async); as search) {
+			<span>
+				{{ advisors.length }} de {{ total$ | async }} personas con
+				<b>"{{ search }}"</b>
+			</span>
+			} @else {
+			<span>{{ advisors.length }} personas</span>
+			}
+		</div>
 		}
-		<ion-grid>
-			<ion-row>
-				<ion-col size="12">
-					<ion-list [inset]="true" class="ion-margin-bottom">
-						<ion-list-header>
-							<ion-label color="success"><b>CEO</b></ion-label>
-						</ion-list-header>
 
-						@for (advisor of ceos$ | async; track advisor.uid) {
-						<ion-item lines="inset" button (click)="openAdvisor(advisor)">
-							<ion-label>
-								<h2><b>{{ advisor.name }}</b></h2>
-								
-								@if (advisor.tags?.length) {
-								<p>Funciones: {{ advisor.tags.join(' | ') }}</p>
-								}
-							</ion-label>
-						</ion-item>
+		<!-- CEO -->
+		<div class="section">
+			<div class="section-title ceo">CEO</div>
+
+			@for (advisor of ceos$ | async; track advisor.uid) {
+			<div class="person-card ceo-card" (click)="openAdvisor(advisor)">
+				<div class="avatar">{{ advisor.name[0] }}</div>
+
+				<div class="person-info">
+					<div class="name">{{ advisor.name }}</div>
+
+					@if (advisor.tags?.length) {
+					<div class="tags">
+						@for(tag of advisor.tags; track tag) {
+						<span class="tag role">{{ tag }}</span>
 						}
-					</ion-list>
-					<ion-list [inset]="true" class="ion-margin-bottom">
-						<ion-list-header>
-							<ion-label color="primary"><b>Gerentes</b></ion-label>
-						</ion-list-header>
+					</div>
+					}
+				</div>
+			</div>
+			}
+		</div>
 
-						@for (advisor of managers$ | async; track advisor.uid) {
-						<ion-item lines="inset" button (click)="openAdvisor(advisor)">
-							<ion-label>
-								<h2><b>{{ advisor.name }}</b></h2>
+		<!-- GERENTES -->
+		<div class="section">
+			<div class="section-title managers">Gerentes</div>
 
-								@if (advisor.tags?.length) {
-								<p>Funciones: {{ advisor.tags.join(' | ') }}</p>
-								}
-							</ion-label>
-						</ion-item>
+			@for (advisor of managers$ | async; track advisor.uid) {
+			<div class="person-card" (click)="openAdvisor(advisor)">
+				<div class="avatar manager">{{ advisor.name[0] }}</div>
+
+				<div class="person-info">
+					<div class="name">{{ advisor.name }}</div>
+
+					@if (advisor.tags?.length) {
+					<div class="tags">
+						@for(tag of advisor.tags; track tag) {
+						<span class="tag role">{{ tag }}</span>
 						}
-					</ion-list>
-					<ion-list [inset]="true">
-						<ion-list-header>
-							<ion-label color="tertiary"><b>Consultoras</b></ion-label>
-						</ion-list-header>
+					</div>
+					}
+				</div>
+			</div>
+			}
+		</div>
 
-						@for (advisor of consultants$ | async; track advisor.uid) {
-						<ion-item lines="inset" button (click)="openAdvisor(advisor)">
-							<ion-label>
-								<h2><b>{{ advisor.name }}</b></h2>
+		<!-- CONSULTORAS -->
+		<div class="section">
+			<div class="section-title consultants">Consultoras</div>
 
-								@if (advisor.tags?.length) {
-								<p>Funciones: {{ advisor.tags.join(' | ') }}</p>
-								}
+			@for (advisor of consultants$ | async; track advisor.uid) {
+			<div class="person-card" (click)="openAdvisor(advisor)">
+				<div class="avatar consultant">{{ advisor.name[0] }}</div>
 
-								@if (advisor.managerId && (managersDic$ | async); as managersDic) {
-								<p>Gerente: {{ managersDic[advisor.managerId]?.name }}</p>
-								}
-							</ion-label>
-						</ion-item>
+				<div class="person-info">
+					<div class="name">{{ advisor.name }}</div>
+
+					<div class="meta">
+						@if (advisor.managerId && (managersDic$ | async); as managersDic) {
+						<span class="tag manager">👤 {{ managersDic[advisor.managerId]?.name }}</span>
 						}
-					</ion-list>
-				</ion-col>
-			</ion-row>
-		</ion-grid>
+
+						@if (advisor.tags?.length) {
+						@for(tag of advisor.tags; track tag) {
+						<span class="tag role">{{ tag }}</span>
+						}
+						}
+					</div>
+				</div>
+			</div>
+			}
+		</div>
+
 	</div>
 </ion-content>

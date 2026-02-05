@@ -1,0 +1,115 @@
+.team-page {
+	padding: 16px;
+}
+
+.counter {
+	font-size: 13px;
+	opacity: 0.7;
+	margin-bottom: 16px;
+}
+
+/* SECCIONES */
+.section {
+	margin-bottom: 28px;
+}
+
+.section-title {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	margin-bottom: 12px;
+	opacity: 0.6;
+}
+
+.section-title.ceo {
+	color: var(--ion-color-success);
+}
+
+.section-title.managers {
+	color: var(--ion-color-primary);
+}
+
+.section-title.consultants {
+	color: var(--ion-color-tertiary);
+}
+
+/* CARD PERSONA */
+.person-card {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 14px;
+	border-radius: 14px;
+	margin-bottom: 10px;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	transition: 0.2s ease;
+}
+
+.person-card:hover {
+	transform: translateY(-2px);
+	background: rgba(var(--ion-color-primary-rgb), 0.08);
+	border-color: rgba(var(--ion-color-primary-rgb), 0.3);
+}
+
+/* AVATAR */
+.avatar {
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	background: linear-gradient(135deg, #7c3aed, #2563eb);
+	font-size: 16px;
+}
+
+.avatar.manager {
+	background: linear-gradient(135deg, #2563eb, #06b6d4);
+}
+
+.avatar.consultant {
+	background: linear-gradient(135deg, #9333ea, #ec4899);
+}
+
+/* INFO */
+.person-info {
+	flex: 1;
+}
+
+.name {
+	font-weight: 600;
+	font-size: 15px;
+}
+
+.meta,
+.tags {
+	margin-top: 6px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+/* TAGS */
+.tag {
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 500;
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.tag.role {
+	background: rgba(var(--ion-color-primary-rgb), 0.15);
+}
+
+.tag.manager {
+	background: rgba(var(--ion-color-tertiary-rgb), 0.18);
+}
+
+/* CEO HIGHLIGHT */
+.ceo-card {
+	background: rgba(var(--ion-color-success-rgb), 0.12);
+	border-color: rgba(var(--ion-color-success-rgb), 0.4);
+}
