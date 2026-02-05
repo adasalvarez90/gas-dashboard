@@ -91,11 +91,9 @@
 	grid-template-columns: 1.5fr repeat(4, 1fr);
 	align-items: center;
 
-	background: linear-gradient(
-		90deg,
-		rgba(var(--ion-color-tertiary-rgb), 0.15),
-		rgba(var(--ion-color-tertiary-rgb), 0.05)
-	);
+	background: linear-gradient(90deg,
+			rgba(var(--ion-color-tertiary-rgb), 0.15),
+			rgba(var(--ion-color-tertiary-rgb), 0.05));
 
 	border-radius: 14px;
 	margin: 0 8px 12px 8px;
@@ -115,15 +113,77 @@
 	grid-template-columns: 1.5fr repeat(4, 1fr);
 	align-items: center;
 
-	background: linear-gradient(
-		90deg,
-		rgba(var(--ion-color-primary-rgb), 0.15),
-		rgba(var(--ion-color-primary-rgb), 0.05)
-	);
+	background: linear-gradient(90deg,
+			rgba(var(--ion-color-primary-rgb), 0.15),
+			rgba(var(--ion-color-primary-rgb), 0.05));
 
 	border-radius: 14px;
 	margin: 0 8px 12px 8px;
 	border: 1px solid rgba(var(--ion-color-primary-rgb), 0.25);
 	font-weight: 700;
 	box-shadow: 0 2px 8px rgba(var(--ion-color-primary-rgb), 0.15);
+}
+
+// -------------------------------------------------------------------
+
+.save-btn {
+	--background: linear-gradient(90deg,
+			var(--ion-color-primary),
+			#5da9ff);
+
+	--color: white;
+	--border-radius: 14px;
+
+	font-weight: 700;
+	letter-spacing: 0.5px;
+
+	height: 52px;
+	margin-top: 20px;
+
+	box-shadow:
+		0 4px 14px rgba(var(--ion-color-primary-rgb), 0.4),
+		0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+
+	transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+/* Hover (desktop) */
+.save-btn:hover {
+	transform: translateY(-2px);
+	box-shadow:
+		0 6px 18px rgba(var(--ion-color-primary-rgb), 0.5),
+		0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+	filter: brightness(1.05);
+}
+
+/* Click */
+.save-btn:active {
+	transform: translateY(0px) scale(0.98);
+	box-shadow:
+		0 2px 8px rgba(var(--ion-color-primary-rgb), 0.4);
+}
+
+/* Disabled */
+.save-btn[disabled] {
+	--background: rgba(var(--ion-color-medium-rgb), 0.3);
+	box-shadow: none;
+	opacity: 0.6;
+}
+
+.save-btn.unsaved {
+	animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+	0% {
+		box-shadow: 0 0 0 rgba(var(--ion-color-primary-rgb), 0.4);
+	}
+
+	50% {
+		box-shadow: 0 0 18px rgba(var(--ion-color-primary-rgb), 0.6);
+	}
+
+	100% {
+		box-shadow: 0 0 0 rgba(var(--ion-color-primary-rgb), 0.4);
+	}
 }

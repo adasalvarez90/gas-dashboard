@@ -50,7 +50,20 @@ export class CommissionsPage implements OnInit {
 
 	constructor(private commissionFacade: CommissionFacade) { }
 
-	ngOnInit() {}
+	ngOnInit() { }
+
+	get hasUnsavedChanges(): boolean {
+		if (!this.matrixLocal || !this.originalMatrix) return false;
+
+		for (const role of Object.keys(this.matrixLocal)) {
+			for (const source of Object.keys(this.matrixLocal[role])) {
+				if (this.matrixLocal[role][source] !== this.originalMatrix[role]?.[source]) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
 	updateValue(role: string, source: string, value: number) {
 		const num = Number(value);
@@ -70,6 +83,7 @@ export class CommissionsPage implements OnInit {
 	}
 
 	isModified(role: string, source: string): boolean {
+
 		return this.matrixLocal?.[role]?.[source] !== this.originalMatrix?.[role]?.[source];
 	}
 
