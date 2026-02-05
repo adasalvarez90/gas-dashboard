@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
+import { map } from 'rxjs/operators';
 // Components
 import { AdvisorsManageComponent } from 'src/app/components/advisors-manage/advisors-manage.component';
 // Facades
@@ -15,7 +16,19 @@ import { Advisor } from 'src/app/store/advisor/advisor.model'
 })
 export class AdvisorsPage implements OnInit {
 	advisors$ = this.advisorFacade.advisors$;
+	managersDic$ = this.advisorFacade.managerEntities$;
+	// Categorized advisors
+	ceos$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.hierarchyLevel === 'CEO'))
+	);
 
+	managers$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.hierarchyLevel === 'MANAGER'))
+	);
+
+	consultants$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.hierarchyLevel === 'CONSULTANT'))
+	);
 	// Search term
 	search$ = this.advisorFacade.search$;
 	total$ = this.advisorFacade.total$;
@@ -25,7 +38,10 @@ export class AdvisorsPage implements OnInit {
 		private modalCtrl: ModalController
 	) { }
 
-	ngOnInit() { }
+	ngOnInit() {
+		// subscribe to advisors
+		this.advisors$.subscribe();
+	}
 
 	filter(searchTerm: any) {
 		// dispatch search term

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { LoadingController, ToastController } from '@ionic/angular';
 //NgRx
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { exhaustMap, switchMap, map, withLatestFrom } from 'rxjs/operators';
+import { exhaustMap, switchMap, map, withLatestFrom, tap } from 'rxjs/operators';
 
 import * as AdvisorActions from './advisor.actions';
 import * as AuthActions from '../auth/auth.actions';
@@ -65,13 +65,13 @@ export class AdvisorEffects {
 					await loading.present();
 
 					return this.advisorFS.createAdvisor(advisor).then(
-						async () => {
+						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return AdvisorActions.createAdvisorSuccess({ advisor })
+							return AdvisorActions.createAdvisorSuccess({ advisor: response })
 						},
 						async (err) => {
 							await loading.dismiss();
@@ -111,13 +111,13 @@ export class AdvisorEffects {
 					await loading.present();
 
 					return this.advisorFS.updateAdvisor(advisor).then(
-						async () => {
+						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return AdvisorActions.updateAdvisorSuccess({ advisor })
+							return AdvisorActions.updateAdvisorSuccess({ advisor: response })
 						},
 						async (err) => {
 							await loading.dismiss();

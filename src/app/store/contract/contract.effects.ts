@@ -64,13 +64,13 @@ export class ContractEffects {
 					await loading.present();
 
 					return this.contractFS.createContract(contract).then(
-						async () => {
+						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return ContractActions.createContractSuccess({ contract })
+							return ContractActions.createContractSuccess({ contract: response })
 						},
 						async (err) => {
 							await loading.dismiss();
@@ -110,13 +110,13 @@ export class ContractEffects {
 					await loading.present();
 
 					return this.contractFS.updateContract(contract).then(
-						async () => {
+						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return ContractActions.updateContractSuccess({ contract })
+							return ContractActions.updateContractSuccess({ contract: response })
 						},
 						async (err) => {
 							await loading.dismiss();

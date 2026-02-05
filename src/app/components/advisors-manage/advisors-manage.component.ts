@@ -24,10 +24,14 @@ import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 })
 export class AdvisorsManageComponent {
 	advisor$ = this.advisorFacade.selectedAdvisor$;
+	managers$ = this.advisorFacade.managers$;
 	advisor: fromAdvisor.Advisor;
 	form: FormGroup = this.fb.group({
 		uid: [''],
-		name: ['', [Validators.required]]
+		name: ['', [Validators.required]],
+		hierarchyLevel: ['', [Validators.required]],
+		tags: [[], []],
+		managerId: [null, []],
 	});
 
 	constructor(
@@ -48,10 +52,29 @@ export class AdvisorsManageComponent {
 			this.form.patchValue({
 				uid: this.advisor.uid,
 				name: this.advisor.name,
+				hierarchyLevel: this.advisor.hierarchyLevel,
+				tags: this.advisor.tags,
+				managerId: this.advisor.managerId,
 			});
 		} else {
 			this.form.reset();
 		}
+
+		// Handle hierarchy level changes
+		this.form.get('hierarchyLevel')?.valueChanges.subscribe(level => {
+			// If not consultant, clear managerId
+			if (level !== 'CONSULTANT') {
+				// Clear validator
+				this.form.get('managerId')?.clearValidators();
+				this.form.get('managerId')?.updateValueAndValidity();
+				// Clear managerId
+				this.form.get('managerId')?.setValue(null);
+			} else {
+				// Set validator
+				this.form.get('managerId')?.setValidators([Validators.required]);
+				this.form.get('managerId')?.updateValueAndValidity();
+			}
+		});
 
 		// Detect changes
 		this.ref.detectChanges();
@@ -64,25 +87,10 @@ export class AdvisorsManageComponent {
 	async create() {
 		// Get the form value
 		const form = this.form.value;
-		// Create the update alert
-		const prompt = await this.alertCtrl.create({
-			header: `Crear consultora`,
-			message: `¿Desea crear la consultora ${form.name}?`,
-			buttons: [{
-				text: 'No',
-				role: 'cancel'
-			}, {
-				text: 'Sí',
-				handler: () => {
-					// Create new user
-					this.advisorFacade.createAdvisor(form);
-					// Exit
-					this.close();
-				}
-			}]
-		});
-		// Present the prompt
-		await prompt.present();
+		// Create new user
+		this.advisorFacade.createAdvisor(form);
+		// Exit
+		this.close();
 	}
 
 	async update() {

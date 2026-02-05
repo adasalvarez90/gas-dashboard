@@ -49,7 +49,7 @@ export class InviteEffects {
 			ofType(InviteActions.createInvite),
 			exhaustMap(({ invite }) =>
 				this.inviteFS.createInvite(invite).then(
-					() => InviteActions.createInviteSuccess({ invite }),
+					(response) => InviteActions.createInviteSuccess({ invite: response }),
 					(err) => InviteActions.createInviteFailure({ error: err.message }),
 				),
 			),

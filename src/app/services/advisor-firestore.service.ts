@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where } from '@angular/fire/firestore';
 import * as _ from 'lodash';
+import { map } from 'rxjs/operators';
 
 import { Advisor } from 'src/app/store/advisor/advisor.model';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,7 +22,18 @@ export class AdvisorFirestoreService {
 		
 		const snap = await getDocs(q);
 
-		return snap.docs.map(d => d.data() as Advisor);
+		const advisors = snap.docs.map(d => d.data() as Advisor);
+
+		// Sort advisors by level first 'CEO' then 'MAMANGER' AND LAST 'CONSULTANT' and then by _create date
+		advisors.sort((a, b) => {
+			const levelOrder = { 'CEO': 1, 'MANAGER': 2, 'CONSULTANT': 3 };
+			if (levelOrder[a.hierarchyLevel] !== levelOrder[b.hierarchyLevel]) {
+				return levelOrder[a.hierarchyLevel] - levelOrder[b.hierarchyLevel];
+			}
+			return (a._create || 0) - (b._create || 0);
+		});
+
+		return advisors;
 	}
 
 	// ➕ Create advisor
@@ -31,6 +43,9 @@ export class AdvisorFirestoreService {
 		const newAdvisor: Advisor = {
 			uid,
 			name: advisor.name,
+			hierarchyLevel: advisor.hierarchyLevel,
+			tags: advisor.tags,
+			managerId: advisor.managerId,
 			_create: Date.now(),
 			_on: true,
 		};
@@ -42,13 +57,15 @@ export class AdvisorFirestoreService {
 	}
 
 	// ✏️ Update advisor
-	async updateAdvisor(advisor: Advisor): Promise<void> {
+	async updateAdvisor(advisor: Advisor): Promise<Advisor> {
 		let updateAdvisor = _.cloneDeep(advisor);
 		
 		updateAdvisor._update = Date.now();
 
 		const ref = doc(this.firestore, this.collectionName, advisor.uid);
 		await updateDoc(ref, { ...updateAdvisor });
+
+		return updateAdvisor;
 	}
 
 	// 🗑️ Delete advisor

@@ -14,7 +14,7 @@ export const advisorReducer = createReducer(
 
 	on(AdvisorsActions.selectAdvisor, (state, { advisor }) => ({ ...state, selected: advisor, })),
 
-	on(AdvisorsActions.createAdvisorSuccess, (state, { advisor }) => adapter.addOne(advisor, state)),
+	on(AdvisorsActions.createAdvisorSuccess, (state, { advisor }) => adapter.addOne(advisor, { ...state, selected: advisor, loading: false, })),
 
 	on(AdvisorsActions.updateAdvisorSuccess, (state, { advisor }) => adapter.updateOne({ id: advisor.uid, changes: advisor, }, { ...state, selected: advisor, loading: false, })),
 

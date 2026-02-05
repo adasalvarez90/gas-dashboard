@@ -62,13 +62,15 @@ export class ContractFirestoreService {
 	}
 
 	// ✏️ Update contract
-	async updateContract(contract: Contract): Promise<void> {
+	async updateContract(contract: Contract): Promise<Contract> {
 		let updateContract = _.cloneDeep(contract);
 
 		updateContract._update = Date.now();
 		
 		const ref = doc(this.firestore, this.collectionName, contract.uid);
 		await updateDoc(ref, { ...updateContract });
+		
+		return updateContract;
 	}
 
 	// 🗑️ Delete contract

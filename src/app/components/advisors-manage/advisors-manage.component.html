@@ -8,16 +8,16 @@
 		<ion-title>{{ (advisor) ? 'Editar' : 'Crear' }} asesor</ion-title>
 		<ion-buttons slot="end">
 			@if (advisor) {
-				<ion-button [disabled]="!form?.valid" (click)="update()">
-					<ion-icon slot="icon-only" name="save"></ion-icon>
-				</ion-button>
-				<ion-button (click)="remove()">
-					<ion-icon slot="icon-only" name="trash"></ion-icon>
-				</ion-button>
+			<ion-button [disabled]="!form?.valid" (click)="update()">
+				<ion-icon slot="icon-only" name="save"></ion-icon>
+			</ion-button>
+			<ion-button (click)="remove()">
+				<ion-icon slot="icon-only" name="trash"></ion-icon>
+			</ion-button>
 			} @else {
-				<ion-button [disabled]="!form?.valid" (click)="create()">
-					<ion-icon slot="icon-only" name="save"></ion-icon>
-				</ion-button>
+			<ion-button [disabled]="!form?.valid" (click)="create()">
+				<ion-icon slot="icon-only" name="save"></ion-icon>
+			</ion-button>
 			}
 		</ion-buttons>
 	</ion-toolbar>
@@ -31,11 +31,39 @@
 					<ion-col size="12" size-md="12">
 						<ion-card>
 							<ion-card-header>
-								<ion-card-title>Datos personales</ion-card-title>
+								<ion-card-title>Datos</ion-card-title>
 							</ion-card-header>
 							<ion-card-content>
 								<ion-item>
-									<ion-input label="Nombre" label-placement="floating" formControlName="name" type="text"></ion-input>
+									<ion-input label="Nombre" label-placement="floating" formControlName="name"
+										type="text"></ion-input>
+								</ion-item>
+								<ion-item>
+									<ion-label>Nivel</ion-label>
+									<ion-select formControlName="hierarchyLevel" placeholder="Seleccionar nivel">
+										<ion-select-option value="CONSULTANT">CONSULTORA</ion-select-option>
+										<ion-select-option value="MANAGER">GERENTE</ion-select-option>
+										<ion-select-option value="CEO">CEO</ion-select-option>
+									</ion-select>
+								</ion-item>
+								@if (form.get('hierarchyLevel')?.value === 'CONSULTANT') {
+								<ion-item>
+									<ion-label>Gerente</ion-label>
+									<ion-select formControlName="managerId" placeholder="Seleccionar gerente">
+										@for((manager of managers$ | async); track manager.name; let i = $index) {
+										<ion-select-option [value]="manager.uid">{{manager.name }}</ion-select-option>
+										}
+									</ion-select>
+								</ion-item>
+								}
+								<ion-item>
+									<ion-label>Funciones</ion-label>
+									<ion-select formControlName="tags" multiple="true"
+										placeholder="Seleccionar funciones">
+										<ion-select-option value="KAM">KAM</ion-select-option>
+										<ion-select-option value="SM">Dirección de Ventas</ion-select-option>
+										<ion-select-option value="OS">Equipo operativo</ion-select-option>
+									</ion-select>
 								</ion-item>
 							</ion-card-content>
 						</ion-card>

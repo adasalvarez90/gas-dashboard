@@ -8,6 +8,8 @@ import { Advisor } from './advisor.model';
 export class AdvisorFacade {
 	advisors$ = this.store.select(fromAdvisor.selectFiltered);
 	entities$ = this.store.select(fromAdvisor.selectEntities);
+	managers$ = this.store.select(fromAdvisor.selectManagers);
+	managerEntities$ = this.store.select(fromAdvisor.selectManagersEntities);
 	selectedAdvisor$ = this.store.select(fromAdvisor.selectedAdvisor);
 	loading$ = this.store.select(fromAdvisor.selectLoading);
 	search$ = this.store.select(fromAdvisor.selectSearch);
