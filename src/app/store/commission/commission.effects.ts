@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { LoadingController, ToastController } from '@ionic/angular';
 //NgRx
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { exhaustMap, switchMap, map, withLatestFrom, tap } from 'rxjs/operators';
+import { exhaustMap, switchMap, map, withLatestFrom } from 'rxjs/operators';
 
 import * as CommissionActions from './commission.actions';
 import * as AuthActions from '../auth/auth.actions';
@@ -58,7 +58,7 @@ export class CommissionEffects {
 						color: 'primary',
 						message: `Las comisiones fueron editadas con éxito.`,
 						duration: 3000,
-						position: 'middle'
+						position: 'bottom'
 					});
 
 					// Present the loading

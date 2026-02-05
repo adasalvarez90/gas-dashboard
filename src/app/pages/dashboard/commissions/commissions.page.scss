@@ -9,6 +9,7 @@
 
 .row {
   display: grid;
+  background: rgba(var(--ion-color-medium-rgb), 0.05);
   grid-template-columns: 1.5fr repeat(4, 1fr);
 }
 
@@ -36,7 +37,7 @@
 }
 
 .ceo {
-  background: rgba(var(--ion-color-danger-rgb), 0.08);
+  background: rgba(var(--ion-color-success-rgb), 0.08);
 }
 
 
