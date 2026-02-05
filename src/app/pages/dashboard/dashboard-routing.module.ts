@@ -51,8 +51,17 @@ const routes: Routes = [
 					roles: [0, 1], // Support and Admin
 				},
 			},
+			{
+				path: 'commissions',
+				loadChildren: () => import('./commissions/commissions.module').then(m => m.CommissionsPageModule),
+				canActivate: [RoleGuard],
+				data: {
+					roles: [0, 1], // Support and Admin
+				},
+			},
 		],
 	},
+
 
 ];
 

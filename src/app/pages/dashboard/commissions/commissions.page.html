@@ -1,0 +1,70 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-menu-button></ion-menu-button>
+		</ion-buttons>
+		<ion-title>Esquema de comisiones</ion-title>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<div class="scrollbar">
+		<ion-grid fixed>
+			<ion-row>
+				<ion-col size="12">
+					<ion-card-content *ngIf="matrix$ | async as matrix">
+			
+						<div class="commission-table">
+			
+							<!-- HEADER -->
+							<div class="row header">
+								<div class="cell role">Equipo</div>
+								@for(source of sourcesOrder; track source.key) {
+								<div class="cell">{{ source.label }}</div>
+								}
+							</div>
+			
+							<!-- ROWS -->
+							@for(role of rolesOrder; track role.key) {
+							<div class="row" [class.highlight]="role.key === 'CONSULTANT'" [class.ceo]="role.key === 'CEO'">
+			
+								<div class="cell role">
+									{{ role.label }}
+								</div>
+			
+								@for(source of sourcesOrder; track source.key) {
+								<div class="cell editable">
+			
+									<ion-input type="number" min="0" max="100" step="0.01" fill="outline"
+										[ngModel]="matrix[role.key]?.[source.key]"
+										(ngModelChange)="updateValue(role.key, source.key, $event)"
+										[class.modified]="isModified(role.key, source.key)"></ion-input>
+			
+								</div>
+								}
+							</div>
+							}
+							
+							<!-- Totals -->
+							<div class="row totals">
+								<div class="cell role"></div>
+								@for(source of sourcesOrder; track source.key) {
+								<div class="cell">
+									{{ calculateTotalForSource(source.key) | number:'1.2-2' }}%
+								</div>
+								}
+							</div>
+						</div>
+			
+						<ion-button expand="block" color="primary" (click)="saveMatrix()">
+							Guardar cambios
+						</ion-button>
+			
+					</ion-card-content>
+				</ion-col>
+			</ion-row>
+		</ion-grid>
+
+
+	</div>
+</ion-content>

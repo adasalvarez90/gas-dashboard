@@ -1,0 +1,66 @@
+.commission-table {
+  display: grid;
+  grid-auto-rows: minmax(48px, auto);
+  border: 1px solid var(--ion-color-light);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(4, 1fr);
+}
+
+.cell {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--ion-color-light);
+  border-right: 1px solid var(--ion-color-light);
+}
+
+.cell.role {
+  justify-content: flex-start;
+  font-weight: 600;
+}
+
+.header {
+  background: var(--ion-color-light);
+  font-weight: 700;
+}
+
+.highlight {
+  background: rgba(var(--ion-color-primary-rgb), 0.08);
+}
+
+.ceo {
+  background: rgba(var(--ion-color-danger-rgb), 0.08);
+}
+
+
+.editable ion-input {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.editable ion-input.modified {
+  --background: rgba(var(--ion-color-warning-rgb), 0.15);
+  --border-color: var(--ion-color-warning);
+}
+
+.editable ion-input:focus {
+  --border-color: var(--ion-color-primary);
+  --box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb), 0.2);
+}
+
+.cell {
+  transition: background 0.2s ease;
+}
+
+.row:hover .cell {
+  background: rgba(var(--ion-color-medium-rgb), 0.04);
+}
