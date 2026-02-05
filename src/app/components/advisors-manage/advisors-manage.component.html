@@ -1,24 +1,22 @@
 <ion-header>
 	<ion-toolbar>
-		<ion-buttons slot="start">
-			<ion-button (click)="close()">
-				<ion-icon name="close-outline"></ion-icon>
-			</ion-button>
-		</ion-buttons>
 		<ion-title>{{ (advisor) ? 'Editar' : 'Crear' }} asesor</ion-title>
 		<ion-buttons slot="end">
 			@if (advisor) {
-			<ion-button [disabled]="!form?.valid" (click)="update()">
-				<ion-icon slot="icon-only" name="save"></ion-icon>
-			</ion-button>
-			<ion-button (click)="remove()">
-				<ion-icon slot="icon-only" name="trash"></ion-icon>
-			</ion-button>
+				<ion-button [disabled]="!form?.valid" (click)="update()">
+					<ion-icon slot="icon-only" name="save"></ion-icon>
+				</ion-button>
+				<ion-button (click)="remove()">
+					<ion-icon slot="icon-only" name="trash"></ion-icon>
+				</ion-button>
 			} @else {
-			<ion-button [disabled]="!form?.valid" (click)="create()">
-				<ion-icon slot="icon-only" name="save"></ion-icon>
-			</ion-button>
+				<ion-button [disabled]="!form?.valid" (click)="create()">
+					<ion-icon slot="icon-only" name="save"></ion-icon>
+				</ion-button>
 			}
+			<ion-button (click)="close()">
+				<ion-icon slot="icon-only" name="close-outline"></ion-icon>
+			</ion-button>
 		</ion-buttons>
 	</ion-toolbar>
 </ion-header>
