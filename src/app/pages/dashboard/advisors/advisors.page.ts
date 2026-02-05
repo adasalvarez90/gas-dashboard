@@ -54,7 +54,7 @@ export class AdvisorsPage implements OnInit {
 		// Modal
 		const modal = await this.modalCtrl.create({
 			component: AdvisorsManageComponent,
-			componentProps: {},
+			cssClass: 'glass-modal',
 			backdropDismiss: false,
 		});
 

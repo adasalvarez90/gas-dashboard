@@ -13,20 +13,20 @@ export class CommissionsPage implements OnInit {
 	commissions$ = this.commissionFacade.commissions$;
 
 	sourcesOrder = [
-		{ key: 'COMMUNITY', label: 'Comunidad' },
-		{ key: 'WARM_NETWORK', label: 'Red Calida' },
-		{ key: 'SELF_FUNDED', label: 'Autofinanciado' },
-		{ key: 'REFERRER', label: 'Referente' }
+		{ key: 'COMMUNITY', label: 'COMUNIDAD' },
+		{ key: 'WARM_NETWORK', label: 'RED CALIDA' },
+		{ key: 'SELF_FUNDED', label: 'AUTOFINANCIADO' },
+		{ key: 'REFERRER', label: 'REFERENTE' }
 	];
 
 	rolesOrder = [
 		{ key: 'KAM', label: 'KAM' },
-		{ key: 'CONSULTANT', label: 'Consultora' },
-		{ key: 'MANAGER', label: 'Gerente' },
-		{ key: 'SM', label: 'Dirección de ventas' },
-		{ key: 'OS', label: 'Equipo operativo' },
+		{ key: 'CONSULTANT', label: 'CONSULTORA' },
+		{ key: 'MANAGER', label: 'GERENTE' },
+		{ key: 'SM', label: 'DIRECCIÓN DE VENTAS' },
+		{ key: 'OS', label: 'EQUIPO OPERATIVO' },
 		{ key: 'CEO', label: 'CEO' },
-		{ key: 'REFERRAL', label: 'Referidora' }
+		{ key: 'REFERRAL', label: 'REFERIDORA' }
 	];
 
 	matrix$ = this.commissions$.pipe(

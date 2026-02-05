@@ -9,7 +9,8 @@
     gap: 16px;
     padding: 20px;
     border-radius: 16px;
-    margin-bottom: 18px;
+    margin: 18px;
+    // margin-bottom: 18px;
     background: linear-gradient(135deg, #1e1e2f, #12121c);
     border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -17,13 +18,15 @@
 .avatar-big {
     width: 64px;
     height: 64px;
-    border-radius: 50%;
-    font-size: 22px;
-    font-weight: 600;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    font-size: 26px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .profile-info {
@@ -42,7 +45,8 @@
 
 /* TARJETAS */
 .card {
-    background: rgba(255, 255, 255, 0.03);
+    margin: 18px;
+    background: var(--ion-item-background);
     border-radius: 14px;
     padding: 16px;
     margin-bottom: 16px;

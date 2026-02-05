@@ -35,3 +35,23 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+
+/* BACKDROP (fondo detrás del modal) */
+ion-modal.glass-modal::part(backdrop) {
+  background: rgba(8, 12, 20, 0.35);
+  backdrop-filter: blur(14px);
+}
+
+/* CONTENEDOR PRINCIPAL DEL MODAL */
+ion-modal.glass-modal::part(content) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 22px;
+}
+
+/* FONDO INTERNO */
+ion-modal.glass-modal ion-content {
+  --background: rgba(var(--ion-background-color-rgb), 0.65) !important; /* ← nivel pro */
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
