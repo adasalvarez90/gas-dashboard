@@ -23,9 +23,9 @@ export class DashboardPage implements OnInit {
 			name: 'Admin',
 			role: 1,
 			pages: [
-				{ name: 'Equipo Futuro es Femenino', url: '/dashboard/advisors', icon: 'people', role: 1, hidden: false, badge: '' },
-				{ name: 'Esquema de comisiones', url: '/dashboard/commissions', icon: 'people', role: 1, hidden: false, badge: '' },
-				{ name: 'Contratos', url: '/dashboard/contracts', icon: 'people', role: 1, hidden: false, badge: '' },
+				{ name: 'Equipo Futuro es Femenino', url: '/dashboard/advisors', icon: 'female', role: 1, hidden: false, badge: '' },
+				{ name: 'Esquema de comisiones', url: '/dashboard/commissions', icon: 'cash', role: 1, hidden: false, badge: '' },
+				{ name: 'Contratos', url: '/dashboard/contracts', icon: 'briefcase', role: 1, hidden: false, badge: '' },
 				{ name: 'Invitaciones', url: '/dashboard/invites', icon: 'people', role: 1, hidden: true, badge: '' },
 			]
 		}

@@ -114,14 +114,14 @@
 	align-items: center;
 
 	background: linear-gradient(90deg,
-			rgba(var(--ion-color-primary-rgb), 0.15),
-			rgba(var(--ion-color-primary-rgb), 0.05));
+			rgba(var(--ion-color-secondary-rgb), 0.15),
+			rgba(var(--ion-color-secondary-rgb), 0.05));
 
 	border-radius: 14px;
 	margin: 0 8px 12px 8px;
-	border: 1px solid rgba(var(--ion-color-primary-rgb), 0.25);
+	border: 1px solid rgba(var(--ion-color-secondary-rgb), 0.25);
 	font-weight: 700;
-	box-shadow: 0 2px 8px rgba(var(--ion-color-primary-rgb), 0.15);
+	box-shadow: 0 2px 8px rgba(var(--ion-color-secondary-rgb), 0.15);
 }
 
 // -------------------------------------------------------------------
