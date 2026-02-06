@@ -4,7 +4,7 @@ import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 
 // RxJS
 import { lastValueFrom } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { take, tap } from 'rxjs/operators';
 
 // Store
 import * as fromContract from 'src/app/store/contract';
@@ -20,9 +20,16 @@ import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ManagePage implements OnInit {
-	advisors$ = this.advisorFacade.advisors$;
+	advisors$ = this.advisorFacade.advisors$.pipe(
+		tap(advisors => {
+			this.advisorsSnapshot = advisors;
+		})
+	);
 	contract$ = this.contractFacade.selectedContract$;
 	contract: fromContract.Contract | null;
+
+	advisorsSnapshot: any[] = [];
+	selectedAdvisorName: string | null = null;
 
 	form: FormGroup = this.fb.group({
 		uid: [''],
@@ -74,6 +81,12 @@ export class ManagePage implements OnInit {
 		} else {
 			this.form.reset();
 		}
+
+		this.form.get('advisorUid')?.valueChanges.subscribe(uid => {
+			console.log('Selected advisor UID:', uid);
+			const advisor = this.advisorsSnapshot.find(a => a.uid === uid);
+			this.selectedAdvisorName = advisor ? advisor.name : null;
+		});
 
 		this.ref.detectChanges();
 	}

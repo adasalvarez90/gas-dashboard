@@ -1,3 +1,78 @@
-.w-100 {
-    width: 100%;
+.contract-manage {
+	padding: 16px;
+}
+
+.contract-hero {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 20px;
+	margin-bottom: 24px;
+	border-radius: 20px;
+	background: linear-gradient(135deg, rgba(60, 90, 255, 0.2), rgba(0, 0, 0, 0.4));
+	backdrop-filter: blur(16px);
+}
+
+.avatar {
+	width: 56px;
+	height: 56px;
+	border-radius: 16px;
+	background: var(--ion-color-primary);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	font-size: 22px;
+	color: #fff;
+}
+
+.hero-info {
+	flex: 1;
+}
+
+.hero-info .title {
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.hero-info .subtitle {
+	font-size: 13px;
+	opacity: 0.7;
+}
+
+.section {
+	margin-bottom: 28px;
+	padding: 20px;
+	border-radius: 20px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.section.highlight {
+	background: rgba(var(--ion-color-primary-rgb), 0.08);
+}
+
+.section-title {
+	font-weight: 700;
+	font-size: 14px;
+	letter-spacing: 0.05em;
+	opacity: 0.7;
+	margin-bottom: 16px;
+}
+
+.grid-2 {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16px;
+}
+
+.grid-4 {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px;
+}
+
+ion-item {
+	--background: transparent;
+	--border-radius: 12px;
 }
