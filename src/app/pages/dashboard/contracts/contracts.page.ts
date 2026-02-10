@@ -42,7 +42,7 @@ export class ContractsPage implements OnInit {
 		
 		const modal = await this.modalCtrl.create({
 			component: ContractDetailComponent,
-			componentProps: { },
+			cssClass: 'glass-modal'
 		});
 
 		await modal.present();

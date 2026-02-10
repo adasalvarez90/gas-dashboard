@@ -1,15 +1,20 @@
 @if ((contract$ | async); as contract) {
-<ion-header>
+
+<ion-header class="modal-header">
 	<ion-toolbar>
-		<ion-title>Detalle del contrato</ion-title>
+		<ion-title>Contrato</ion-title>
+
 		<ion-buttons slot="end">
 			<ion-button (click)="toggleSign(contract)">
 				<ion-icon slot="icon-only" [color]="contract.signed ? 'success' : 'medium'"
-					[name]="contract.signed ? 'checkbox' : 'square-outline'"></ion-icon>
+					[name]="contract.signed ? 'checkbox' : 'square-outline'">
+				</ion-icon>
 			</ion-button>
+
 			<ion-button (click)="edit()">
 				<ion-icon slot="icon-only" name="create"></ion-icon>
 			</ion-button>
+
 			<ion-button (click)="close()">
 				<ion-icon slot="icon-only" name="close-outline"></ion-icon>
 			</ion-button>
@@ -17,188 +22,160 @@
 	</ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="contract-modal">
 
-	<!-- HEADER PRINCIPAL -->
-	<ion-card>
-		<ion-card-header>
-			<ion-card-title>
-				{{ contract.investor }}
-			</ion-card-title>
+	<!-- FINANCIAL HEADER -->
+	<div class="financial-header">
+		<div class="amount">
+			{{ contract.capitalMXN | currency:'MXN':'symbol':'1.0-0' }}
+		</div>
 
-			<ion-card-subtitle>
-				@if ((advisorsDic$ | async); as advisorsDic) {
-				Asesora:
-				<strong>{{ advisorsDic[contract.advisorUid].name || 'Sin asignar' }}</strong>
-				}
-			</ion-card-subtitle>
-		</ion-card-header>
-
-		<ion-card-content>
-			<ion-chip [color]="contract.accountStatus === 'active' ? 'success' : 'warning'" outline>
+		<div class="meta-line">
+			<span class="status" [class.active]="contract.accountStatus === 'active'"
+				[class.pending]="contract.accountStatus !== 'active'">
 				{{ contract.accountStatus | titlecase }}
-			</ion-chip>
-			<ion-chip color="secondary" outline>
-				{{ contract.scheme | titlecase }}
-			</ion-chip>
-		</ion-card-content>
-	</ion-card>
+			</span>
+
+			<span class="tag scheme">{{ contract.scheme }}</span>
+
+			@if (contract.signed) {
+			<span class="tag signed">Firmado</span>
+			}
+		</div>
+	</div>
+
+	<!-- PARTICIPANTES -->
+	<div class="card">
+		<div class="card-title">Participantes</div>
+
+		<div class="info-row">
+			<span class="label">Inversionista</span>
+			<span class="value">{{ contract.investor }}</span>
+		</div>
+
+		@if ((advisorsDic$ | async); as advisorsDic) {
+		<div class="info-row">
+			<span class="label">Asesora</span>
+			<span class="value">
+				{{ advisorsDic[contract.advisorUid]?.name || 'Sin asignar' }}
+			</span>
+		</div>
+		}
+	</div>
 
 	<!-- FIRMA -->
-	<ion-card>
-		<ion-card-header>
-			<ion-card-title>Firma del contrato</ion-card-title>
-		</ion-card-header>
+	<div class="card">
+		<div class="card-title">Firma del contrato</div>
 
-		<ion-card-content>
-			<ion-item lines="none">
-				<ion-label>Firma</ion-label>
-				<ion-note slot="end">
-					{{ contract.signature }}
-				</ion-note>
-			</ion-item>
+		<div class="info-row">
+			<span class="label">Firma</span>
+			<span class="value">{{ contract.signature }}</span>
+		</div>
 
-			<ion-item lines="none">
-				<ion-label>Deposito</ion-label>
-				<ion-note slot="end">
-					{{ contract.deposit }}
-				</ion-note>
-			</ion-item>
-		</ion-card-content>
-	</ion-card>
+		<div class="info-row">
+			<span class="label">Depósito</span>
+			<span class="value">{{ contract.deposit }}</span>
+		</div>
+	</div>
 
 	<!-- CAPITAL Y RENDIMIENTO -->
-	<ion-card>
-		<ion-card-header>
-			<ion-card-title>Capital & Rendimiento</ion-card-title>
-		</ion-card-header>
+	<div class="card">
+		<div class="card-title">Capital & Rendimiento</div>
 
-		<ion-card-content>
-			<ion-item lines="none">
-				<ion-label>Capital</ion-label>
-				<ion-note slot="end" color="success">
+		<div class="metrics">
+			<div>
+				<span class="label">Capital</span>
+				<strong class="highlight">
 					${{ contract.capitalMXN | number:'1.2-2' }} MXN
-				</ion-note>
-			</ion-item>
+				</strong>
+			</div>
 
-			<ion-item lines="none">
-				<ion-label>Rendimiento</ion-label>
-				<ion-note slot="end">
-					{{ contract.yieldPercent }}%
-				</ion-note>
-			</ion-item>
+			<div>
+				<span class="label">Rendimiento</span>
+				<strong>{{ contract.yieldPercent }}%</strong>
+			</div>
 
-			<ion-item lines="none">
-				<ion-label>Liquidez</ion-label>
-				<ion-note slot="end">
-					{{ contract.liquidity }}%
-				</ion-note>
-			</ion-item>
-		</ion-card-content>
-	</ion-card>
+			<div>
+				<span class="label">Liquidez</span>
+				<strong>{{ contract.liquidity }}%</strong>
+			</div>
+		</div>
+	</div>
 
 	<!-- PLAZO Y PAGOS -->
-	<ion-card>
-		<ion-card-header>
-			<ion-card-title>Plazo & Pagos</ion-card-title>
-		</ion-card-header>
+	<div class="card">
+		<div class="card-title">Plazo & Pagos</div>
 
-		<ion-card-content>
-			<ion-item lines="none">
-				<ion-label>Plazo</ion-label>
-				<ion-note slot="end">
-					{{ contract.term }} meses
-				</ion-note>
-			</ion-item>
+		<div class="metrics">
+			<div>
+				<span class="label">Plazo</span>
+				<strong>{{ contract.term }} meses</strong>
+			</div>
 
-			<ion-item lines="none">
-				<ion-label>Periodicidad</ion-label>
-				<ion-note slot="end">
-					{{ contract.yieldFrequency }}
-				</ion-note>
-			</ion-item>
+			<div>
+				<span class="label">Periodicidad</span>
+				<strong>{{ contract.yieldFrequency }}</strong>
+			</div>
 
-			<ion-item lines="none">
-				<ion-label>Pagos</ion-label>
-				<ion-note slot="end">
-					{{ contract.payments }}
-				</ion-note>
-			</ion-item>
-		</ion-card-content>
-	</ion-card>
+			<div>
+				<span class="label">Pagos</span>
+				<strong>{{ contract.payments }}</strong>
+			</div>
+		</div>
+	</div>
 
 	<!-- CUENTAS -->
-	<ion-card>
-		<ion-card-header>
-			<ion-card-title>Cuentas</ion-card-title>
-		</ion-card-header>
+	<div class="card">
+		<div class="card-title">Cuentas</div>
 
-		<ion-card-content>
-			<ion-item lines="none">
-				<ion-label>Cuenta depósito</ion-label>
-				<ion-note slot="end">
-					{{ contract.depositAccount }}
-				</ion-note>
-			</ion-item>
+		<div class="info-row">
+			<span class="label">Cuenta depósito</span>
+			<span class="value">{{ contract.depositAccount }}</span>
+		</div>
 
-			<ion-item lines="none">
-				<ion-label>Cuenta cliente</ion-label>
-				<ion-note slot="end">
-					{{ contract.clientAccount }}
-				</ion-note>
-			</ion-item>
-		</ion-card-content>
-	</ion-card>
+		<div class="info-row">
+			<span class="label">Cuenta cliente</span>
+			<span class="value">{{ contract.clientAccount }}</span>
+		</div>
+	</div>
 
 	<!-- DOCUMENTACIÓN -->
-	<ion-card>
-		<ion-card-header>
-			<ion-card-title>Documentación</ion-card-title>
-		</ion-card-header>
+	<div class="card">
+		<div class="card-title">Documentación</div>
 
-		<ion-card-content>
-			<ion-item lines="none">
-				<ion-label>Documentos completos</ion-label>
-				<ion-icon slot="end" [name]="contract.docs ? 'checkmark-circle' : 'close-circle'"
-					[color]="contract.docs ? 'success' : 'danger'"></ion-icon>
-			</ion-item>
+		<div class="info-row">
+			<span class="label">Documentos completos</span>
+			<span class="status" [class.active]="contract.docs" [class.inactive]="!contract.docs">
+				{{ contract.docs ? 'Sí' : 'No' }}
+			</span>
+		</div>
 
-			<ion-item *ngIf="contract.docsComments" lines="none">
-				<ion-label class="ion-text-wrap">
-					{{ contract.docsComments }}
-				</ion-label>
-			</ion-item>
-		</ion-card-content>
-	</ion-card>
+		@if (contract.docsComments) {
+		<div class="note">
+			{{ contract.docsComments }}
+		</div>
+		}
+	</div>
 
 	<!-- BENEFICIARIOS -->
-	<ion-card *ngIf="contract.beneficiaries">
-		<ion-card-header>
-			<ion-card-title>Beneficiarios</ion-card-title>
-		</ion-card-header>
-
-		<ion-card-content>
-			<p class="ion-text-wrap">
-				{{ contract.beneficiaries }}
-			</p>
-		</ion-card-content>
-	</ion-card>
+	@if (contract.beneficiaries) {
+	<div class="card">
+		<div class="card-title">Beneficiarios</div>
+		<p class="text-block">
+			{{ contract.beneficiaries }}
+		</p>
+	</div>
+	}
 
 	<!-- CONTACTO -->
-	<ion-card>
-		<ion-card-header>
-			<ion-card-title>Contacto</ion-card-title>
-		</ion-card-header>
+	<div class="card">
+		<div class="card-title">Contacto</div>
 
-		<ion-card-content>
-			<ion-item lines="none">
-				<ion-label>Email</ion-label>
-				<ion-note slot="end">
-					{{ contract.email }}
-				</ion-note>
-			</ion-item>
-		</ion-card-content>
-	</ion-card>
+		<div class="info-row">
+			<span class="label">Email</span>
+			<span class="value">{{ contract.email }}</span>
+		</div>
+	</div>
 
 </ion-content>
 }

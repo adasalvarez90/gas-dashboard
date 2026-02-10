@@ -1,0 +1,109 @@
+.contract-modal {
+    padding: 16px;
+}
+
+/* FINANCIAL HEADER */
+.financial-header {
+    margin: 18px;
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1e1e2f, #12121c);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.amount {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.meta-line {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* STATUS & TAGS */
+.status,
+.tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.status.active {
+    background: rgba(var(--ion-color-success-rgb), 0.2);
+}
+
+.status.inactive {
+    background: rgba(var(--ion-color-danger-rgb), 0.2);
+}
+
+.tag.signed {
+    background: rgba(var(--ion-color-success-rgb), 0.2);
+}
+
+/* CARDS */
+.card {
+    margin: 18px;
+    background: var(--ion-item-background);
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    opacity: 0.6;
+}
+
+/* INFO ROWS */
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.label {
+    font-size: 11px;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+.value {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* METRICS */
+.metrics {
+    display: flex;
+    gap: 24px;
+}
+
+.metrics div {
+    display: flex;
+    flex-direction: column;
+}
+
+.metrics strong {
+    font-size: 15px;
+}
+
+.highlight {
+    color: var(--ion-color-success);
+}
+
+/* TEXT BLOCKS */
+.text-block,
+.note {
+    font-size: 14px;
+    opacity: 0.8;
+    line-height: 1.4;
+}

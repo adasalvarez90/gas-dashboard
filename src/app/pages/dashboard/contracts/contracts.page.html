@@ -3,96 +3,95 @@
 		<ion-buttons slot="start">
 			<ion-menu-button></ion-menu-button>
 		</ion-buttons>
+
 		<ion-title>Contratos</ion-title>
+
 		<ion-buttons slot="end">
 			<ion-button (click)="addOrEdit()">
 				<ion-icon slot="icon-only" name="add"></ion-icon>
 			</ion-button>
 		</ion-buttons>
 	</ion-toolbar>
+
 	<ion-toolbar>
-		<ion-searchbar #searchBar (ionInput)="filter(searchBar.value)" debounce="500"
-			placeholder="Buscar contratos"></ion-searchbar>
+		<ion-searchbar #searchBar debounce="500" (ionInput)="filter(searchBar.value)" placeholder="Buscar contratos">
+		</ion-searchbar>
 	</ion-toolbar>
 </ion-header>
 
 <ion-content>
-	<div class="scrollbar">
+	<div class="contracts-page">
 		@if ((contracts$ | async); as contracts) {
-		<ion-list-header>
-			<p>
-				@if ((search$ | async); as search) {
-				<span>
-					{{ contracts.length }} de {{ total$ | async }} {{ 'contrato' | plural
-					:(total$ | async) :'s' :'' }} con <ion-text>"{{ search }}" </ion-text>
-				</span>
-				} @else {
-				<span>{{ contracts.length }} {{ 'contrato' | plural :contracts.length :'s' :''
-					}}</span>
-				}
-			</p>
-		</ion-list-header>
+		<div class="contracts-summary">
+			@if ((search$ | async); as search) {
+			<span>
+				{{ contracts.length }} de {{ total$ | async }} {{ 'contrato' | plural
+				:(total$ | async) :'s' :'' }} con <ion-text>"{{ search }}" </ion-text>
+			</span>
+			} @else {
+			<span>{{ contracts.length }} {{ 'contrato' | plural :contracts.length :'s' :'' }}</span>
+			}
+		</div>
 		}
-		<ion-grid>
-			<ion-row>
-				<ion-col size="12">
-					<ion-list class="ion-no-padding" [inset]="true">
-						@if ((advisorsDic$ | async); as advisorsDic) {
-						@for (contract of contracts$ | async; track contract.uid) {
-						<ion-item lines="inset" button (click)="openContractDetail(contract)">
-							<ion-label>
 
-								<!-- Inversionista -->
-								<h2 class="ion-text-wrap">
-									<strong>{{ contract.investor }}</strong>
-								</h2>
+		<div class="contracts-grid">
+			@if ((advisorsDic$ | async); as advisorsDic) {
+			@for (contract of contracts$ | async; track contract.uid) {
 
-								<!-- Asesora (VISIBLE) -->
-								<p class="ion-text-wrap">
-									<ion-text color="primary">
-										{{ advisorsDic[contract.advisorUid].name || 'Sin asesora' }}
-									</ion-text>
-								</p>
+			<div class="contract-card" (click)="openContractDetail(contract)">
 
-								<!-- Capital -->
-								<p>
-									<ion-text color="success">
-										${{ contract.capitalMXN | number:'1.2-2' }} MXN
-									</ion-text>
-								</p>
+				<!-- HEADER -->
+				<div class="card-header">
+					<div class="investor">
+						{{ contract.investor }}
+					</div>
 
-								<!-- Rendimiento -->
-								<p class="ion-text-wrap">
-									{{ contract.yieldPercent }}%
-									· {{ contract.term }} meses
-									· {{ contract.yieldFrequency }}
-								</p>
+					<div class="status">
+						<ion-chip [color]="contract.accountStatus === 'active' ? 'success' : 'warning'" outline>
+							{{ contract.accountStatus | titlecase }}
+						</ion-chip>
+					</div>
+				</div>
 
-							</ion-label>
+				<!-- CAPITAL -->
+				<div class="capital">
+					${{ contract.capitalMXN | number:'1.2-2' }}
+					<span>MXN</span>
+				</div>
 
-							<!-- Estado -->
-							<ion-note slot="end">
-								<ion-chip [color]="contract.accountStatus === 'active' ? 'success' : 'warning'" outline>
-									{{ contract.accountStatus | titlecase }}
-								</ion-chip>
-								<ion-chip color="secondary" outline>
-									{{ contract.scheme | titlecase }}
-								</ion-chip>
-								@if(contract.signed) {
-									<ion-chip color="success" outline>
-										Firmado
-										<ion-icon name="checkmark-circle"></ion-icon>
-									</ion-chip>
-								}
-							</ion-note>
+				<!-- ASESORA -->
+				<div class="advisor">
+					<ion-icon name="person-circle-outline"></ion-icon>
+					<span>
+						{{ advisorsDic[contract.advisorUid]?.name || 'Sin asesora' }}
+					</span>
+				</div>
 
-						</ion-item>
-						}
-						}
-					</ion-list>
+				<!-- DETALLES -->
+				<div class="details">
+					<span>{{ contract.yieldPercent }}%</span>
+					<span>· {{ contract.term }} meses</span>
+					<span>· {{ contract.yieldFrequency }}</span>
+				</div>
 
-				</ion-col>
-			</ion-row>
-		</ion-grid>
+				<!-- FOOTER -->
+				<div class="card-footer">
+					<ion-chip color="secondary" outline>
+						{{ contract.scheme | titlecase }}
+					</ion-chip>
+
+					@if (contract.signed) {
+					<ion-chip color="success" outline>
+						Firmado
+						<ion-icon name="checkmark-circle"></ion-icon>
+					</ion-chip>
+					}
+				</div>
+
+			</div>
+
+			}
+			}
+		</div>
 	</div>
 </ion-content>
