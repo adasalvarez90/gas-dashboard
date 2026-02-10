@@ -80,6 +80,8 @@ export class ManagePage implements OnInit {
 
 		if (this.contract) {
 			this.form.patchValue(this.contract);
+			const advisor = this.advisorsSnapshot.find(a => a.uid === this.contract.advisorUid);
+			this.selectedAdvisorName = advisor ? advisor.name : null;
 		} else {
 			this.form.reset();
 		}
