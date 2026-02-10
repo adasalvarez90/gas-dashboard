@@ -30,25 +30,32 @@ export class ContractFirestoreService {
 		
 		const newContract: Contract = {
 			uid,
+			
 			advisorUid: contract.advisorUid,
 			investor: contract.investor,
-			signature: contract.signature,
-			deposit: contract.deposit,
-			depositAccount: contract.depositAccount,
+			email: contract.email,
+			clientAccount: contract.clientAccount,
+			
 			capitalMXN: contract.capitalMXN,
 			yieldPercent: contract.yieldPercent,
 			liquidity: contract.liquidity,
 			term: contract.term,
+			
 			yieldFrequency: contract.yieldFrequency,
 			payments: contract.payments,
 			accountStatus: contract.accountStatus,
 			scheme: contract.scheme,
+			
+			signature: contract.signature,
+			deposit: contract.deposit,
+			depositAccount: contract.depositAccount,
+			
 			docs: contract.docs,
 			docsComments: contract.docsComments,
-			email: contract.email,
-			clientAccount: contract.clientAccount,
+			
 			beneficiaries: contract.beneficiaries,
 			signed: contract.signed,
+			
 			regularComision: contract.regularComision,
 			dinamicComision: contract.dinamicComision,
 			_create: Date.now(),

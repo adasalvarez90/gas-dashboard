@@ -37,6 +37,7 @@ export class ManagePage implements OnInit {
 		advisorUid: ['', Validators.required],
 		investor: ['', Validators.required],
 		email: ['', [Validators.required, Validators.email]],
+		clientAccount: [''],
 
 		capitalMXN: [null, Validators.required],
 		yieldPercent: [null, Validators.required],
@@ -45,20 +46,21 @@ export class ManagePage implements OnInit {
 
 		yieldFrequency: ['', Validators.required],
 		payments: ['', Validators.required],
-
 		accountStatus: ['', Validators.required],
 		scheme: ['', Validators.required],
 
 		signature: [''],
 		deposit: [''],
 		depositAccount: [''],
-		clientAccount: [''],
 
 		docs: [false],
 		docsComments: [''],
 
 		beneficiaries: [''],
 		signed: [false],
+
+		regularComision: [0],
+		dinamicComision: [0],
 	});
 
 	constructor(
@@ -93,35 +95,20 @@ export class ManagePage implements OnInit {
 
 	async create() {
 		// Get the form value
-		const form = this.form.value;
-		// Create the update alert
-		const prompt = await this.alertCtrl.create({
-			header: `Crear contrato`,
-			message: `¿Desea crear el contrato para ${form.investor}?`,
-			buttons: [{
-				text: 'No',
-				role: 'cancel'
-			}, {
-				text: 'Sí',
-				handler: () => {
-					// Create new user
-					this.contractFacade.createContract(form);
-					// Exit
-					this.exit();
-				}
-			}]
-		});
-		// Present the prompt
-		await prompt.present();
+		const contract = this.form.value;
+		// Create new user
+		this.contractFacade.createContract(contract);
+		// Exit
+		this.exit();
 	}
 
 	async update() {
 		// Get the form value
-		const form = this.form.value;
+		const contract = this.form.value;
 		// Create the update alert
 		const prompt = await this.alertCtrl.create({
 			header: `Editar contrato`,
-			message: `¿Desea editar el contrato para ${form.investor}?`,
+			message: `¿Desea editar el contrato para ${contract.investor}?`,
 			buttons: [{
 				text: 'No',
 				role: 'cancel'
@@ -129,7 +116,7 @@ export class ManagePage implements OnInit {
 				text: 'Sí',
 				handler: () => {
 					// Create new user
-					this.contractFacade.updateContract(form);
+					this.contractFacade.updateContract(contract);
 					// Exit
 					this.exit();
 				}
@@ -141,11 +128,11 @@ export class ManagePage implements OnInit {
 
 	async remove() {
 		// Get the form value
-		const form = this.form.value;
+		const contract = this.form.value;
 		// Create the update alert
 		const prompt = await this.alertCtrl.create({
 			header: `Eliminar contrato`,
-			message: `¿Desea eliminar el contrato para ${form.investor}?`,
+			message: `¿Desea eliminar el contrato para ${contract.investor}?`,
 			buttons: [{
 				text: 'No',
 				role: 'cancel'
@@ -153,7 +140,7 @@ export class ManagePage implements OnInit {
 				text: 'Sí',
 				handler: () => {
 					// Create new user
-					this.contractFacade.deleteContract(form.uid);
+					this.contractFacade.deleteContract(contract.uid);
 					// Exit
 					this.exit();
 				}

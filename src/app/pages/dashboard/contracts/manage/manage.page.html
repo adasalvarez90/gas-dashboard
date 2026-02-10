@@ -30,13 +30,13 @@
 		<ion-row>
 			<ion-col size="12">
 				<form [formGroup]="form">
-			
+
 					<!-- PERFIL DEL CONTRATO -->
 					<div class="contract-hero">
 						<div class="avatar">
 							{{ (selectedAdvisorName || '?')[0] }}
 						</div>
-			
+
 						<div class="hero-info">
 							<div class="title">
 								{{ selectedAdvisorName || 'Selecciona consultora' }}
@@ -45,16 +45,16 @@
 								{{ form.get('investor')?.value || 'Inversionista' }}
 							</div>
 						</div>
-			
+
 						<ion-toggle color="success" formControlName="signed">
 							Firmado
 						</ion-toggle>
 					</div>
-			
+
 					<!-- INFORMACIÓN GENERAL -->
 					<div class="section">
 						<div class="section-title">Información general</div>
-			
+
 						<div class="grid-2">
 							<ion-item lines="none">
 								<ion-label position="stacked">Consultora</ion-label>
@@ -66,99 +66,120 @@
 									}
 								</ion-select>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Inversionista</ion-label>
 								<ion-input formControlName="investor"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Correo</ion-label>
 								<ion-input type="email" formControlName="email"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Cuenta cliente</ion-label>
 								<ion-input formControlName="clientAccount"></ion-input>
 							</ion-item>
 						</div>
 					</div>
-			
+
 					<!-- DATOS FINANCIEROS -->
-					<div class="section highlight">
+					<div class="section primary">
 						<div class="section-title">Datos financieros</div>
-			
+
 						<div class="grid-4">
 							<ion-item lines="none">
 								<ion-label position="stacked">Capital (MXN)</ion-label>
 								<ion-input type="number" formControlName="capitalMXN"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Rendimiento %</ion-label>
 								<ion-input type="number" formControlName="yieldPercent"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Liquidez</ion-label>
 								<ion-input type="number" formControlName="liquidity"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Plazo (meses)</ion-label>
 								<ion-input type="number" formControlName="term"></ion-input>
 							</ion-item>
 						</div>
 					</div>
-			
+
 					<!-- CONDICIONES -->
 					<div class="section">
 						<div class="section-title">Condiciones</div>
-			
+
 						<div class="grid-2">
 							<ion-item lines="none">
 								<ion-label position="stacked">Periodicidad</ion-label>
 								<ion-input formControlName="yieldFrequency"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Pagos</ion-label>
 								<ion-input formControlName="payments"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Estado de cuenta</ion-label>
 								<ion-input formControlName="accountStatus"></ion-input>
 							</ion-item>
-			
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Esquema</ion-label>
 								<ion-input formControlName="scheme"></ion-input>
 							</ion-item>
 						</div>
 					</div>
-			
+
+					<!-- FIRMA -->
+					<div class="section success">
+						<div class="section-title">Información de firma</div>
+						<div class="grid-3">
+							<ion-item lines="none">
+								<ion-label position="stacked">Fecha de firma</ion-label>
+								<ion-input type="text" formControlName="signature"></ion-input>
+							</ion-item>
+
+							<ion-item lines="none">
+								<ion-label position="stacked">Fecha de deposito</ion-label>
+								<ion-input type="text" formControlName="deposit"></ion-input>
+							</ion-item>
+
+							<ion-item lines="none">
+								<ion-label position="stacked">Cuenta de deposito</ion-label>
+								<ion-input type="text" formControlName="depositAccount"></ion-input>
+							</ion-item>
+						</div>
+					</div>
+
 					<!-- DOCUMENTOS -->
 					<div class="section">
 						<div class="section-title">Documentación</div>
-			
+
 						<ion-item lines="none">
 							<ion-checkbox slot="start" formControlName="docs"></ion-checkbox>
 							<ion-label>Documentación completa</ion-label>
 						</ion-item>
-			
+
 						<ion-item lines="none">
 							<ion-label position="stacked">Comentarios</ion-label>
 							<ion-textarea formControlName="docsComments"></ion-textarea>
 						</ion-item>
 					</div>
-			
+
 					<!-- BENEFICIARIOS -->
-					<div class="section">
+					<div class="section warning">
 						<div class="section-title">Beneficiarios</div>
 						<ion-textarea formControlName="beneficiaries"></ion-textarea>
 					</div>
-			
+
 				</form>
 			</ion-col>
 		</ion-row>
