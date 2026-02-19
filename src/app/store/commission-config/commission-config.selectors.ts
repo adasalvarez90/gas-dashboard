@@ -1,11 +1,11 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
-import { State, adapter } from './commission.state';
+import { State, adapter } from './commission-config.state';
 
 // Store state functions
 import { match } from '../store.state';
-import { Commission } from './commission.model';
+import { CommissionConfig } from './commission-config.model';
 
-export const selectors = createFeatureSelector<State>('commissions');
+export const selectors = createFeatureSelector<State>('commissionConfigs');
 
 export const {
 	selectIds,
@@ -14,6 +14,6 @@ export const {
 	selectTotal
 } = adapter.getSelectors(selectors);
 
-export const selectedCommission = createSelector(selectors, (state) => state.selected);
+export const selectedCommissionConfig = createSelector(selectors, (state) => state.selected);
 
 export const selectLoading = createSelector(selectors, (state) => state.loading);

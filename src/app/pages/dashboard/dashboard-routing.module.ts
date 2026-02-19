@@ -52,8 +52,8 @@ const routes: Routes = [
 				},
 			},
 			{
-				path: 'commissions',
-				loadChildren: () => import('./commissions/commissions.module').then(m => m.CommissionsPageModule),
+				path: 'commission-configs',
+				loadChildren: () => import('./commission-configs/commission-configs.module').then(m => m.CommissionConfigsPageModule),
 				canActivate: [RoleGuard],
 				data: {
 					roles: [0, 1], // Support and Admin

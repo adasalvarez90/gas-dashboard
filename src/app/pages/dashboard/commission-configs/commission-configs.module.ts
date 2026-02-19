@@ -4,9 +4,9 @@ import { FormsModule } from '@angular/forms';
 
 import { IonicModule } from '@ionic/angular';
 
-import { CommissionsPageRoutingModule } from './commissions-routing.module';
+import { CommissionConfigsPageRoutingModule } from './commission-configs-routing.module';
 
-import { CommissionsPage } from './commissions.page';
+import { CommissionConfigsPage } from './commission-configs.page';
 
 import { PipesModule } from 'src/app/pipes/pipes.module';
 
@@ -16,8 +16,8 @@ import { PipesModule } from 'src/app/pipes/pipes.module';
     FormsModule,
     PipesModule,
     IonicModule,
-    CommissionsPageRoutingModule
+    CommissionConfigsPageRoutingModule
   ],
-  declarations: [CommissionsPage]
+  declarations: [CommissionConfigsPage]
 })
-export class CommissionsPageModule {}
+export class CommissionConfigsPageModule {}

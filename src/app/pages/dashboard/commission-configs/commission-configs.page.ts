@@ -1,16 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { map, take, tap } from 'rxjs/operators';
 // Facades
-import { CommissionFacade } from 'src/app/store/commission/commission.facade';
+import { CommissionConfigFacade } from 'src/app/store/commission-config/commission-config.facade';
 
 @Component({
-	selector: 'app-commissions',
+	selector: 'app-commission-configs',
 	standalone: false,
-	templateUrl: './commissions.page.html',
-	styleUrls: ['./commissions.page.scss'],
+	templateUrl: './commission-configs.page.html',
+	styleUrls: ['./commission-configs.page.scss'],
 })
-export class CommissionsPage implements OnInit {
-	commissions$ = this.commissionFacade.commissions$;
+export class CommissionConfigsPage implements OnInit {
+	commissionConfigs$ = this.commissionConfigFacade.commissionConfigs$;
 
 	sourcesOrder = [
 		{ key: 'COMMUNITY', label: 'COMUNIDAD' },
@@ -29,11 +29,11 @@ export class CommissionsPage implements OnInit {
 		{ key: 'REFERRAL', label: 'REFERIDORA' }
 	];
 
-	matrix$ = this.commissions$.pipe(
-		map(commissions => {
+	matrix$ = this.commissionConfigs$.pipe(
+		map(commissionConfigs => {
 			const matrix: Record<string, Record<string, number>> = {};
 
-			commissions.forEach(c => {
+			commissionConfigs.forEach(c => {
 				if (!matrix[c.role]) matrix[c.role] = {};
 				matrix[c.role][c.source] = c.percentage;
 			});
@@ -48,7 +48,7 @@ export class CommissionsPage implements OnInit {
 	matrixLocal: any = {};
 	originalMatrix: any = {};
 
-	constructor(private commissionFacade: CommissionFacade) { }
+	constructor(private commissionConfigFacade: CommissionConfigFacade) { }
 
 	ngOnInit() { }
 
@@ -109,7 +109,7 @@ export class CommissionsPage implements OnInit {
 			}
 		}
 
-		this.commissionFacade.upsertManyCommissions(ops);
+		this.commissionConfigFacade.upsertManyCommissionConfigs(ops);
 	}
 
 	calculateTotalForSource(source: string): number {

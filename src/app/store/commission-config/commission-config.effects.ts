@@ -4,50 +4,50 @@ import { LoadingController, ToastController } from '@ionic/angular';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { exhaustMap, switchMap, map, withLatestFrom } from 'rxjs/operators';
 
-import * as CommissionActions from './commission.actions';
+import * as CommissionConfigActions from './commission-config.actions';
 import * as AuthActions from '../auth/auth.actions';
 // Services
-import { CommissionFirestoreService } from 'src/app/services/commission-firestore.service';
+import { CommissionConfigFirestoreService } from 'src/app/services/commission-config-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
 
 
 @Injectable()
-export class CommissionEffects {
+export class CommissionConfigEffects {
 	constructor(
 		private actions$: Actions,
-		private commissionFS: CommissionFirestoreService,
+		private commissionConfigFS: CommissionConfigFirestoreService,
 		private authFacade: AuthFacade,
 		private loadingCtrl: LoadingController,
 		private toastCtrl: ToastController,
 	) { }
 
-	// 🔎 Load commissions
-	loadCommissions$ = createEffect(() =>
+	// 🔎 Load commissionConfigs
+	loadCommissionConfigs$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(CommissionActions.loadCommissions),
+			ofType(CommissionConfigActions.loadCommissionConfigs),
 			withLatestFrom(this.authFacade.user$),
 			switchMap(([_, user]) =>
-				this.commissionFS.getCommissions().then(
-					commissions => CommissionActions.loadCommissionsSuccess({ commissions }),
-					err => CommissionActions.loadCommissionsFailure({ error: err.message }),
+				this.commissionConfigFS.getCommissionConfigs().then(
+					commissionConfigs => CommissionConfigActions.loadCommissionConfigsSuccess({ commissionConfigs }),
+					err => CommissionConfigActions.loadCommissionConfigsFailure({ error: err.message }),
 				),
 			),
 		),
 	);
 
-	loadCommissionsOnLogin$ = createEffect(() =>
+	loadCommissionConfigsOnLogin$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(AuthActions.loginSuccess),
-			map(() => CommissionActions.loadCommissions()),
+			map(() => CommissionConfigActions.loadCommissionConfigs()),
 		),
 	);
 
 
 	upsertMany$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(CommissionActions.upsertManyCommissions),
+			ofType(CommissionConfigActions.upsertManyCommissionConfigs),
 			exhaustMap(
-				async ({ commissions }) => {
+				async ({ commissionConfigs }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
@@ -64,14 +64,14 @@ export class CommissionEffects {
 					// Present the loading
 					await loading.present();
 					
-					return this.commissionFS.upsertMany(commissions).then(
+					return this.commissionConfigFS.upsertMany(commissionConfigs).then(
 						async (res) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return CommissionActions.upsertManyCommissionsSuccess({ commissions: res })
+							return CommissionConfigActions.upsertManyCommissionConfigsSuccess({ commissionConfigs: res })
 						},
 						async (err) => {
 							await loading.dismiss();
@@ -80,7 +80,7 @@ export class CommissionEffects {
 							// Present the toast
 							toast.present();
 
-							return CommissionActions.upsertManyCommissionsFailure({ error: err })
+							return CommissionConfigActions.upsertManyCommissionConfigsFailure({ error: err })
 						}
 					)
 				}

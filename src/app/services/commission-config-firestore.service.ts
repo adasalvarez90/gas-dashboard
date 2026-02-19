@@ -3,45 +3,45 @@ import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where, w
 import * as _ from 'lodash';
 import { map } from 'rxjs/operators';
 
-import { Commission } from 'src/app/store/commission/commission.model';
+import { CommissionConfig } from 'src/app/store/commission-config/commission-config.model';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
 	providedIn: 'root'
 })
-export class CommissionFirestoreService {
+export class CommissionConfigFirestoreService {
 
-	private readonly collectionName = 'commissions';
+	private readonly collectionName = 'commissionConfigs';
 
 	constructor(private firestore: Firestore) { }
 
 	// ===== GET ALL =====
-	async getCommissions(): Promise<Commission[]> {
+	async getCommissionConfigs(): Promise<CommissionConfig[]> {
 		const ref = collection(this.firestore, this.collectionName);
 		const q = query(ref, where('_on', '==', true));
 
 		const snap = await getDocs(q);
 
-		const commissions = snap.docs.map(d => d.data() as Commission);
+		const commissionConfigs = snap.docs.map(d => d.data() as CommissionConfig);
 
-		// Sort commissions by _create date
-		commissions.sort((a, b) => (a._create || 0) - (b._create || 0));
+		// Sort commissionConfigs by _create date
+		commissionConfigs.sort((a, b) => (a._create || 0) - (b._create || 0));
 
-		return commissions;
+		return commissionConfigs;
 	}
 
 
-	async upsertMany(commissions: { role: string; source: string; percentage: number }[]) {
+	async upsertMany(commissionConfigs: { role: string; source: string; percentage: number }[]) {
 		const batch = writeBatch(this.firestore);
 
-		const results: Commission[] = [];
+		const results: CommissionConfig[] = [];
 
-		for (const c of commissions) {
+		for (const c of commissionConfigs) {
 			const uid = `${c.role}|${c.source}`; // 🔑 ID determinístico
 
 			const ref = doc(this.firestore, this.collectionName, uid);
 
-			const commission: Commission = {
+			const commissionConfig: CommissionConfig = {
 				uid,
 				role: c.role,
 				source: c.source,
@@ -50,9 +50,9 @@ export class CommissionFirestoreService {
 				_on: true,
 			};
 
-			batch.set(ref, commission, { merge: true });
+			batch.set(ref, commissionConfig, { merge: true });
 
-			results.push(commission);
+			results.push(commissionConfig);
 		}
 
 		await batch.commit();

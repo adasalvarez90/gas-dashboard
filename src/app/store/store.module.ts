@@ -11,7 +11,7 @@ import { UserModule } from './user/user.module';
 import { InviteModule } from './invite/invite.module'
 import { AdvisorModule } from './advisor/advisor.module'
 import { ContractModule } from './contract/contract.module'
-import { CommissionModule } from './commission/commission.module'
+import { CommissionConfigModule } from './commission-config/commission-config.module'
 
 // Custom serializer
 import { CustomSerializer } from './router/router-custom-serializer';
@@ -28,7 +28,7 @@ import { reducers } from './store.reducer';
 		InviteModule,
 		AdvisorModule,
 		ContractModule,
-		CommissionModule,
+		CommissionConfigModule,
 		// NGRX Modules
 		StoreModule.forRoot(reducers),
 		EffectsModule.forRoot([]),
