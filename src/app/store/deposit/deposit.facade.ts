@@ -14,8 +14,8 @@ export class DepositFacade {
 
 	constructor(private store: Store) {}
 
-	loadDeposits() {
-		this.store.dispatch(DepositActions.loadDeposits());
+	loadDeposits(contractUid: string) {
+		this.store.dispatch(DepositActions.loadDeposits({ contractUid }));
 	}
 
 	selectDeposit(deposit: Deposit) {

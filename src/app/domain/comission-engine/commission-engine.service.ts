@@ -18,4 +18,8 @@ export class CommissionEngineService {
 	) {
 
 	}
+
+	public calculateContractCommissions(contract: Contract) {
+		
+	}
 }
