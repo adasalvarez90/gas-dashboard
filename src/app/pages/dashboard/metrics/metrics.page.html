@@ -1,0 +1,90 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-title>Metrics</ion-title>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<div class="metrics-page scrollbar">
+
+		@if (metrics$ | async; as vm) {
+
+		<!-- ===================== -->
+		<!-- KPIs PRINCIPALES -->
+		<!-- ===================== -->
+		<div class="kpi-grid">
+
+			<div class="kpi-card">
+				<div class="kpi-label">Contratos</div>
+				<div class="kpi-value">{{ vm.totalContracts }}</div>
+			</div>
+
+			<div class="kpi-card success">
+				<div class="kpi-label">Firmados</div>
+				<div class="kpi-value">{{ vm.signedContracts }}</div>
+			</div>
+
+			<div class="kpi-card warning">
+				<div class="kpi-label">Pendientes</div>
+				<div class="kpi-value">{{ vm.pendingContracts }}</div>
+			</div>
+
+			<div class="kpi-card primary">
+				<div class="kpi-label">Comisión Total</div>
+				<div class="kpi-value">
+					{{ vm.totalCommissionGlobal | currency:'MXN':'symbol':'1.0-0' }}
+				</div>
+			</div>
+
+		</div>
+
+		<!-- ===================== -->
+		<!-- FACTURACIÓN POR ASESORA -->
+		<!-- ===================== -->
+		<div class="section">
+			<div class="section-title">Facturación por asesora</div>
+
+			<div class="advisor-grid">
+				@for (advisor of vm.advisors; track advisor.advisorUid) {
+
+				<div class="advisor-card">
+					<div class="advisor-total">
+						{{ advisor.total | currency:'MXN':'symbol':'1.0-0' }}
+					</div>
+
+					<div class="advisor-meta">
+						{{ advisor.contracts.length }} contratos
+					</div>
+				</div>
+
+				}
+			</div>
+		</div>
+
+		<!-- ===================== -->
+		<!-- DESGLOSE POR CONTRATO -->
+		<!-- ===================== -->
+		<div class="section">
+			<div class="section-title">Desglose por contrato</div>
+
+			@for (contract of vm.contracts; track contract.contractUid) {
+
+			<div class="contract-row">
+
+				<div class="contract-info">
+					{{ contract.contractUid }}
+				</div>
+
+				<div class="contract-amount">
+					{{ contract.totalCommission | currency:'MXN':'symbol':'1.0-0' }}
+				</div>
+
+			</div>
+
+			}
+		</div>
+
+		}
+
+	</div>
+</ion-content>

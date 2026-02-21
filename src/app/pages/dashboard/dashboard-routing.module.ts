@@ -59,10 +59,17 @@ const routes: Routes = [
 					roles: [0, 1], // Support and Admin
 				},
 			},
+			{
+				path: 'metrics',
+				loadChildren: () => import('./metrics/metrics.module').then(m => m.MetricsPageModule),
+				canActivate: [RoleGuard],
+				data: {
+					roles: [0, 1], // Support and Admin
+				},
+			},
+
 		],
 	},
-
-
 ];
 
 @NgModule({

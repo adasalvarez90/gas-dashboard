@@ -16,6 +16,7 @@ export class DashboardPage implements OnInit {
 			name: 'Home',
 			role: 2,
 			pages: [
+				{ name: 'Métricas', url: '/dashboard/metrics', icon: 'analytics', role: 2, hidden: false, badge: '' },
 				{ name: 'Usuarios', url: '/dashboard/users', icon: 'people', role: 2, hidden: false, badge: '' },
 			],
 		},
