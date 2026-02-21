@@ -61,6 +61,8 @@ export class MetricsPage implements OnInit {
 					matrix
 				);
 
+				console.log('Splits for contract', contract.uid, splits);
+
 				return this.engine.generatePayments(contract, splits);
 
 			});

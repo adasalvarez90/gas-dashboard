@@ -31,6 +31,13 @@ export class ManagePage implements OnInit {
 	advisorsSnapshot: any[] = [];
 	selectedAdvisorName: string | null = null;
 
+	sources = [
+		{ value: 'COMUNIDAD', label: 'Comunidad' },
+		{ value: 'RED_CALIDA', label: 'Red cálida' },
+		{ value: 'DINERO_PROPIO', label: 'Dinero propio' },
+		{ value: 'REFERIDORA', label: 'Referidora' },
+	];
+
 	form: FormGroup = this.fb.group({
 		uid: [''],
 
@@ -61,6 +68,10 @@ export class ManagePage implements OnInit {
 
 		regularComision: [0],
 		dinamicComision: [0],
+
+		source: ['COMUNIDAD', Validators.required],
+
+		fullyFundedAt: [null],
 	});
 
 	constructor(

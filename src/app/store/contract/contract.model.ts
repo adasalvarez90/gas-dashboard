@@ -2,7 +2,6 @@
 import { Metadata } from 'src/app/models/metadata.model';
 
 export type InvestmentSource =
-	| 'EQUIPO'
 	| 'COMUNIDAD'
 	| 'RED_CALIDA'
 	| 'DINERO_PROPIO'

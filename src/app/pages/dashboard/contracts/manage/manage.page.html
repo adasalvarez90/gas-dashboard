@@ -82,6 +82,25 @@
 								<ion-input formControlName="clientAccount"></ion-input>
 							</ion-item>
 						</div>
+
+						<!-- 🔥 NUEVO: SOURCE -->
+						<div class="source-wrapper">
+							<div class="source-title">Origen de inversión</div>
+
+							<div class="source-grid">
+
+								@for (s of sources; track s.value) {
+								<div class="source-option" [class.active]="form.get('source')?.value === s.value"
+									(click)="form.patchValue({ source: s.value })">
+									<div class="source-label">
+										{{ s.label }}
+									</div>
+								</div>
+								}
+
+							</div>
+						</div>
+
 					</div>
 
 					<!-- DATOS FINANCIEROS -->
