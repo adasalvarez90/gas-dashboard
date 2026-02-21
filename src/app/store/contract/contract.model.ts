@@ -1,6 +1,13 @@
 // Interfaces
 import { Metadata } from 'src/app/models/metadata.model';
 
+export type InvestmentSource =
+	| 'EQUIPO'
+	| 'COMUNIDAD'
+	| 'RED_CALIDA'
+	| 'DINERO_PROPIO'
+	| 'REFERIDORA';
+
 //
 export interface Contract extends Metadata {
 	advisorUid: string;
@@ -24,4 +31,5 @@ export interface Contract extends Metadata {
 	signed: boolean;
 	regularComision: number;
 	dinamicComision: number;
+	source: InvestmentSource;
 }

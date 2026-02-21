@@ -58,6 +58,8 @@ export class ContractFirestoreService {
 			
 			regularComision: contract.regularComision,
 			dinamicComision: contract.dinamicComision,
+			source: contract.source,
+
 			_create: Date.now(),
 			_on: true
 		};
