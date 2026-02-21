@@ -34,7 +34,7 @@ export class CommissionPaymentFirestoreService {
 			contractUid: commissionPayment.contractUid,
 			advisorUid: commissionPayment.advisorUid,
 			role: commissionPayment.role,
-			origin: commissionPayment.origin,
+			source: commissionPayment.source,
 			amount: commissionPayment.amount,
 			scheme: commissionPayment.scheme,
 			cutDate: commissionPayment.cutDate,

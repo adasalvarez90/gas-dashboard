@@ -32,4 +32,5 @@ export interface Contract extends Metadata {
 	regularComision: number;
 	dinamicComision: number;
 	source: InvestmentSource;
+	fullyFundedAt?: number;
 }

@@ -7,7 +7,7 @@ export interface CommissionPayment extends Metadata {
 	advisorUid: string;
 
 	role: string;        // CONSULTANT | KAM | MANAGER | CEO | etc
-	origin: string;      // comunidad | red_calida | etc
+	source: string;      // comunidad | red_calida | etc
 
 	amount: number;
 
