@@ -63,7 +63,7 @@
 				<div class="advisor">
 					<ion-icon name="person-circle-outline"></ion-icon>
 					<span>
-						{{ advisorsDic[contract.advisorUid]?.name || 'Sin asesora' }}
+						{{ advisorsDic[contract.roles.consultant]?.name || 'Sin asesora' }}
 					</span>
 				</div>
 
@@ -78,6 +78,13 @@
 				<div class="card-footer">
 					<ion-chip color="secondary" outline>
 						{{ contract.scheme | titlecase }}
+					</ion-chip>
+
+					<ion-chip color="tertiary" outline>
+						{{ contract.source === 'COMUNIDAD' ? 'Comunidad' :
+						contract.source === 'RED_CALIDA' ? 'Red Cálida' : 
+						contract.source === 'DINERO_PROPIO' ? 'Dinero propio' : 
+						contract.source === 'REFERIDORA' ? 'Referidora' : 'Sin asignar' | titlecase }}
 					</ion-chip>
 
 					@if (contract.signed) {

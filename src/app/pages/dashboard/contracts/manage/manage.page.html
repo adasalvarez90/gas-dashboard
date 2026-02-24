@@ -51,14 +51,15 @@
 						</ion-toggle>
 					</div>
 
-					<!-- INFORMACIÓN GENERAL -->
-					<div class="section">
-						<div class="section-title">Información general</div>
+					<div class="section roles-section" formGroupName="roles">
 
-						<div class="grid-2">
+						<div class="section-title">Participantes del contrato</div>
+
+						<div class="grid-3">
+
 							<ion-item lines="none">
 								<ion-label position="stacked">Consultora</ion-label>
-								<ion-select formControlName="advisorUid" interface="popover">
+								<ion-select formControlName="consultant">
 									@for (advisor of advisors$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
 										{{ advisor.name }}
@@ -66,6 +67,70 @@
 									}
 								</ion-select>
 							</ion-item>
+
+							<ion-item lines="none">
+								<ion-label position="stacked">KAM</ion-label>
+								<ion-select formControlName="kam">
+									@for (advisor of advisorsKam$ | async; track advisor.uid) {
+									<ion-select-option [value]="advisor.uid">
+										{{ advisor.name }}
+									</ion-select-option>
+									}
+								</ion-select>
+							</ion-item>
+
+							<ion-item lines="none">
+								<ion-label position="stacked">Gerente</ion-label>
+								<ion-select formControlName="manager">
+									@for (advisor of advisorsManager$ | async; track advisor.uid) {
+									<ion-select-option [value]="advisor.uid">
+										{{ advisor.name }}
+									</ion-select-option>
+									}
+								</ion-select>
+							</ion-item>
+
+							<ion-item lines="none">
+								<ion-label position="stacked">Dirección ventas</ion-label>
+								<ion-select formControlName="salesDirector">
+									@for (advisor of advisorsSales$ | async; track advisor.uid) {
+									<ion-select-option [value]="advisor.uid">
+										{{ advisor.name }}
+									</ion-select-option>
+									}
+								</ion-select>
+							</ion-item>
+
+							<ion-item lines="none">
+								<ion-label position="stacked">Operaciones</ion-label>
+								<ion-select formControlName="operations">
+									@for (advisor of advisorsOps$ | async; track advisor.uid) {
+									<ion-select-option [value]="advisor.uid">
+										{{ advisor.name }}
+									</ion-select-option>
+									}
+								</ion-select>
+							</ion-item>
+
+							<ion-item lines="none">
+								<ion-label position="stacked">CEO</ion-label>
+								<ion-select formControlName="ceo">
+									@for (advisor of advisorsCEO$ | async; track advisor.uid) {
+									<ion-select-option [value]="advisor.uid">
+										{{ advisor.name }}
+									</ion-select-option>
+									}
+								</ion-select>
+							</ion-item>
+
+						</div>
+					</div>
+
+					<!-- INFORMACIÓN GENERAL -->
+					<div class="section">
+						<div class="section-title">Información general</div>
+
+						<div class="grid-2">
 
 							<ion-item lines="none">
 								<ion-label position="stacked">Inversionista</ion-label>

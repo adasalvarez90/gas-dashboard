@@ -9,7 +9,6 @@ export type InvestmentSource =
 
 //
 export interface Contract extends Metadata {
-	advisorUid: string;
 	investor: string;
 	signature: string;
 	deposit: string;
@@ -32,4 +31,13 @@ export interface Contract extends Metadata {
 	dinamicComision: number;
 	source: InvestmentSource;
 	fullyFundedAt?: number;
+
+	roles: {
+		consultant?: string;
+		kam?: string;
+		manager?: string;
+		salesDirector?: string;
+		operations?: string;
+		ceo?: string;
+	};
 }

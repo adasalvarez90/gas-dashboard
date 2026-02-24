@@ -30,8 +30,8 @@ export class ContractFirestoreService {
 		
 		const newContract: Contract = {
 			uid,
+			roles: contract.roles,
 			
-			advisorUid: contract.advisorUid,
 			investor: contract.investor,
 			email: contract.email,
 			clientAccount: contract.clientAccount,

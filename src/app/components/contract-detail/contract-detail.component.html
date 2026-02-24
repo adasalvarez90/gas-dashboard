@@ -45,6 +45,7 @@
 	</div>
 
 	<!-- PARTICIPANTES -->
+	@if ((advisorsDic$ | async); as advisorsDic) {
 	<div class="card">
 		<div class="card-title">Participantes</div>
 
@@ -53,15 +54,63 @@
 			<span class="value">{{ contract.investor }}</span>
 		</div>
 
-		@if ((advisorsDic$ | async); as advisorsDic) {
 		<div class="info-row">
 			<span class="label">Asesora</span>
 			<span class="value">
-				{{ advisorsDic[contract.advisorUid]?.name || 'Sin asignar' }}
+				{{ advisorsDic[contract.roles.consultant]?.name || 'Sin asignar' }}
 			</span>
 		</div>
-		}
+
+		<div class="info-row">
+			<span class="label">Origen</span>
+			<span class="value">
+				{{ contract.source === 'COMUNIDAD' ? 'Comunidad' :
+				contract.source === 'RED_CALIDA' ? 'Red Cálida' : 
+				contract.source === 'DINERO_PROPIO' ? 'Dinero propio' : 
+				contract.source === 'REFERIDORA' ? 'Referidora' : 'Sin asignar' }}
+			</span>
+		</div>
 	</div>
+
+	<div class="card">
+		<div class="card-title">Otros roles</div>
+
+		<div class="info-row">
+			<span class="label">Gerente</span>
+			<span class="value">
+				{{ advisorsDic[contract.roles.manager]?.name || 'Sin asignar' }}
+			</span>
+		</div>
+
+		<div class="info-row">
+			<span class="label">KAM</span>
+			<span class="value">
+				{{ advisorsDic[contract.roles.kam]?.name || 'Sin asignar' }}
+			</span>
+		</div>
+
+		<div class="info-row">
+			<span class="label">Dirección de Ventas</span>
+			<span class="value">
+				{{ advisorsDic[contract.roles.salesDirector]?.name || 'Sin asignar' }}
+			</span>
+		</div>
+
+		<div class="info-row">
+			<span class="label">Equipo Operativo</span>
+			<span class="value">
+				{{ advisorsDic[contract.roles.operations]?.name || 'Sin asignar' }}
+			</span>
+		</div>
+
+		<div class="info-row">
+			<span class="label">CEO</span>
+			<span class="value">
+				{{ advisorsDic[contract.roles.ceo]?.name || 'Sin asignar' }}
+			</span>
+		</div>
+	</div>
+	}
 
 	<!-- FIRMA -->
 	<div class="card">

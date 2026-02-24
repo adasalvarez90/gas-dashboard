@@ -26,7 +26,7 @@ export class RoleResolverService {
 			percent: number;
 		}[] = [];
 
-		const advisor = advisorsDic[contract.advisorUid];
+		const advisor = advisorsDic[contract.roles.consultant];
 
 		if (!advisor) return splits;
 

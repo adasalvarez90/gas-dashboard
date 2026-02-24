@@ -4,7 +4,7 @@ import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 
 // RxJS
 import { lastValueFrom } from 'rxjs';
-import { take, tap } from 'rxjs/operators';
+import { take, tap, map } from 'rxjs/operators';
 
 // Store
 import * as fromContract from 'src/app/store/contract';
@@ -25,6 +25,26 @@ export class ManagePage implements OnInit {
 			this.advisorsSnapshot = advisors;
 		})
 	);
+	advisorsManager$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.hierarchyLevel === 'MANAGER'))
+	);
+	advisorsCEO$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.hierarchyLevel === 'CEO'))
+	);
+
+	advisorsKam$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.tags?.includes('KAM')))
+	);
+
+	advisorsSales$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.tags?.includes('SALES_DIRECTION')))
+	);
+
+	advisorsOps$ = this.advisors$.pipe(
+		map(list => list.filter(a => a.tags?.includes('OPERATIONS')))
+	);
+
+
 	contract$ = this.contractFacade.selectedContract$;
 	contract: fromContract.Contract | null;
 
@@ -41,7 +61,15 @@ export class ManagePage implements OnInit {
 	form: FormGroup = this.fb.group({
 		uid: [''],
 
-		advisorUid: ['', Validators.required],
+		roles: this.fb.group({
+			consultant: [''],
+			kam: [''],
+			manager: [''],
+			salesDirector: [''],
+			operations: [''],
+			ceo: ['']
+		}),
+
 		investor: ['', Validators.required],
 		email: ['', [Validators.required, Validators.email]],
 		clientAccount: [''],
@@ -91,13 +119,13 @@ export class ManagePage implements OnInit {
 
 		if (this.contract) {
 			this.form.patchValue(this.contract);
-			const advisor = this.advisorsSnapshot.find(a => a.uid === this.contract.advisorUid);
+			const advisor = this.advisorsSnapshot.find(a => a.uid === this.contract.roles.consultant);
 			this.selectedAdvisorName = advisor ? advisor.name : null;
 		} else {
 			this.form.reset();
 		}
 
-		this.form.get('advisorUid')?.valueChanges.subscribe(uid => {
+		this.form.get('roles.consultant')?.valueChanges.subscribe(uid => {
 			console.log('Selected advisor UID:', uid);
 			const advisor = this.advisorsSnapshot.find(a => a.uid === uid);
 			this.selectedAdvisorName = advisor ? advisor.name : null;
