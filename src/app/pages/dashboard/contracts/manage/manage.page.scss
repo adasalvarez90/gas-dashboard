@@ -125,7 +125,7 @@ ion-item {
 
 .source-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 	gap: 10px;
 }
 
@@ -135,8 +135,8 @@ ion-item {
 	cursor: pointer;
 	text-align: center;
 
-	background: rgba(255,255,255,.03);
-	border: 1px solid rgba(255,255,255,.06);
+	background: rgba(255, 255, 255, .03);
+	border: 1px solid rgba(255, 255, 255, .06);
 
 	transition: .18s ease;
 }
@@ -153,5 +153,62 @@ ion-item {
 
 .source-label {
 	font-size: 13px;
+	font-weight: 600;
+}
+
+.roles-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 14px;
+}
+
+.role-card {
+	padding: 14px;
+	border-radius: 14px;
+
+	background: rgba(255, 255, 255, .03);
+	border: 1px solid rgba(255, 255, 255, .06);
+
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+
+	transition: .18s ease;
+}
+
+.role-card:hover {
+	transform: translateY(-2px);
+	background: rgba(var(--ion-color-primary-rgb), .08);
+}
+
+.role-label {
+	font-size: 12px;
+	letter-spacing: .5px;
+	text-transform: uppercase;
+	opacity: .7;
+}
+
+.role-label.kam {
+	color: #22c55e;
+}
+
+.role-label.manager {
+	color: #3b82f6;
+}
+
+.role-label.sales {
+	color: #a855f7;
+}
+
+.role-label.ops {
+	color: #f59e0b;
+}
+
+.role-label.ceo {
+	color: #ef4444;
+}
+
+.role-card ion-select {
+	--padding-start: 0;
 	font-weight: 600;
 }
