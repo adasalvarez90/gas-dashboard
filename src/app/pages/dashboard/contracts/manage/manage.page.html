@@ -30,16 +30,16 @@
 		<ion-row>
 			<ion-col size="12">
 				<form [formGroup]="form">
-
+					@if (advisorsDic$ | async; as advisorsDic) {
 					<!-- PERFIL DEL CONTRATO -->
 					<div class="contract-hero">
 						<div class="avatar">
-							{{ (selectedAdvisorName || '?')[0] }}
+							{{ (advisorsDic[form.get('roles.consultant')?.value]?.name || '?')[0] }}
 						</div>
 
 						<div class="hero-info">
 							<div class="title">
-								{{ selectedAdvisorName || 'Selecciona consultora' }}
+								{{ advisorsDic[form.get('roles.consultant')?.value]?.name || 'Selecciona consultora' }}
 							</div>
 							<div class="subtitle">
 								{{ form.get('investor')?.value || 'Inversionista' }}
@@ -50,8 +50,10 @@
 							Firmado
 						</ion-toggle>
 					</div>
+					}
 
 					<!-- ROLES -->
+					@if (previewSplits$ | async; as preview) {
 					<div class="section roles-section" formGroupName="roles">
 
 						<div class="section-title">Participantes del contrato</div>
@@ -60,7 +62,7 @@
 
 							<!-- CONSULTORA -->
 							<div class="role-card">
-								<div class="role-label">Consultora</div>
+								<div class="role-label">{{ roleLabels.CONSULTANT }}</div>
 
 								<ion-select formControlName="consultant" interface="popover">
 									@for (advisor of advisors$ | async; track advisor.uid) {
@@ -69,11 +71,15 @@
 									</ion-select-option>
 									}
 								</ion-select>
+
+								<div class="preview-percent">
+									{{ getPercentForRole('CONSULTANT') }}%
+								</div>
 							</div>
 
 							<!-- KAM -->
 							<div class="role-card">
-								<div class="role-label kam">KAM</div>
+								<div class="role-label kam">{{ roleLabels.KAM }}</div>
 
 								<ion-select formControlName="kam">
 									@for (advisor of advisorsKam$ | async; track advisor.uid) {
@@ -82,11 +88,14 @@
 									</ion-select-option>
 									}
 								</ion-select>
+								<div class="preview-percent">
+									{{ getPercentForRole('KAM') }}%
+								</div>
 							</div>
 
 							<!-- GERENTE -->
 							<div class="role-card">
-								<div class="role-label manager">Gerente</div>
+								<div class="role-label manager">{{ roleLabels.MANAGER }}</div>
 
 								<ion-select formControlName="manager">
 									@for (advisor of advisorsManager$ | async; track advisor.uid) {
@@ -95,11 +104,14 @@
 									</ion-select-option>
 									}
 								</ion-select>
+								<div class="preview-percent">
+									{{ getPercentForRole('MANAGER') }}%
+								</div>
 							</div>
 
 							<!-- DIRECCIÓN VENTAS -->
 							<div class="role-card">
-								<div class="role-label sales">Dirección ventas</div>
+								<div class="role-label sales">{{ roleLabels.SALES_DIRECTION }}</div>
 
 								<ion-select formControlName="salesDirector">
 									@for (advisor of advisorsSales$ | async; track advisor.uid) {
@@ -108,11 +120,14 @@
 									</ion-select-option>
 									}
 								</ion-select>
+								<div class="preview-percent">
+									{{ getPercentForRole('SALES_DIRECTION') || 0 }}%
+								</div>
 							</div>
 
 							<!-- OPERACIONES -->
 							<div class="role-card">
-								<div class="role-label ops">Operaciones</div>
+								<div class="role-label ops">{{ roleLabels.OPERATIONS }}</div>
 
 								<ion-select formControlName="operations">
 									@for (advisor of advisorsOps$ | async; track advisor.uid) {
@@ -121,11 +136,14 @@
 									</ion-select-option>
 									}
 								</ion-select>
+								<div class="preview-percent">
+									{{ getPercentForRole('OPERATIONS') }}%
+								</div>
 							</div>
 
 							<!-- CEO -->
 							<div class="role-card ceo">
-								<div class="role-label ceo">CEO</div>
+								<div class="role-label ceo">{{ roleLabels.CEO }}</div>
 
 								<ion-select formControlName="ceo">
 									@for (advisor of advisorsCEO$ | async; track advisor.uid) {
@@ -134,11 +152,33 @@
 									</ion-select-option>
 									}
 								</ion-select>
+								<div class="preview-percent">
+									{{ getPercentForRole('CEO') }}%
+								</div>
 							</div>
+
+							<!-- REFERIDORA -->
+							@if(form.get('source')?.value === 'REFERIDORA') {
+							<div class="role-card referral">
+								<div class="role-label referral">{{ roleLabels.REFERRAL }}</div>
+
+								<ion-select formControlName="referral">
+									@for (advisor of advisors$ | async; track advisor.uid) {
+									<ion-select-option [value]="advisor.uid">
+										{{ advisor.name }}
+									</ion-select-option>
+									}
+								</ion-select>
+								<div class="preview-percent">
+									{{ getPercentForRole('REFERRAL') }}%
+								</div>
+							</div>
+							}
 
 						</div>
 
 					</div>
+					}
 
 					<!-- INFORMACIÓN GENERAL -->
 					<div class="section">

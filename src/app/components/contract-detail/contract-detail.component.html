@@ -65,8 +65,8 @@
 			<span class="label">Origen</span>
 			<span class="value">
 				{{ contract.source === 'COMUNIDAD' ? 'Comunidad' :
-				contract.source === 'RED_CALIDA' ? 'Red Cálida' : 
-				contract.source === 'DINERO_PROPIO' ? 'Dinero propio' : 
+				contract.source === 'RED_CALIDA' ? 'Red Cálida' :
+				contract.source === 'DINERO_PROPIO' ? 'Dinero propio' :
 				contract.source === 'REFERIDORA' ? 'Referidora' : 'Sin asignar' }}
 			</span>
 		</div>
@@ -109,6 +109,15 @@
 				{{ advisorsDic[contract.roles.ceo]?.name || 'Sin asignar' }}
 			</span>
 		</div>
+
+		@if(contract.roles.referral) {
+		<div class="info-row">
+			<span class="label">Referidora</span>
+			<span class="value">
+				{{ advisorsDic[contract.roles.referral]?.name || 'Sin asignar' }}
+			</span>
+		</div>
+		}
 	</div>
 	}
 

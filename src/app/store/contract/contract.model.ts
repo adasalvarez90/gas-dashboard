@@ -39,5 +39,6 @@ export interface Contract extends Metadata {
 		salesDirector?: string;
 		operations?: string;
 		ceo?: string;
+		referral?: string;
 	};
 }

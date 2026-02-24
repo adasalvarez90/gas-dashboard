@@ -13,18 +13,18 @@ export class CommissionConfigsPage implements OnInit {
 	commissionConfigs$ = this.commissionConfigFacade.commissionConfigs$;
 
 	sourcesOrder = [
-		{ key: 'COMMUNITY', label: 'COMUNIDAD' },
-		{ key: 'WARM_NETWORK', label: 'RED CALIDA' },
-		{ key: 'SELF_FUNDED', label: 'AUTOFINANCIADO' },
-		{ key: 'REFERRER', label: 'REFERENTE' }
+		{ key: 'COMUNIDAD', label: 'COMUNIDAD' },
+		{ key: 'RED_CALIDA', label: 'RED CALIDA' },
+		{ key: 'DINERO_PROPIO', label: 'DINERO PROPIO' },
+		{ key: 'REFERIDORA', label: 'REFERIDORA' }
 	];
 
 	rolesOrder = [
 		{ key: 'KAM', label: 'KAM' },
 		{ key: 'CONSULTANT', label: 'CONSULTORA' },
 		{ key: 'MANAGER', label: 'GERENTE' },
-		{ key: 'SM', label: 'DIRECCIÓN DE VENTAS' },
-		{ key: 'OS', label: 'EQUIPO OPERATIVO' },
+		{ key: 'SALES_DIRECTION', label: 'DIRECCIÓN DE VENTAS' },
+		{ key: 'OPERATIONS', label: 'EQUIPO OPERATIVO' },
 		{ key: 'CEO', label: 'CEO' },
 		{ key: 'REFERRAL', label: 'REFERIDORA' }
 	];

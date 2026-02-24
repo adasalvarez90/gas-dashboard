@@ -208,7 +208,56 @@ ion-item {
 	color: #ef4444;
 }
 
+.role-label.referral {
+	color: #10b981;
+}
+
 .role-card ion-select {
 	--padding-start: 0;
 	font-weight: 600;
+}
+
+.preview-section {
+	margin-top: 20px;
+}
+
+.preview-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 10px;
+}
+
+.preview-card {
+	padding: 12px;
+	border-radius: 12px;
+
+	background: rgba(255, 255, 255, .03);
+	border: 1px solid rgba(255, 255, 255, .05);
+
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+
+	transition: .18s ease;
+}
+
+.preview-card:hover {
+	transform: translateY(-2px);
+	background: rgba(var(--ion-color-success-rgb), .08);
+}
+
+.preview-role {
+	font-size: 11px;
+	text-transform: uppercase;
+	opacity: .6;
+}
+
+.preview-name {
+	font-weight: 600;
+	font-size: 14px;
+}
+
+.preview-percent {
+	font-size: 13px;
+	color: var(--ion-color-success);
 }

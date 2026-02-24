@@ -1,16 +1,16 @@
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { AlertController, NavController } from '@ionic/angular';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-
+import { Dictionary } from '@ngrx/entity';
 // RxJS
-import { lastValueFrom } from 'rxjs';
+import { combineLatest, lastValueFrom } from 'rxjs';
 import { take, tap, map } from 'rxjs/operators';
-
 // Store
 import * as fromContract from 'src/app/store/contract';
+// Facades
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
-
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
+import { CommissionConfigFacade } from 'src/app/store/commission-config/commission-config.facade';
 
 @Component({
 	selector: 'app-manage-contract',
@@ -20,11 +20,8 @@ import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ManagePage implements OnInit {
-	advisors$ = this.advisorFacade.advisors$.pipe(
-		tap(advisors => {
-			this.advisorsSnapshot = advisors;
-		})
-	);
+	advisors$ = this.advisorFacade.advisors$;
+	advisorsDic$ = this.advisorFacade.entities$;
 	advisorsManager$ = this.advisors$.pipe(
 		map(list => list.filter(a => a.hierarchyLevel === 'MANAGER'))
 	);
@@ -44,12 +41,8 @@ export class ManagePage implements OnInit {
 		map(list => list.filter(a => a.tags?.includes('OPERATIONS')))
 	);
 
-
 	contract$ = this.contractFacade.selectedContract$;
 	contract: fromContract.Contract | null;
-
-	advisorsSnapshot: any[] = [];
-	selectedAdvisorName: string | null = null;
 
 	sources = [
 		{ value: 'COMUNIDAD', label: 'Comunidad' },
@@ -67,7 +60,8 @@ export class ManagePage implements OnInit {
 			manager: [''],
 			salesDirector: [''],
 			operations: [''],
-			ceo: ['']
+			ceo: [''],
+			referral: ['']
 		}),
 
 		investor: ['', Validators.required],
@@ -102,9 +96,102 @@ export class ManagePage implements OnInit {
 		fullyFundedAt: [null],
 	});
 
+	previewSplits$ = combineLatest([
+		this.form.valueChanges,
+		this.advisorFacade.entities$,
+		this.commissionConfigFacade.commissionConfigs$
+	]).pipe(
+		map(([formValue, advisorsDic, configs]) => {
+
+			if (!formValue?.source || !formValue?.roles) {
+				return [];
+			}
+
+			const roles = formValue.roles;
+
+			// 🔥 filtramos configs por source seleccionado
+			const sourceConfigs = configs.filter(
+				c => c.source === formValue.source
+			);
+
+
+			// 🔥 helper para obtener porcentaje por rol
+			const getPercent = (role: string) =>
+				sourceConfigs.find(c => c.role === role)?.percentage || 0;
+
+			this.preview = [
+				{
+					role: 'CONSULTANT',
+					uid: roles.consultant,
+					percent: getPercent('CONSULTANT')
+				},
+				{
+					role: 'KAM',
+					uid: roles.kam,
+					percent: getPercent('KAM')
+				},
+				{
+					role: 'MANAGER',
+					uid: roles.manager,
+					percent: getPercent('MANAGER')
+				},
+				{
+					role: 'SALES_DIRECTION',
+					uid: roles.salesDirector,
+					percent: getPercent('SALES_DIRECTION')
+				},
+				{
+					role: 'OPERATIONS',
+					uid: roles.operations,
+					percent: getPercent('OPERATIONS')
+				},
+				{
+					role: 'CEO',
+					uid: roles.ceo,
+					percent: getPercent('CEO')
+				},
+				{
+					role: 'REFERRAL',
+					uid: roles.referral,
+					percent: getPercent('REFERRAL')
+				}
+			];
+
+			this.preview
+				.filter(p => p.uid)
+				.map(p => ({
+					role: p.role,
+					percent: p.percent,
+					name: advisorsDic[p.uid]?.name || 'Sin asignar'
+				}));
+
+
+			return this.preview
+				.filter(p => p.uid)
+				.map(p => ({
+					role: p.role,
+					percent: p.percent,
+					name: advisorsDic[p.uid]?.name || 'Sin asignar'
+				}));
+		})
+	);
+
+	preview = [];
+
+	roleLabels = {
+		CONSULTANT: 'Consultora',
+		KAM: 'KAM',
+		MANAGER: 'Gerente',
+		SALES_DIRECTION: 'Dirección ventas',
+		OPERATIONS: 'Operaciones',
+		CEO: 'CEO',
+		REFERRAL: 'Referidora'
+	};
+
 	constructor(
 		private contractFacade: ContractFacade,
 		private advisorFacade: AdvisorFacade,
+		private commissionConfigFacade: CommissionConfigFacade,
 		private navCtrl: NavController,
 		private fb: FormBuilder,
 		private alertCtrl: AlertController,
@@ -119,19 +206,21 @@ export class ManagePage implements OnInit {
 
 		if (this.contract) {
 			this.form.patchValue(this.contract);
-			const advisor = this.advisorsSnapshot.find(a => a.uid === this.contract.roles.consultant);
-			this.selectedAdvisorName = advisor ? advisor.name : null;
 		} else {
 			this.form.reset();
 		}
 
-		this.form.get('roles.consultant')?.valueChanges.subscribe(uid => {
-			console.log('Selected advisor UID:', uid);
-			const advisor = this.advisorsSnapshot.find(a => a.uid === uid);
-			this.selectedAdvisorName = advisor ? advisor.name : null;
+		this.form.get('source')?.valueChanges.subscribe(source => {
+			if (source !== 'REFERIDORA') {
+				this.form.get('roles.referral')?.setValue('');
+			}
 		});
 
 		this.ref.detectChanges();
+	}
+
+	getPercentForRole(role: string): number {
+		return this.preview.find(p => p.role === role)?.percent || 0;
 	}
 
 	async create() {
