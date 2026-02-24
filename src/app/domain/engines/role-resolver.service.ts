@@ -5,111 +5,30 @@ import { Advisor } from 'src/app/store/advisor/advisor.model';
 @Injectable({ providedIn: 'root' })
 export class RoleResolverService {
 
-	resolve = {
-		CONSULTANT: 'CONSULTANT',
-		MANAGER: 'MANAGER',
-		CEO: 'CEO',
-		KAM: 'KAM',
-		OPERATIONS: 'OPERATIONS',
-		SALES: 'SALES_DIRECTION'
-	};
+	public resolveRoleSplits(contract, configs) {
 
-	resolveRoleSplits(
-		contract: Contract,
-		advisorsDic: Record<string, Advisor>,
-		matrix: any[]
-	) {
+		if (!contract?.roles || !contract?.source) return [];
 
-		const splits: {
-			role: string;
-			advisorUid: string;
-			percent: number;
-		}[] = [];
+		const sourceConfigs = configs.filter(
+			c => c.source === contract.source
+		);
 
-		const advisor = advisorsDic[contract.roles.consultant];
+		const getPercent = (role: string) =>
+			sourceConfigs.find(c => c.role === role)?.percentage || 0;
 
-		if (!advisor) return splits;
+		const roles = contract.roles;
 
-		// 🔥 BUSCAR CONFIG SEGÚN SOURCE
-		const config = matrix.find(m => m.source === contract.source);
+		const splits = [
+			{ role: 'CONSULTANT', advisorUid: roles.consultant, percent: getPercent('CONSULTANT') },
+			{ role: 'KAM', advisorUid: roles.kam, percent: getPercent('KAM') },
+			{ role: 'MANAGER', advisorUid: roles.manager, percent: getPercent('MANAGER') },
+			{ role: 'SALES_DIRECTION', advisorUid: roles.salesDirector, percent: getPercent('SALES_DIRECTION') },
+			{ role: 'OPERATIONS', advisorUid: roles.operations, percent: getPercent('OPERATIONS') },
+			{ role: 'CEO', advisorUid: roles.ceo, percent: getPercent('CEO') },
+			{ role: 'REFERRAL', advisorUid: roles.referral, percent: getPercent('REFERRAL') }
+		];
 
-		if (!config) return splits;
-
-		// =========================
-		// 👩‍💼 CONSULTORA ORIGINARIA
-		// =========================
-		splits.push({
-			role: this.Roles.CONSULTANT,
-			advisorUid: advisor.uid,
-			percent: config.consultant
-		});
-
-		// =========================
-		// 👩‍💼 GERENTE
-		// =========================
-		if (advisor.managerId) {
-			splits.push({
-				role: this.Roles.MANAGER,
-				advisorUid: advisor.managerId,
-				percent: config.manager
-			});
-		}
-
-		// =========================
-		// 🏷️ TAGS
-		// =========================
-		advisor.tags?.forEach(tag => {
-
-			if (tag === 'KAM') {
-				splits.push({
-					role: this.Roles.KAM,
-					advisorUid: advisor.uid,
-					percent: config.kam
-				});
-			}
-
-			if (tag === 'OS') {
-				splits.push({
-					role: this.Roles.OPERATIONS,
-					advisorUid: advisor.uid,
-					percent: config.operations
-				});
-			}
-
-			if (tag === 'SM') {
-				splits.push({
-					role: this.Roles.SALES,
-					advisorUid: advisor.uid,
-					percent: config.sales
-				});
-			}
-
-		});
-
-		// =========================
-		// 👑 CEO GLOBAL
-		// =========================
-		const ceo = Object.values(advisorsDic)
-			.find(a => a.hierarchyLevel === 'CEO');
-
-		if (ceo) {
-			splits.push({
-				role: this.Roles.CEO,
-				advisorUid: ceo.uid,
-				percent: config.ceo
-			});
-		}
-
-		return splits;
+		return splits.filter(s => s.advisorUid && s.percent > 0);
 	}
-
-	private Roles = {
-		CONSULTANT: 'CONSULTANT',
-		MANAGER: 'MANAGER',
-		CEO: 'CEO',
-		KAM: 'KAM',
-		OPERATIONS: 'OPERATIONS',
-		SALES: 'SALES_DIRECTION'
-	};
 
 }
