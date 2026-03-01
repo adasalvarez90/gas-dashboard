@@ -42,10 +42,8 @@ export class CommissionConfigFirestoreService {
 			const ref = doc(this.firestore, this.collectionName, uid);
 
 			const commissionConfig: CommissionConfig = {
+				...c,
 				uid,
-				role: c.role,
-				source: c.source,
-				percentage: c.percentage,
 				_create: Date.now(),
 				_on: true,
 			};

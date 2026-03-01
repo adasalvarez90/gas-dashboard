@@ -1,0 +1,75 @@
+<div class="panel-wrapper">
+
+	@if (contract) {
+
+	<!-- HEADER -->
+	<div class="panel-header">
+
+		@if (isMobile) {
+		<ion-button fill="clear" (click)="goBack()" class="back-btn">
+			<ion-icon slot="start" name="arrow-back"></ion-icon>
+			Volver
+		</ion-button>
+		}
+
+		<div class="amount">
+			{{ contract.capitalMXN | currency:'MXN':'symbol':'1.0-0' }}
+		</div>
+
+		<div class="meta">
+			<span>{{ contract.scheme }}</span>
+			<span>·</span>
+			<span>{{ contract.source }}</span>
+			<span>·</span>
+			<span [class.signed]="contract.signed">
+				{{ contract.signed ? 'Firmado' : 'Pendiente' }}
+			</span>
+		</div>
+	</div>
+
+	<!-- TABS -->
+	<div class="tabs">
+
+		<div class="tab" [class.active]="activeTab === 'info'" (click)="activeTab = 'info'">
+			Información
+		</div>
+
+		<div class="tab" [class.active]="activeTab === 'deposits'" (click)="activeTab = 'deposits'">
+			Depósitos
+		</div>
+
+		<div class="tab" [class.active]="activeTab === 'commissions'" (click)="activeTab = 'commissions'">
+			Comisiones
+		</div>
+
+	</div>
+
+	<!-- CONTENT -->
+	<div class="panel-content fade-slide">
+
+		@if (activeTab === 'info') {
+		<!-- <app-contract-info [contract]="contract"></app-contract-info> -->
+		}
+
+		@if (activeTab === 'deposits') {
+		<!-- <app-contract-deposits [contract]="contract"></app-contract-deposits> -->
+		}
+
+		@if (activeTab === 'commissions') {
+		<!-- <app-contract-commissions [contract]="contract"></app-contract-commissions> -->
+		}
+
+	</div>
+
+	} @else {
+
+	<!-- EMPTY STATE -->
+	<div class="empty-state">
+		<ion-icon name="document-text-outline"></ion-icon>
+		<h3>Selecciona un contrato</h3>
+		<p>Elige un contrato de la lista para ver su información.</p>
+	</div>
+
+	}
+
+</div>

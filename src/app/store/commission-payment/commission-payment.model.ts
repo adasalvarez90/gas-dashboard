@@ -4,18 +4,22 @@ import { Metadata } from 'src/app/models/metadata.model';
 //
 export interface CommissionPayment extends Metadata {
 	contractUid: string;
+	trancheUid: string;
+
 	advisorUid: string;
+	role: string;
 
-	role: string;        // CONSULTANT | KAM | MANAGER | CEO | etc
-	source: string;      // comunidad | red_calida | etc
-
+	grossCommissionPercent: number;   // ejemplo 9% o 10%
+	roleSplitPercent: number;         // porcentaje según matriz
 	amount: number;
 
-	scheme: string;      // A | B
+	paymentType: 'IMMEDIATE' | 'RECURRING' | 'FINAL';
 
-	cutDate: number;     // timestamp del corte (7 o 21)
-	installment: number; // numero de pago (1,2,3...)
+	dueDate: number;
+	cutDate: number;
 
 	paid: boolean;
 	paidAt?: number;
+
+	policyUid?: string;
 }

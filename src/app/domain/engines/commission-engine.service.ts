@@ -15,7 +15,7 @@ export class CommissionEngineService {
 		roleSplits: { role: string; advisorUid: string; percent: number }[],
 	): CommissionPaymentDraft[] {
 
-		if (!contract.fullyFundedAt) return [];
+		if (!contract.fundedAt) return [];
 
 		const totalCommissionPercent = this.getTotalCommissionPercent(contract);
 
@@ -40,7 +40,7 @@ export class CommissionEngineService {
 					source: contract.source,
 					scheme: contract.scheme,
 					installment: inst.index,
-					cutDate: this.resolveCutDate(contract.fullyFundedAt!, inst.offset),
+					cutDate: this.resolveCutDate(contract.fundedAt!, inst.offset),
 					amount: advisorAmount * inst.percent,
 				});
 

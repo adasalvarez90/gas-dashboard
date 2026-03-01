@@ -2,52 +2,53 @@ import { Injectable } from '@angular/core';
 import { LoadingController, ToastController } from '@ionic/angular';
 //NgRx
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { exhaustMap, switchMap, withLatestFrom } from 'rxjs/operators';
+import { exhaustMap, switchMap, map, withLatestFrom } from 'rxjs/operators';
 
-import * as DepositActions from './deposit.actions';
+import * as TrancheActions from './tranche.actions';
+import * as AuthActions from '../auth/auth.actions';
 // Services
-import { DepositFirestoreService } from 'src/app/services/deposit-firestore.service';
+import { TrancheFirestoreService } from 'src/app/services/tranche-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
 
 @Injectable()
-export class DepositEffects {
+export class TrancheEffects {
 	constructor(
 		private actions$: Actions,
-		private depositFS: DepositFirestoreService,
+		private trancheFS: TrancheFirestoreService,
 		private authFacade: AuthFacade,
 		private loadingCtrl: LoadingController,
 		private toastCtrl: ToastController,
 	) { }
 
-	// 🔎 Load deposits
-	loadDeposits$ = createEffect(() =>
+	// 🔎 Load tranches
+	loadTranches$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(DepositActions.loadDeposits),
+			ofType(TrancheActions.loadTranches),
 			withLatestFrom(this.authFacade.user$),
 			switchMap(([{ contractUid }, user]) =>
-				this.depositFS.getDeposits(contractUid).then(
-					deposits => DepositActions.loadDepositsSuccess({ deposits }),
-					err => DepositActions.loadDepositsFailure({ error: err.message }),
+				this.trancheFS.getTranches(contractUid).then(
+					tranches => TrancheActions.loadTranchesSuccess({ tranches }),
+					err => TrancheActions.loadTranchesFailure({ error: err.message }),
 				),
 			),
 		),
 	);
 
-	// ➕ Create deposit
-	createDeposit$ = createEffect(() =>
+	// ➕ Create tranche
+	createTranche$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(DepositActions.createDeposit),
+			ofType(TrancheActions.createTranche),
 			exhaustMap(
-				async ({ deposit }) => {
+				async ({ tranche }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
-						message: 'Creando deposito. Espere, por favor.'
+						message: 'Creando tramo. Espere, por favor.'
 					});
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `El deposito de "${deposit.amount}" fue creado con éxito.`,
+						message: `El tramo de "${tranche.capital}" fue creado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -55,23 +56,23 @@ export class DepositEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.depositFS.createDeposit(deposit).then(
+					return this.trancheFS.createTranche(tranche).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return DepositActions.createDepositSuccess({ deposit: response })
+							return TrancheActions.createTrancheSuccess({ tranche: response })
 						},
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al crear el deposito de "${deposit.amount}": ${err.message}`;
+							toast.message = `Error al crear el tramo de "${tranche.capital}": ${err.message}`;
 							// Present the toast
 							toast.present();
 
-							return DepositActions.createDepositFailure({ error: err.message })
+							return TrancheActions.createTrancheFailure({ error: err.message })
 						},
 					)
 				},
@@ -79,21 +80,21 @@ export class DepositEffects {
 		),
 	);
 
-	// ✏️ Update deposit
-	updateDeposit$ = createEffect(() =>
+	// ✏️ Update tranche
+	updateTranche$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(DepositActions.updateDeposit),
+			ofType(TrancheActions.updateTranche),
 			exhaustMap(
-				async ({ deposit }) => {
+				async ({ tranche }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
-						message: 'Editando deposito. Espere, por favor.'
+						message: 'Editando tramo. Espere, por favor.'
 					});
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `El deposito de "${deposit.amount}" fue editado con éxito.`,
+						message: `El tramo de "${tranche.capital}" fue editado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -101,23 +102,23 @@ export class DepositEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.depositFS.updateDeposit(deposit).then(
+					return this.trancheFS.updateTranche(tranche).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return DepositActions.updateDepositSuccess({ deposit: response })
+							return TrancheActions.updateTrancheSuccess({ tranche: response })
 						},
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al editar el deposito de "${deposit.amount}": ${err.message}`;
+							toast.message = `Error al editar el tramo de "${tranche.capital}": ${err.message}`;
 							// Present the toast
 							toast.present();
 
-							return DepositActions.updateDepositFailure({ error: err.message })
+							return TrancheActions.updateTrancheFailure({ error: err.message })
 						},
 					)
 				},
@@ -125,21 +126,21 @@ export class DepositEffects {
 		),
 	);
 
-	// 🗑️ Delete deposit
-	deleteDeposit$ = createEffect(() =>
+	// 🗑️ Delete tranche
+	deleteTranche$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(DepositActions.deleteDeposit),
+			ofType(TrancheActions.deleteTranche),
 			exhaustMap(
 				async ({ uid }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
-						message: 'Eliminando deposito. Espere, por favor.'
+						message: 'Eliminando tramo. Espere, por favor.'
 					});
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `El deposito fue eliminado con éxito.`,
+						message: `El tramo fue eliminado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -147,23 +148,23 @@ export class DepositEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.depositFS.deleteDeposit(uid).then(
+					return this.trancheFS.deleteTranche(uid).then(
 						async () => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return DepositActions.deleteDepositSuccess({ uid })
+							return TrancheActions.deleteTrancheSuccess({ uid })
 						},
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al eliminar el deposito: ${err.message}`;
+							toast.message = `Error al eliminar el tramo: ${err.message}`;
 							// Present the toast
 							toast.present();
 
-							return DepositActions.deleteDepositFailure({ error: err.message })
+							return TrancheActions.deleteTrancheFailure({ error: err.message })
 						},
 					)
 				},

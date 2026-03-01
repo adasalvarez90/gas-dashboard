@@ -10,35 +10,38 @@ export type InvestmentSource =
 //
 export interface Contract extends Metadata {
 	investor: string;
-	signature: string;
-	deposit: string;
-	depositAccount: string;
-	capitalMXN: number;
-	yieldPercent: number;
-	liquidity: number;
-	term: number;
-	yieldFrequency: string;
-	payments: string;
-	accountStatus: string;
-	scheme: string;
-	docs: boolean;
-	docsComments: string;
 	email: string;
 	clientAccount: string;
-	beneficiaries: string;
-	signed: boolean;
-	regularComision: number;
-	dinamicComision: number;
+
+	scheme: 'A' | 'B';
+	yieldPercent: number;
+	liquidity: number;
+	term: 12;
+
+	yieldFrequency: string;
+	payments: string;
+
 	source: InvestmentSource;
-	fullyFundedAt?: number;
+
+	signatureDate: number;
+	startDate: number;
+	endDate: number;
+
+	accountStatus: string;
+	signed: boolean;
+
+	docs: boolean;
+	docsComments?: string;
+
+	beneficiaries?: string;
 
 	roles: {
-		consultant?: string;
-		kam?: string;
-		manager?: string;
-		salesDirector?: string;
-		operations?: string;
-		ceo?: string;
+		consultant: string;
+		kam: string;
+		manager: string;
+		salesDirector: string;
+		operations: string;
+		ceo: string;
 		referral?: string;
 	};
 }

@@ -1,11 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { ModalController, NavController } from '@ionic/angular';
-// Components
-import { ContractDetailComponent } from 'src/app/components/contract-detail/contract-detail.component';
-//
-import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
+import { Component, HostListener } from '@angular/core';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
-import { Contract } from 'src/app/store/contract/contract.model';
 
 @Component({
 	selector: 'app-contracts',
@@ -13,45 +7,44 @@ import { Contract } from 'src/app/store/contract/contract.model';
 	templateUrl: './contracts.page.html',
 	styleUrls: ['./contracts.page.scss'],
 })
-export class ContractsPage implements OnInit {
-	contracts$ = this.contractFacade.contracts$
-	loading$ = this.contractFacade.loading$;
+export class ContractsPage {
 
-	advisorsDic$ = this.advisorFacade.entities$
+	contracts$ = this.contractFacade.contracts$;
+	selectedContract$ = this.contractFacade.selectedContract$;
 
-	// Search term
-	search$ = this.contractFacade.search$;
-	total$ = this.contractFacade.total$;
+	isMobile = window.innerWidth < 992;
+
+	currentFilter: 'pending' | 'signed' = 'pending';
+
+	activeTab: 'info' | 'deposits' | 'commissions' = 'info';
 
 	constructor(
-		private advisorFacade: AdvisorFacade,
-		private contractFacade: ContractFacade,
-		private navCtrl: NavController,
-		private modalCtrl: ModalController
+		private contractFacade: ContractFacade
 	) { }
 
-	ngOnInit() {}
-
-	filter(searchTerm: any) {
-		// dispatch search term
-		this.contractFacade.searchText(searchTerm);
+	// Detect responsive changes
+	@HostListener('window:resize', [])
+	onResize() {
+		this.isMobile = window.innerWidth < 992;
 	}
 
-	async openContractDetail(contract: Contract) {
-		this.contractFacade.selectContract(contract);
-		
-		const modal = await this.modalCtrl.create({
-			component: ContractDetailComponent,
-			cssClass: 'glass-modal'
-		});
-
-		await modal.present();
+	clearSelection() {
+		this.contractFacade.selectContract(null as any);
 	}
 
-	addOrEdit(contract: Contract = null) {
-		// set selected contract
+	addOrEdit(contract: any = null) {
 		this.contractFacade.selectContract(contract);
-		// navigate to manage page
-		this.navCtrl.navigateForward(['dashboard', 'contracts', 'manage']);
+	}
+
+	select(contract: any) {
+		this.contractFacade.selectContract(contract);
+	}
+
+	setFilter(filter: 'pending' | 'signed') {
+		this.currentFilter = filter;
+	}
+
+	filter(search: string) {
+		this.contractFacade.searchText(search);
 	}
 }

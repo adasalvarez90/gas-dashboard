@@ -1,0 +1,144 @@
+<div class="info-grid">
+
+	<!-- PARTICIPANTES -->
+	<div class="card">
+		<div class="card-title">Participantes</div>
+
+		<div class="row">
+			<span class="label">Inversionista</span>
+			<span class="value">{{ contract.investor }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Correo</span>
+			<span class="value">{{ contract.email }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Cuenta cliente</span>
+			<span class="value">{{ contract.clientAccount }}</span>
+		</div>
+	</div>
+
+	<!-- ROLES -->
+	<div class="card">
+		<div class="card-title">Roles asignados</div>
+
+		<div class="row">
+			<span class="label">Consultora</span>
+			<span class="value">{{ contract.roles?.consultant || 'Sin asignar' }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Gerente</span>
+			<span class="value">{{ contract.roles?.manager || 'Sin asignar' }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">KAM</span>
+			<span class="value">{{ contract.roles?.kam || 'Sin asignar' }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Dirección Ventas</span>
+			<span class="value">{{ contract.roles?.salesDirector || 'Sin asignar' }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Operaciones</span>
+			<span class="value">{{ contract.roles?.operations || 'Sin asignar' }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">CEO</span>
+			<span class="value">{{ contract.roles?.ceo || 'Sin asignar' }}</span>
+		</div>
+
+	</div>
+
+	<!-- CAPITAL Y CONDICIONES -->
+	<div class="card">
+		<div class="card-title">Condiciones financieras</div>
+
+		<div class="metrics">
+			<div>
+				<span class="label">Capital</span>
+				<strong>{{ contract.capitalMXN | currency:'MXN' }}</strong>
+			</div>
+
+			<div>
+				<span class="label">Rendimiento</span>
+				<strong>{{ contract.yieldPercent }}%</strong>
+			</div>
+
+			<div>
+				<span class="label">Plazo</span>
+				<strong>{{ contract.term }} meses</strong>
+			</div>
+		</div>
+
+		<div class="row">
+			<span class="label">Liquidez</span>
+			<span class="value">{{ contract.liquidity }}%</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Periodicidad</span>
+			<span class="value">{{ contract.yieldFrequency }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Pagos</span>
+			<span class="value">{{ contract.payments }}</span>
+		</div>
+	</div>
+
+	<!-- FIRMA -->
+	<div class="card">
+		<div class="card-title">Firma & Depósito</div>
+
+		<div class="row">
+			<span class="label">Fecha firma</span>
+			<span class="value">{{ contract.signature }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Fecha depósito</span>
+			<span class="value">{{ contract.deposit }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Cuenta depósito</span>
+			<span class="value">{{ contract.depositAccount }}</span>
+		</div>
+	</div>
+
+	<!-- DOCUMENTACIÓN -->
+	<div class="card">
+		<div class="card-title">Documentación</div>
+
+		<div class="row">
+			<span class="label">Completa</span>
+			<span class="value" [class.ok]="contract.docs" [class.no]="!contract.docs">
+				{{ contract.docs ? 'Sí' : 'No' }}
+			</span>
+		</div>
+
+		@if (contract.docsComments) {
+		<div class="note">
+			{{ contract.docsComments }}
+		</div>
+		}
+	</div>
+
+	<!-- BENEFICIARIOS -->
+	@if (contract.beneficiaries) {
+	<div class="card">
+		<div class="card-title">Beneficiarios</div>
+		<div class="text">
+			{{ contract.beneficiaries }}
+		</div>
+	</div>
+	}
+
+</div>

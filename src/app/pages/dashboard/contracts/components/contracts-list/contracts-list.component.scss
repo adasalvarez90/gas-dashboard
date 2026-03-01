@@ -1,0 +1,70 @@
+.list-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.filters {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+
+.tabs {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.tab {
+	font-size: 14px;
+	font-weight: 400;
+	transition: .2s ease;
+}
+
+.tab.active {
+	border: 1px solid rgba(33, 192, 99, .2);
+	color: #D9FDD3;
+	background-color: #103529;
+}
+
+.contracts {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.contract-item {
+    padding: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .03);
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.contract-item:hover {
+    background: rgba(255, 255, 255, .04);
+}
+
+.contract-item.selected {
+    background: rgba(var(--ion-color-primary-rgb), .08);
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+}
+
+.amount {
+    color: var(--ion-color-success);
+}
+
+.bottom {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    opacity: .7;
+    margin-top: 6px;
+}
+
+.status.signed {
+    color: var(--ion-color-success);
+}

@@ -1,0 +1,55 @@
+<div class="list-wrapper">
+
+	<div class="filters">
+
+		<div class="tabs">
+			<ion-chip color="dark" mode="ios" outline="true" class="tab" [class.active]="currentFilter === 'pending'"
+				(click)="setFilter('pending')">
+				<ion-label>Pendientes</ion-label>
+			</ion-chip>
+			<ion-chip color="dark" mode="ios" outline="true" class="tab" [class.active]="currentFilter === 'signed'"
+				(click)="setFilter('signed')">
+				<ion-label>Firmados</ion-label>
+			</ion-chip>
+		</div>
+
+		<ion-searchbar debounce="400" (ionInput)="filter($event.target.value)"
+			placeholder="Buscar contratos"></ion-searchbar>
+
+	</div>
+
+	<div class="contracts">
+
+		@if ((contracts$ | async); as contracts) {
+		@for (contract of contracts; track contract.uid) {
+
+		<div class="contract-item" [class.selected]="(selectedContract$ | async)?.uid === contract.uid"
+			(click)="select(contract)">
+
+			<div class="top">
+				<div class="investor">
+					{{ contract.investor }}
+				</div>
+				<div class="amount">
+					${{ contract.capitalMXN | number:'1.0-0' }}
+				</div>
+			</div>
+
+			<div class="bottom">
+				<span>
+					{{ contract.yieldPercent }}% · {{ contract.term }}m
+				</span>
+
+				<span class="status" [class.signed]="contract.signed">
+					{{ contract.signed ? 'Firmado' : 'Pendiente' }}
+				</span>
+			</div>
+
+		</div>
+
+		}
+		}
+
+	</div>
+
+</div>

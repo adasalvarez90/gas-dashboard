@@ -11,6 +11,7 @@ import * as InviteActions from '../invite/invite.actions';
 import * as AdvisorActions from '../advisor/advisor.actions';
 import * as ContractActions from '../contract/contract.actions';
 import * as CommissionConfigActions from '../commission-config/commission-config.actions';
+import * as CommissionPolicyActions from '../commission-policy/commission-policy.actions';
 
 @Injectable()
 export class UtilEffects {
@@ -23,7 +24,8 @@ export class UtilEffects {
                 InviteActions.loadInvites(),
                 AdvisorActions.loadAdvisors(),
                 ContractActions.loadContracts(),
-                CommissionConfigActions.loadCommissionConfigs()
+                CommissionConfigActions.loadCommissionConfigs(),
+                CommissionPolicyActions.loadCommissionPolicies(),
             ])
         )
     );

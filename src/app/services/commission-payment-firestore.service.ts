@@ -29,19 +29,8 @@ export class CommissionPaymentFirestoreService {
 		const uid = uuidv4();
 		
 		const newCommissionPayment: CommissionPayment = {
+			...commissionPayment,
 			uid,
-			
-			contractUid: commissionPayment.contractUid,
-			advisorUid: commissionPayment.advisorUid,
-			role: commissionPayment.role,
-			source: commissionPayment.source,
-			amount: commissionPayment.amount,
-			scheme: commissionPayment.scheme,
-			cutDate: commissionPayment.cutDate,
-			installment: commissionPayment.installment,
-			paid: commissionPayment.paid,
-			paidAt: commissionPayment.paidAt,
-
 			_create: Date.now(),
 			_on: true
 		};

@@ -1,94 +1,34 @@
-.contracts-page {
-	padding: 16px !important;
-}
-
-/* RESUMEN */
-.contracts-summary {
-	margin: 8px 8px 16px;
-	color: var(--ion-color-medium);
-	font-size: 14px;
-}
-
-/* GRID */
-.contracts-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: 16px;
-}
-
-/* CARD */
-.contract-card {
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.03);
-	backdrop-filter: blur(10px);
-	border-radius: 18px;
-	padding: 16px;
-	box-shadow:
-		0 10px 30px rgba(0, 0, 0, 0.08),
-		inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-	cursor: pointer;
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.contract-card:hover {
-	transform: translateY(-4px);
-	box-shadow:
-		0 16px 40px rgba(0, 0, 0, 0.12);
-
-    // border-left: 4px solid;
-	background: rgba(var(--ion-color-primary-rgb), 0.08);
-	border-color: rgba(var(--ion-color-primary-rgb), 0.3);
-}
-
-/* HEADER */
-.card-header {
+.contracts-layout {
 	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	margin-bottom: 12px;
+	height: 100%;
 }
 
-.investor {
-	font-weight: 600;
-	font-size: 16px;
-	line-height: 1.2;
+.left-panel {
+	width: 360px;
+	border-right: 1px solid rgba(255, 255, 255, .05);
 }
 
-/* CAPITAL */
-.capital {
-	font-size: 22px;
-	font-weight: 700;
-	color: var(--ion-color-success);
-	margin-bottom: 8px;
+.right-panel {
+	flex: 1;
 }
 
-.capital span {
-	font-size: 13px;
-	font-weight: 500;
-	margin-left: 4px;
-	color: var(--ion-color-medium);
-}
+@media (max-width: 992px) {
 
-/* ASESORA */
-.advisor {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	color: var(--ion-color-primary);
-	font-size: 14px;
-	margin-bottom: 8px;
-}
+	.contracts-layout {
+		position: relative;
+	}
 
-/* DETALLES */
-.details {
-	font-size: 13px;
-	color: var(--ion-color-medium);
-	margin-bottom: 12px;
-}
+	.left-panel {
+		width: 100%;
+	}
 
-/* FOOTER */
-.card-footer {
-	display: flex;
-	gap: 6px;
-	flex-wrap: wrap;
+	.right-panel {
+		position: absolute;
+		inset: 0;
+		background: var(--ion-background-color);
+	}
+
+	.hidden {
+		display: none;
+	}
 }

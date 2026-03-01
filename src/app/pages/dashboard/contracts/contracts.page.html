@@ -12,93 +12,23 @@
 			</ion-button>
 		</ion-buttons>
 	</ion-toolbar>
-
-	<ion-toolbar>
-		<ion-searchbar #searchBar debounce="500" (ionInput)="filter(searchBar.value)" placeholder="Buscar contratos">
-		</ion-searchbar>
-	</ion-toolbar>
 </ion-header>
 
 <ion-content>
-	<div class="contracts-page">
-		@if ((contracts$ | async); as contracts) {
-		<div class="contracts-summary">
-			@if ((search$ | async); as search) {
-			<span>
-				{{ contracts.length }} de {{ total$ | async }} {{ 'contrato' | plural
-				:(total$ | async) :'s' :'' }} con <ion-text>"{{ search }}" </ion-text>
-			</span>
-			} @else {
-			<span>{{ contracts.length }} {{ 'contrato' | plural :contracts.length :'s' :'' }}</span>
-			}
-		</div>
-		}
+  <div class="contracts-layout">
 
-		<div class="contracts-grid">
-			@if ((advisorsDic$ | async); as advisorsDic) {
-			@for (contract of contracts$ | async; track contract.uid) {
+    <!-- LIST -->
+    <app-contracts-list
+      class="left-panel"
+      [class.hidden]="isMobile && (selectedContract$ | async)"
+    ></app-contracts-list>
 
-			<div class="contract-card" (click)="openContractDetail(contract)">
+    <!-- PANEL -->
+    <app-contract-panel
+      class="right-panel"
+      [contract]="selectedContract$ | async"
+      (back)="clearSelection()"
+    ></app-contract-panel>
 
-				<!-- HEADER -->
-				<div class="card-header">
-					<div class="investor">
-						{{ contract.investor }}
-					</div>
-
-					<div class="status">
-						<ion-chip [color]="contract.accountStatus === 'active' ? 'success' : 'warning'" outline>
-							{{ contract.accountStatus | titlecase }}
-						</ion-chip>
-					</div>
-				</div>
-
-				<!-- CAPITAL -->
-				<div class="capital">
-					${{ contract.capitalMXN | number:'1.2-2' }}
-					<span>MXN</span>
-				</div>
-
-				<!-- ASESORA -->
-				<div class="advisor">
-					<ion-icon name="person-circle-outline"></ion-icon>
-					<span>
-						{{ advisorsDic[contract.roles.consultant]?.name || 'Sin asesora' }}
-					</span>
-				</div>
-
-				<!-- DETALLES -->
-				<div class="details">
-					<span>{{ contract.yieldPercent }}%</span>
-					<span>· {{ contract.term }} meses</span>
-					<span>· {{ contract.yieldFrequency }}</span>
-				</div>
-
-				<!-- FOOTER -->
-				<div class="card-footer">
-					<ion-chip color="secondary" outline>
-						{{ contract.scheme | titlecase }}
-					</ion-chip>
-
-					<ion-chip color="tertiary" outline>
-						{{ contract.source === 'COMUNIDAD' ? 'Comunidad' :
-						contract.source === 'RED_CALIDA' ? 'Red Cálida' : 
-						contract.source === 'DINERO_PROPIO' ? 'Dinero propio' : 
-						contract.source === 'REFERIDORA' ? 'Referidora' : 'Sin asignar' | titlecase }}
-					</ion-chip>
-
-					@if (contract.signed) {
-					<ion-chip color="success" outline>
-						Firmado
-						<ion-icon name="checkmark-circle"></ion-icon>
-					</ion-chip>
-					}
-				</div>
-
-			</div>
-
-			}
-			}
-		</div>
-	</div>
+  </div>
 </ion-content>

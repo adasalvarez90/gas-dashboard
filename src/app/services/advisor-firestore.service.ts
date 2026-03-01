@@ -41,11 +41,8 @@ export class AdvisorFirestoreService {
 		const uid = uuidv4();
 
 		const newAdvisor: Advisor = {
+			...advisor,
 			uid,
-			name: advisor.name,
-			hierarchyLevel: advisor.hierarchyLevel,
-			tags: advisor.tags,
-			managerId: advisor.managerId,
 			_create: Date.now(),
 			_on: true,
 		};

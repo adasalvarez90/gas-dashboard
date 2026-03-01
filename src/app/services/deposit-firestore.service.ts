@@ -29,12 +29,8 @@ export class DepositFirestoreService {
 		const uid = uuidv4();
 		
 		const newDeposit: Deposit = {
+			...deposit,
 			uid,
-			
-			contractUid: deposit.contractUid,
-			amount: deposit.amount,
-			date: deposit.date,
-
 			_create: Date.now(),
 			_on: true
 		};

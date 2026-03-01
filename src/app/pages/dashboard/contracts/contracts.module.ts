@@ -10,10 +10,16 @@ import { ContractsPage } from './contracts.page';
 
 import { PipesModule } from 'src/app/pipes/pipes.module';
 
+// Components
+import { ContractsListComponent } from './components/contracts-list/contracts-list.component';
+import { ContractPanelComponent } from './components/contract-panel/contract-panel.component';
+
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
+    ContractsListComponent,
+    ContractPanelComponent,
     PipesModule,
     IonicModule,
     ContractsPageRoutingModule

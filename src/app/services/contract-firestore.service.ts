@@ -29,38 +29,8 @@ export class ContractFirestoreService {
 		const uid = uuidv4();
 		
 		const newContract: Contract = {
+			...contract,
 			uid,
-			roles: contract.roles,
-			
-			investor: contract.investor,
-			email: contract.email,
-			clientAccount: contract.clientAccount,
-			
-			capitalMXN: contract.capitalMXN,
-			yieldPercent: contract.yieldPercent,
-			liquidity: contract.liquidity,
-			term: contract.term,
-			
-			yieldFrequency: contract.yieldFrequency,
-			payments: contract.payments,
-			accountStatus: contract.accountStatus,
-			scheme: contract.scheme,
-			
-			signature: contract.signature,
-			deposit: contract.deposit,
-			depositAccount: contract.depositAccount,
-			
-			docs: contract.docs,
-			docsComments: contract.docsComments,
-			
-			beneficiaries: contract.beneficiaries,
-			signed: contract.signed,
-			
-			regularComision: contract.regularComision,
-			dinamicComision: contract.dinamicComision,
-			source: contract.source,
-			fullyFundedAt: contract.fullyFundedAt,
-
 			_create: Date.now(),
 			_on: true
 		};

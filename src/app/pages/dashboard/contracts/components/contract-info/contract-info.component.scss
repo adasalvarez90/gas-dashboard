@@ -1,0 +1,76 @@
+.info-grid {
+    display: grid;
+    gap: 18px;
+}
+
+/* CARD */
+
+.card {
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .05);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.card-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: .6;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+}
+
+/* ROWS */
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.label {
+    opacity: .6;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.value {
+    font-weight: 500;
+}
+
+/* METRICS */
+
+.metrics {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 10px;
+}
+
+.metrics div {
+    display: flex;
+    flex-direction: column;
+}
+
+.metrics strong {
+    font-size: 15px;
+}
+
+/* STATES */
+
+.ok {
+    color: var(--ion-color-success);
+}
+
+.no {
+    color: var(--ion-color-danger);
+}
+
+/* TEXT */
+
+.text,
+.note {
+    font-size: 14px;
+    opacity: .8;
+    line-height: 1.4;
+}
