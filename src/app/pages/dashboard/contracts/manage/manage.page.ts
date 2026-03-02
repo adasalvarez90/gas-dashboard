@@ -54,6 +54,32 @@ export class ManagePage implements OnInit {
 	form: FormGroup = this.fb.group({
 		uid: [''],
 
+		investor: ['', Validators.required],
+		email: ['', [Validators.required, Validators.email]],
+		clientAccount: [''],
+
+		scheme: ['', Validators.required],
+		yieldPercent: [null, Validators.required],
+		liquidity: [null, Validators.required],
+		term: [12],
+		
+		yieldFrequency: ['', Validators.required],
+		payments: ['', Validators.required],
+		
+		source: ['COMUNIDAD', Validators.required],
+
+		signatureDate: [null],
+		startDate: [null],
+		endDate: [null],
+
+		accountStatus: ['', Validators.required],
+		signed: [false],
+		
+		docs: [false],
+		docsComments: [''],
+
+		beneficiaries: [''],
+		
 		roles: this.fb.group({
 			consultant: [''],
 			kam: [''],
@@ -64,36 +90,7 @@ export class ManagePage implements OnInit {
 			referral: ['']
 		}),
 
-		investor: ['', Validators.required],
-		email: ['', [Validators.required, Validators.email]],
-		clientAccount: [''],
-
-		capitalMXN: [null, Validators.required],
-		yieldPercent: [null, Validators.required],
-		liquidity: [null, Validators.required],
-		term: [null, Validators.required],
-
-		yieldFrequency: ['', Validators.required],
-		payments: ['', Validators.required],
-		accountStatus: ['', Validators.required],
-		scheme: ['', Validators.required],
-
-		signature: [''],
-		deposit: [''],
-		depositAccount: [''],
-
-		docs: [false],
-		docsComments: [''],
-
-		beneficiaries: [''],
-		signed: [false],
-
-		regularComision: [0],
-		dinamicComision: [0],
-
-		source: ['COMUNIDAD', Validators.required],
-
-		fullyFundedAt: [null],
+		initialCapital: [null, [Validators.required, Validators.min(1)]],
 	});
 
 	previewSplits$ = combineLatest([
@@ -206,14 +203,31 @@ export class ManagePage implements OnInit {
 
 		if (this.contract) {
 			this.form.patchValue(this.contract);
-		} else {
-			this.form.reset();
 		}
 
 		this.form.get('source')?.valueChanges.subscribe(source => {
 			if (source !== 'REFERIDORA') {
 				this.form.get('roles.referral')?.setValue('');
 			}
+		});
+
+		// Valuechanges to signed
+		this.form.get('signed')?.valueChanges.subscribe(signed => {
+			if (!signed) {
+				this.form.get('signatureDate')?.setValue(null);
+				this.form.get('startDate')?.setValue(null);
+				this.form.get('endDate')?.setValue(null);
+				// Also remove validators
+				this.form.get('startDate')?.clearValidators();
+				// Remove validators
+				this.form.get('signatureDate')?.clearValidators();
+			} else {
+				// Add validators
+				this.form.get('signatureDate')?.setValidators(Validators.required);
+				this.form.get('startDate')?.setValidators(Validators.required);
+			}
+			this.form.get('signatureDate')?.updateValueAndValidity();
+			this.form.get('startDate')?.updateValueAndValidity();
 		});
 
 		this.ref.detectChanges();

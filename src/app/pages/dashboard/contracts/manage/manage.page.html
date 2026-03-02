@@ -29,9 +29,11 @@
 	<ion-grid fixed>
 		<ion-row>
 			<ion-col size="12">
+
 				<form [formGroup]="form">
+
+					<!-- ================= HERO ================= -->
 					@if (advisorsDic$ | async; as advisorsDic) {
-					<!-- PERFIL DEL CONTRATO -->
 					<div class="contract-hero">
 						<div class="avatar">
 							{{ (advisorsDic[form.get('roles.consultant')?.value]?.name || '?')[0] }}
@@ -45,17 +47,11 @@
 								{{ form.get('investor')?.value || 'Inversionista' }}
 							</div>
 						</div>
-
-						<ion-toggle color="success" formControlName="signed">
-							Firmado
-						</ion-toggle>
 					</div>
 					}
 
-					<!-- ROLES -->
-					@if (previewSplits$ | async; as preview) {
+					<!-- ================= ROLES ================= -->
 					<div class="section roles-section" formGroupName="roles">
-
 						<div class="section-title">Participantes del contrato</div>
 
 						<div class="roles-grid">
@@ -63,24 +59,18 @@
 							<!-- CONSULTORA -->
 							<div class="role-card">
 								<div class="role-label">{{ roleLabels.CONSULTANT }}</div>
-
-								<ion-select formControlName="consultant" interface="popover">
+								<ion-select formControlName="consultant">
 									@for (advisor of advisors$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
 										{{ advisor.name }}
 									</ion-select-option>
 									}
 								</ion-select>
-
-								<div class="preview-percent">
-									{{ getPercentForRole('CONSULTANT') }}%
-								</div>
 							</div>
 
 							<!-- KAM -->
 							<div class="role-card">
 								<div class="role-label kam">{{ roleLabels.KAM }}</div>
-
 								<ion-select formControlName="kam">
 									@for (advisor of advisorsKam$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
@@ -88,15 +78,11 @@
 									</ion-select-option>
 									}
 								</ion-select>
-								<div class="preview-percent">
-									{{ getPercentForRole('KAM') }}%
-								</div>
 							</div>
 
 							<!-- GERENTE -->
 							<div class="role-card">
 								<div class="role-label manager">{{ roleLabels.MANAGER }}</div>
-
 								<ion-select formControlName="manager">
 									@for (advisor of advisorsManager$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
@@ -104,15 +90,11 @@
 									</ion-select-option>
 									}
 								</ion-select>
-								<div class="preview-percent">
-									{{ getPercentForRole('MANAGER') }}%
-								</div>
 							</div>
 
 							<!-- DIRECCIÓN VENTAS -->
 							<div class="role-card">
 								<div class="role-label sales">{{ roleLabels.SALES_DIRECTION }}</div>
-
 								<ion-select formControlName="salesDirector">
 									@for (advisor of advisorsSales$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
@@ -120,15 +102,11 @@
 									</ion-select-option>
 									}
 								</ion-select>
-								<div class="preview-percent">
-									{{ getPercentForRole('SALES_DIRECTION') || 0 }}%
-								</div>
 							</div>
 
 							<!-- OPERACIONES -->
 							<div class="role-card">
 								<div class="role-label ops">{{ roleLabels.OPERATIONS }}</div>
-
 								<ion-select formControlName="operations">
 									@for (advisor of advisorsOps$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
@@ -136,15 +114,11 @@
 									</ion-select-option>
 									}
 								</ion-select>
-								<div class="preview-percent">
-									{{ getPercentForRole('OPERATIONS') }}%
-								</div>
 							</div>
 
 							<!-- CEO -->
 							<div class="role-card ceo">
 								<div class="role-label ceo">{{ roleLabels.CEO }}</div>
-
 								<ion-select formControlName="ceo">
 									@for (advisor of advisorsCEO$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
@@ -152,16 +126,12 @@
 									</ion-select-option>
 									}
 								</ion-select>
-								<div class="preview-percent">
-									{{ getPercentForRole('CEO') }}%
-								</div>
 							</div>
 
 							<!-- REFERIDORA -->
 							@if(form.get('source')?.value === 'REFERIDORA') {
 							<div class="role-card referral">
 								<div class="role-label referral">{{ roleLabels.REFERRAL }}</div>
-
 								<ion-select formControlName="referral">
 									@for (advisor of advisors$ | async; track advisor.uid) {
 									<ion-select-option [value]="advisor.uid">
@@ -169,23 +139,18 @@
 									</ion-select-option>
 									}
 								</ion-select>
-								<div class="preview-percent">
-									{{ getPercentForRole('REFERRAL') }}%
-								</div>
 							</div>
 							}
 
 						</div>
-
 					</div>
-					}
 
-					<!-- INFORMACIÓN GENERAL -->
+
+					<!-- ================= INFO GENERAL ================= -->
 					<div class="section">
 						<div class="section-title">Información general</div>
 
 						<div class="grid-2">
-
 							<ion-item lines="none">
 								<ion-label position="stacked">Inversionista</ion-label>
 								<ion-input formControlName="investor"></ion-input>
@@ -202,34 +167,30 @@
 							</ion-item>
 						</div>
 
-						<!-- 🔥 NUEVO: SOURCE -->
+						<!-- SOURCE -->
 						<div class="source-wrapper">
 							<div class="source-title">Origen de inversión</div>
-
 							<div class="source-grid">
-
 								@for (s of sources; track s.value) {
 								<div class="source-option" [class.active]="form.get('source')?.value === s.value"
 									(click)="form.patchValue({ source: s.value })">
-									<div class="source-label">
-										{{ s.label }}
-									</div>
+									{{ s.label }}
 								</div>
 								}
-
 							</div>
 						</div>
-
 					</div>
 
-					<!-- DATOS FINANCIEROS -->
+
+					<!-- ================= FINANCIERO ================= -->
 					<div class="section primary">
 						<div class="section-title">Datos financieros</div>
 
 						<div class="grid-4">
+
 							<ion-item lines="none">
-								<ion-label position="stacked">Capital (MXN)</ion-label>
-								<ion-input type="number" formControlName="capitalMXN"></ion-input>
+								<ion-label position="stacked">Capital inicial (MXN)</ion-label>
+								<ion-input type="number" formControlName="initialCapital"></ion-input>
 							</ion-item>
 
 							<ion-item lines="none">
@@ -246,10 +207,12 @@
 								<ion-label position="stacked">Plazo (meses)</ion-label>
 								<ion-input type="number" formControlName="term"></ion-input>
 							</ion-item>
+
 						</div>
 					</div>
 
-					<!-- CONDICIONES -->
+
+					<!-- ================= CONDICIONES ================= -->
 					<div class="section">
 						<div class="section-title">Condiciones</div>
 
@@ -271,33 +234,58 @@
 
 							<ion-item lines="none">
 								<ion-label position="stacked">Esquema</ion-label>
-								<ion-input formControlName="scheme"></ion-input>
+								<ion-select formControlName="scheme">
+									<ion-select-option value="A">Esquema A</ion-select-option>
+									<ion-select-option value="B">Esquema B</ion-select-option>
+								</ion-select>
 							</ion-item>
 						</div>
 					</div>
 
-					<!-- FIRMA -->
+
+					<!-- ================= FIRMA ================= -->
 					<div class="section success">
 						<div class="section-title">Información de firma</div>
+
 						<div class="grid-3">
 							<ion-item lines="none">
-								<ion-label position="stacked">Fecha de firma</ion-label>
-								<ion-input type="text" formControlName="signature"></ion-input>
+								<ion-toggle color="success" formControlName="signed">
+									Firmado
+								</ion-toggle>
+							</ion-item>
+							@if(form.get('signed')?.value) {
+							<ion-item lines="none">
+								<!-- Datepickers as buttons -->
+								<ion-label position="stacked">Fecha firma</ion-label>
+								<br>
+								<ion-datetime-button datetime="datetime"></ion-datetime-button>
+
+								<ion-modal [keepContentsMounted]="true">
+									<ng-template>
+										<ion-datetime id="datetime" formControlName="signatureDate" presentation="date"
+											[showDefaultButtons]="true"></ion-datetime>
+									</ng-template>
+								</ion-modal>
 							</ion-item>
 
 							<ion-item lines="none">
-								<ion-label position="stacked">Fecha de deposito</ion-label>
-								<ion-input type="text" formControlName="deposit"></ion-input>
-							</ion-item>
+								<ion-label position="stacked">Fecha inicio contrato</ion-label>
+								<br>
+								<ion-datetime-button datetime="datetime2"></ion-datetime-button>
 
-							<ion-item lines="none">
-								<ion-label position="stacked">Cuenta de deposito</ion-label>
-								<ion-input type="text" formControlName="depositAccount"></ion-input>
+								<ion-modal [keepContentsMounted]="true">
+									<ng-template>
+										<ion-datetime id="datetime2" formControlName="startDate" presentation="date"
+											[showDefaultButtons]="true"></ion-datetime>
+									</ng-template>
+								</ion-modal>
 							</ion-item>
+							}
 						</div>
 					</div>
 
-					<!-- DOCUMENTOS -->
+
+					<!-- ================= DOCUMENTOS ================= -->
 					<div class="section">
 						<div class="section-title">Documentación</div>
 
@@ -312,13 +300,15 @@
 						</ion-item>
 					</div>
 
-					<!-- BENEFICIARIOS -->
+
+					<!-- ================= BENEFICIARIOS ================= -->
 					<div class="section warning">
 						<div class="section-title">Beneficiarios</div>
 						<ion-textarea formControlName="beneficiaries"></ion-textarea>
 					</div>
 
 				</form>
+
 			</ion-col>
 		</ion-row>
 	</ion-grid>

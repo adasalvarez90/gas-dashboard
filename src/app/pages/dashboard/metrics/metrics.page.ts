@@ -35,7 +35,7 @@ export class MetricsPage implements OnInit {
 					matrix
 				);
 
-				return this.engine.generatePayments(contract, splits);
+				return null; //this.engine.generatePayments(contract, splits);
 
 			});
 
@@ -55,14 +55,16 @@ export class MetricsPage implements OnInit {
 					matrix
 				);
 
-				return this.engine.generatePayments(contract, splits);
+				// return this.engine.generatePayments(contract, splits);
 
 			});
 
-			return this.metricsAggregator.buildDashboardMetrics(
-				contracts,
-				drafts
-			);
+			return null; 
+			
+			// this.metricsAggregator.buildDashboardMetrics(
+			// 	contracts,
+			// 	drafts
+			// );
 
 		})
 	);

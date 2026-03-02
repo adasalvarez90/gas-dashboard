@@ -1,4 +1,5 @@
 import { Component, HostListener } from '@angular/core';
+import { NavController } from '@ionic/angular';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
 @Component({
@@ -19,7 +20,8 @@ export class ContractsPage {
 	activeTab: 'info' | 'deposits' | 'commissions' = 'info';
 
 	constructor(
-		private contractFacade: ContractFacade
+		private contractFacade: ContractFacade,
+		private navCtrl: NavController,
 	) { }
 
 	// Detect responsive changes
@@ -33,7 +35,10 @@ export class ContractsPage {
 	}
 
 	addOrEdit(contract: any = null) {
+		// set selected contract
 		this.contractFacade.selectContract(contract);
+		// navigate to manage page
+		this.navCtrl.navigateForward(['dashboard', 'contracts', 'manage']);
 	}
 
 	select(contract: any) {

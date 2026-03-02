@@ -15,20 +15,15 @@
 </ion-header>
 
 <ion-content>
-  <div class="contracts-layout">
+	<div class="contracts-layout">
 
-    <!-- LIST -->
-    <app-contracts-list
-      class="left-panel"
-      [class.hidden]="isMobile && (selectedContract$ | async)"
-    ></app-contracts-list>
+		<!-- LIST -->
+		<app-contracts-list class="left-panel"
+			[class.hidden]="isMobile && (selectedContract$ | async)"></app-contracts-list>
 
-    <!-- PANEL -->
-    <app-contract-panel
-      class="right-panel"
-      [contract]="selectedContract$ | async"
-      (back)="clearSelection()"
-    ></app-contract-panel>
+		<!-- PANEL -->
+		<app-contract-panel class="right-panel" [contract]="selectedContract$ | async"
+			(back)="clearSelection()"></app-contract-panel>
 
-  </div>
+	</div>
 </ion-content>
