@@ -44,9 +44,9 @@ export class ContractEffects {
 	// ➕ Create contract
 	createContract$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(ContractActions.createContract),
+			ofType(ContractActions.createContractWithInitialTranche),
 			exhaustMap(
-				async ({ contract }) => {
+				async ({ contract, initialCapital }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
@@ -63,7 +63,7 @@ export class ContractEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.contractFS.createContract(contract).then(
+					return this.contractFS.createContractWithInitialTranche(contract, initialCapital).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();

@@ -62,10 +62,10 @@ export class ManagePage implements OnInit {
 		yieldPercent: [null, Validators.required],
 		liquidity: [null, Validators.required],
 		term: [12],
-		
+
 		yieldFrequency: ['', Validators.required],
 		payments: ['', Validators.required],
-		
+
 		source: ['COMUNIDAD', Validators.required],
 
 		signatureDate: [null],
@@ -74,12 +74,12 @@ export class ManagePage implements OnInit {
 
 		accountStatus: ['', Validators.required],
 		signed: [false],
-		
+
 		docs: [false],
 		docsComments: [''],
 
 		beneficiaries: [''],
-		
+
 		roles: this.fb.group({
 			consultant: [''],
 			kam: [''],
@@ -240,8 +240,10 @@ export class ManagePage implements OnInit {
 	async create() {
 		// Get the form value
 		const contract = this.form.value;
+
+		const { initialCapital, ...contractData } = contract;
 		// Create new user
-		this.contractFacade.createContract(contract);
+		this.contractFacade.createContractWithInitialTranche(contractData, initialCapital);
 		// Exit
 		this.exit();
 	}
