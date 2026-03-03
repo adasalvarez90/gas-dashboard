@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 })
 export class ContractFirestoreService {
 	private readonly contractsCollection = 'contracts';
-	private readonly tranchesCollection = 'contractTranches';
+	private readonly tranchesCollection = 'tranches';
 
 	constructor(private firestore: Firestore) { }
 

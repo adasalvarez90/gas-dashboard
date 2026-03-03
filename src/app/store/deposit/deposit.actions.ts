@@ -3,7 +3,7 @@ import { createAction, props } from '@ngrx/store';
 import { Deposit } from './deposit.model';
 
 // Load
-export const loadDeposits = createAction('[Deposits] Load', props<{ contractUid: string }>());
+export const loadDeposits = createAction('[Deposits] Load', props<{ trancheUid: string }>());
 export const loadDepositsSuccess = createAction('[Deposits] Load Success', props<{ deposits: Deposit[] }>());
 export const loadDepositsFailure = createAction('[Deposits] Load Failure', props<{ error: string }>());
 

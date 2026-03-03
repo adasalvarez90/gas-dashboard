@@ -7,13 +7,17 @@ import { exhaustMap, switchMap, withLatestFrom } from 'rxjs/operators';
 import * as DepositActions from './deposit.actions';
 // Services
 import { DepositFirestoreService } from 'src/app/services/deposit-firestore.service';
+import { TrancheDepositService } from 'src/app/domain/tranche/tranche-deposit.service';
+
 import { AuthFacade } from '../auth/auth.facade';
+
 
 @Injectable()
 export class DepositEffects {
 	constructor(
 		private actions$: Actions,
 		private depositFS: DepositFirestoreService,
+		private trancheDepositService: TrancheDepositService,
 		private authFacade: AuthFacade,
 		private loadingCtrl: LoadingController,
 		private toastCtrl: ToastController,
@@ -24,8 +28,8 @@ export class DepositEffects {
 		this.actions$.pipe(
 			ofType(DepositActions.loadDeposits),
 			withLatestFrom(this.authFacade.user$),
-			switchMap(([{ contractUid }, user]) =>
-				this.depositFS.getDeposits(contractUid).then(
+			switchMap(([{ trancheUid }, user]) =>
+				this.depositFS.getDeposits(trancheUid).then(
 					deposits => DepositActions.loadDepositsSuccess({ deposits }),
 					err => DepositActions.loadDepositsFailure({ error: err.message }),
 				),
@@ -55,7 +59,7 @@ export class DepositEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.depositFS.createDeposit(deposit).then(
+					return this.trancheDepositService.registerDeposit(deposit).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();

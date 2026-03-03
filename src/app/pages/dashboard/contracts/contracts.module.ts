@@ -13,6 +13,8 @@ import { PipesModule } from 'src/app/pipes/pipes.module';
 // Components
 import { ContractsListComponent } from './components/contracts-list/contracts-list.component';
 import { ContractPanelComponent } from './components/contract-panel/contract-panel.component';
+import { ContractInfoComponent } from './components/contract-info/contract-info.component';
+
 
 @NgModule({
   imports: [
@@ -20,6 +22,7 @@ import { ContractPanelComponent } from './components/contract-panel/contract-pan
     FormsModule,
     ContractsListComponent,
     ContractPanelComponent,
+    ContractInfoComponent,
     PipesModule,
     IonicModule,
     ContractsPageRoutingModule

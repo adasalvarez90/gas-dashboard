@@ -12,6 +12,10 @@ import { InviteModule } from './invite/invite.module'
 import { AdvisorModule } from './advisor/advisor.module'
 import { ContractModule } from './contract/contract.module'
 import { CommissionConfigModule } from './commission-config/commission-config.module'
+import { CommissionPaymentModule } from './commission-payment/commission-payment.module';
+import { CommissionPolicyModule } from './commission-policy/commission-policy.module';
+import { TrancheModule } from './tranche/tranche.module';
+import { DepositModule } from './deposit/deposit.module';
 
 // Custom serializer
 import { CustomSerializer } from './router/router-custom-serializer';
@@ -29,6 +33,10 @@ import { reducers } from './store.reducer';
 		AdvisorModule,
 		ContractModule,
 		CommissionConfigModule,
+		CommissionPaymentModule,
+		CommissionPolicyModule,
+		TrancheModule,
+		DepositModule,
 		// NGRX Modules
 		StoreModule.forRoot(reducers),
 		EffectsModule.forRoot([]),

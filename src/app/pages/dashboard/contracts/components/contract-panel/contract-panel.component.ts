@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { Contract } from 'src/app/store/contract/contract.model';
+import { ContractInfoComponent } from '../contract-info/contract-info.component';
 
 @Component({
 	selector: 'app-contract-panel',
@@ -10,7 +11,8 @@ import { Contract } from 'src/app/store/contract/contract.model';
 	styleUrls: ['./contract-panel.component.scss'],
 	imports: [
 		CommonModule,
-		IonicModule
+		IonicModule,
+		ContractInfoComponent
 	],
 })
 export class ContractPanelComponent {

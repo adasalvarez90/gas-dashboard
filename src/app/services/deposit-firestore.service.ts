@@ -15,9 +15,9 @@ export class DepositFirestoreService {
 	constructor(private firestore: Firestore) { }
 
 	// ===== GET ALL =====
-	async getDeposits(contractUid: string): Promise<Deposit[]> {
+	async getDeposits(trancheUid: string): Promise<Deposit[]> {
 		const ref = collection(this.firestore, this.collectionName);
-		const q = query(ref, where('contractUid', '==', contractUid), where('_on', '==', true));
+		const q = query(ref, where('trancheUid', '==', trancheUid), where('_on', '==', true));
 		
 		const snap = await getDocs(q);
 

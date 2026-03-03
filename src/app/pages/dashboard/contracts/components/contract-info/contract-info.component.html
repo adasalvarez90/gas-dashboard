@@ -2,6 +2,76 @@
 
 	<!-- PARTICIPANTES -->
 	<div class="card">
+		<div class="card-title">Información general</div>
+
+		<div class="row">
+			<span class="label">Estatus</span>
+			<span class="value">{{ contract.contractStatus }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Inicio de vigencia: </span>
+			<span class="value">{{ contract.startDate | date:'short' }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Fin de vigencia: </span>
+			<span class="value">{{ contract.endDate | date:'short' }}</span>
+		</div>
+	</div>
+
+	@for (tranche of (tranches$ | async);; track tranche.uid) {
+	<div class="card">
+		<div class="card-title">Anexo {{ tranche.sequence }}</div>
+
+		<div class="row">
+			<span class="label">Total de depósito</span>
+			<span class="value">${{ tranche.totalDeposited }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Fondeado</span>
+			<span class="value">{{ tranche.funded }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Fondeado en: </span>
+			<span class="value">{{ tranche.fundedAt | date:'short' }}</span>
+		</div>
+
+		
+		<div class="row">
+			<span class="label">Secuencia </span>
+			<span class="value">{{ tranche.sequence }}</span>
+		</div>
+
+		<ion-button (click)="deposit(tranche)" expand="block" fill="clear" shape="round">
+			Depositar
+		</ion-button>
+	</div>
+	}
+
+	@for (deposit of (deposits$ | async);; track deposit.uid) {
+	<div class="card">
+		<div class="card-title">info</div>
+
+		<div class="row">
+			<span class="label">Total de depósito</span>
+			<span class="value">${{ deposit.amount }}</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Fecha del deposito</span>
+			<span class="value">{{ deposit.depositedAt | date:'short' }}</span>
+		</div>
+	</div>
+	}
+
+	<hr>
+	<hr>
+	<br>
+	<br>
+	<div class="card">
 		<div class="card-title">Participantes</div>
 
 		<div class="row">
@@ -62,11 +132,6 @@
 
 		<div class="metrics">
 			<div>
-				<span class="label">Capital</span>
-				<strong>{{ contract.capitalMXN | currency:'MXN' }}</strong>
-			</div>
-
-			<div>
 				<span class="label">Rendimiento</span>
 				<strong>{{ contract.yieldPercent }}%</strong>
 			</div>
@@ -99,17 +164,12 @@
 
 		<div class="row">
 			<span class="label">Fecha firma</span>
-			<span class="value">{{ contract.signature }}</span>
-		</div>
-
-		<div class="row">
-			<span class="label">Fecha depósito</span>
-			<span class="value">{{ contract.deposit }}</span>
+			<span class="value">{{ contract.signatureDate }}</span>
 		</div>
 
 		<div class="row">
 			<span class="label">Cuenta depósito</span>
-			<span class="value">{{ contract.depositAccount }}</span>
+			<!-- <span class="value">{{ contract.depositAccount }}</span> -->
 		</div>
 	</div>
 
@@ -140,5 +200,4 @@
 		</div>
 	</div>
 	}
-
 </div>
