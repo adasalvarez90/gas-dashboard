@@ -69,8 +69,6 @@ export class ManagePage implements OnInit {
 		source: ['COMUNIDAD', Validators.required],
 
 		signatureDate: [null],
-		startDate: [null],
-		endDate: [null],
 
 		accountStatus: ['', Validators.required],
 		signed: [false],
@@ -215,19 +213,13 @@ export class ManagePage implements OnInit {
 		this.form.get('signed')?.valueChanges.subscribe(signed => {
 			if (!signed) {
 				this.form.get('signatureDate')?.setValue(null);
-				this.form.get('startDate')?.setValue(null);
-				this.form.get('endDate')?.setValue(null);
-				// Also remove validators
-				this.form.get('startDate')?.clearValidators();
 				// Remove validators
 				this.form.get('signatureDate')?.clearValidators();
 			} else {
 				// Add validators
 				this.form.get('signatureDate')?.setValidators(Validators.required);
-				this.form.get('startDate')?.setValidators(Validators.required);
 			}
 			this.form.get('signatureDate')?.updateValueAndValidity();
-			this.form.get('startDate')?.updateValueAndValidity();
 		});
 
 		this.ref.detectChanges();

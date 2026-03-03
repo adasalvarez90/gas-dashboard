@@ -48,7 +48,7 @@ export class TrancheEffects {
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `El tramo de "${tranche.capital}" fue creado con éxito.`,
+						message: `El tramo de "${tranche.amount}" fue creado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -68,7 +68,7 @@ export class TrancheEffects {
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al crear el tramo de "${tranche.capital}": ${err.message}`;
+							toast.message = `Error al crear el tramo de "${tranche.amount}": ${err.message}`;
 							// Present the toast
 							toast.present();
 
@@ -94,7 +94,7 @@ export class TrancheEffects {
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `El tramo de "${tranche.capital}" fue editado con éxito.`,
+						message: `El tramo de "${tranche.amount}" fue editado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -114,7 +114,7 @@ export class TrancheEffects {
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al editar el tramo de "${tranche.capital}": ${err.message}`;
+							toast.message = `Error al editar el tramo de "${tranche.amount}": ${err.message}`;
 							// Present the toast
 							toast.present();
 

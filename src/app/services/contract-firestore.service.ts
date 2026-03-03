@@ -36,20 +36,13 @@ export class ContractFirestoreService {
 		const trancheUid = uuidv4();
 
 		const now = Date.now();
-		
-		let end: Date | null = null;
-
-		if (contractData.startDate) {
-			// 🔹 Calcular endDate = startDate + 12 meses
-			const start = new Date(contractData.startDate);
-			end = new Date(start);
-			end.setMonth(end.getMonth() + 12);
-		}
 
 		const contract: Contract = {
 			...contractData,
 			uid: contractUid,
-			endDate: end ? end.getTime() : null,
+			contractStatus: 'PENDING',
+			startDate: null,
+			endDate: null,
 			_create: now,
 			_on: true
 		};
@@ -57,7 +50,7 @@ export class ContractFirestoreService {
 		const tranche: Tranche = {
 			uid: trancheUid,
 			contractUid,
-			capital: initialCapital,
+			amount: initialCapital,
 			totalDeposited: 0,
 			funded: false,
 			sequence: 1,

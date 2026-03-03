@@ -9,6 +9,7 @@ export interface CommissionPayment extends Metadata {
 	advisorUid: string;
 	role: string;
 
+	policyUid?: string;
 	grossCommissionPercent: number;   // ejemplo 9% o 10%
 	roleSplitPercent: number;         // porcentaje según matriz
 	amount: number;
@@ -21,5 +22,5 @@ export interface CommissionPayment extends Metadata {
 	paid: boolean;
 	paidAt?: number;
 
-	policyUid?: string;
+	cancelled: boolean;
 }

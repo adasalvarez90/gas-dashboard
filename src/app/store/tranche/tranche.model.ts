@@ -5,7 +5,7 @@ import { Metadata } from 'src/app/models/metadata.model';
 export interface Tranche extends Metadata {
 	contractUid: string;
 
-	capital: number;
+	amount: number;
 
 	totalDeposited: number;
 

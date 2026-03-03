@@ -247,7 +247,7 @@
 					<div class="section success">
 						<div class="section-title">Información de firma</div>
 
-						<div class="grid-3">
+						<div class="grid-2">
 							<ion-item lines="none">
 								<ion-toggle color="success" formControlName="signed">
 									Firmado
@@ -263,19 +263,6 @@
 								<ion-modal [keepContentsMounted]="true">
 									<ng-template>
 										<ion-datetime id="datetime" formControlName="signatureDate" presentation="date"
-											[showDefaultButtons]="true"></ion-datetime>
-									</ng-template>
-								</ion-modal>
-							</ion-item>
-
-							<ion-item lines="none">
-								<ion-label position="stacked">Fecha inicio contrato</ion-label>
-								<br>
-								<ion-datetime-button datetime="datetime2"></ion-datetime-button>
-
-								<ion-modal [keepContentsMounted]="true">
-									<ng-template>
-										<ion-datetime id="datetime2" formControlName="startDate" presentation="date"
 											[showDefaultButtons]="true"></ion-datetime>
 									</ng-template>
 								</ion-modal>

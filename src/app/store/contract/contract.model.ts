@@ -7,6 +7,12 @@ export type InvestmentSource =
 	| 'DINERO_PROPIO'
 	| 'REFERIDORA';
 
+export type ContractStatus =
+	| 'PENDING'        // creado pero sin fondeo completo
+	| 'ACTIVE'       // al menos un tranche fondeado
+	| 'FINISHED'     // vencido automáticamente
+	| 'CANCELLED';   // cancelado manualmente
+
 //
 export interface Contract extends Metadata {
 	investor: string;
@@ -24,8 +30,8 @@ export interface Contract extends Metadata {
 	source: InvestmentSource;
 
 	signatureDate: number;
-	startDate: number;
-	endDate: number;
+	startDate?: number, // se define cuando primer tranche fondea
+	endDate?: number,   // startDate + 12 meses
 
 	accountStatus: string;
 	signed: boolean;
@@ -44,4 +50,7 @@ export interface Contract extends Metadata {
 		ceo: string;
 		referral?: string;
 	};
+
+	contractStatus: ContractStatus;
+	cancelledAt?: number;
 }
