@@ -18,19 +18,42 @@ export class TrancheFirestoreService {
 	async getTranches(contractUid: string): Promise<Tranche[]> {
 		const ref = collection(this.firestore, this.collectionName);
 		const q = query(ref, where('contractUid', '==', contractUid), where('_on', '==', true));
-		
+
 		const snap = await getDocs(q);
 
 		return snap.docs.map(d => d.data() as Tranche);
 	}
 
 	// ➕ Create tranche
-	async createTranche(tranche: Tranche): Promise<Tranche> {
+	async createTranche(contractUid: string, amount: number): Promise<Tranche> {
+		// 1️⃣ Obtener tranches existentes
+		const q = query(
+			collection(this.firestore, this.collectionName),
+			where('contractUid', '==', contractUid),
+			where('_on', '==', true)
+		);
+
+		const snap = await getDocs(q);
+
+		const tranches = snap.docs.map(d => d.data() as Tranche);
+
+		// 2️⃣ Calcular siguiente sequence
+		const maxSequence = tranches.length
+			? Math.max(...tranches.map(t => t.sequence))
+			: 0;
+
+		const newSequence = maxSequence + 1;
+
+		// 3️⃣ Crear nuevo tranche
 		const uid = uuidv4();
-		
+
 		const newTranche: Tranche = {
-			...tranche,
 			uid,
+			contractUid,
+			sequence: newSequence,
+			amount,
+			totalDeposited: 0,
+			funded: false,
 			_create: Date.now(),
 			_on: true
 		};
@@ -46,10 +69,10 @@ export class TrancheFirestoreService {
 		let updateTranche = _.cloneDeep(tranche);
 
 		updateTranche._update = Date.now();
-		
+
 		const ref = doc(this.firestore, this.collectionName, tranche.uid);
 		await updateDoc(ref, { ...updateTranche });
-		
+
 		return updateTranche;
 	}
 

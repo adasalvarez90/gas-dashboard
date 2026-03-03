@@ -11,7 +11,7 @@ export const loadTranchesFailure = createAction('[Tranches] Load Failure', props
 export const selectTranche = createAction('[Tranches] Select', props<{ tranche: Tranche }>());
 
 // Create
-export const createTranche = createAction('[Tranches] Create', props<{ tranche: Tranche }>());
+export const createTranche = createAction('[Tranches] Create', props<{ contractUid: string, amount: number }>());
 export const createTrancheSuccess = createAction('[Tranches] Create Success', props<{ tranche: Tranche }>());
 export const createTrancheFailure = createAction('[Tranches] Create Failure', props<{ error: string }>());
 

@@ -39,7 +39,7 @@ export class TrancheEffects {
 		this.actions$.pipe(
 			ofType(TrancheActions.createTranche),
 			exhaustMap(
-				async ({ tranche }) => {
+				async ({ contractUid, amount }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
@@ -48,7 +48,7 @@ export class TrancheEffects {
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `El tramo de "${tranche.amount}" fue creado con éxito.`,
+						message: `El tramo de "${amount}" fue creado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -56,7 +56,7 @@ export class TrancheEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.trancheFS.createTranche(tranche).then(
+					return this.trancheFS.createTranche(contractUid, amount).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
@@ -68,7 +68,7 @@ export class TrancheEffects {
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al crear el tramo de "${tranche.amount}": ${err.message}`;
+							toast.message = `Error al crear el tramo de "${amount}": ${err.message}`;
 							// Present the toast
 							toast.present();
 

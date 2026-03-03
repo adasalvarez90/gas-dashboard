@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where, writeBatch } from '@angular/fire/firestore';
 
 import * as _ from 'lodash';
 
 import { Contract } from 'src/app/store/contract/contract.model';
 import { Tranche } from 'src/app/store/tranche/tranche.model';
+import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
+
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
@@ -81,5 +83,40 @@ export class ContractFirestoreService {
 	async deleteContract(uid: string): Promise<void> {
 		const ref = doc(this.firestore, this.contractsCollection, uid);
 		await updateDoc(ref, { _remove: Date.now(), _on: false });
+	}
+
+	async cancelContract(contract: Contract) {
+
+		const now = Date.now();
+
+		await updateDoc(
+			doc(this.firestore, 'contracts', contract.uid),
+			{
+				status: 'CANCELLED',
+				cancelledAt: now,
+				_update: now
+			}
+		);
+
+		// Cancelar comisiones futuras
+		const q = query(
+			collection(this.firestore, 'commission-payments'),
+			where('contractUid', '==', contract.uid),
+			where('paid', '==', false)
+		);
+
+		const snap = await getDocs(q);
+
+		const batch = writeBatch(this.firestore);
+
+		snap.docs.forEach(d => {
+			const payment = d.data() as CommissionPayment;
+
+			if (payment.dueDate > now) {
+				batch.update(d.ref, { cancelled: true });
+			}
+		});
+
+		await batch.commit();
 	}
 }
