@@ -2,11 +2,11 @@ import { Injectable } from '@angular/core';
 import { LoadingController, ToastController } from '@ionic/angular';
 //NgRx
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { exhaustMap, switchMap, map, withLatestFrom } from 'rxjs/operators';
+import { exhaustMap, switchMap, withLatestFrom } from 'rxjs/operators';
 
 import * as TrancheActions from './tranche.actions';
-import * as AuthActions from '../auth/auth.actions';
 // Services
+import { TrancheService } from 'src/app/domain/tranche/tranche.service';
 import { TrancheFirestoreService } from 'src/app/services/tranche-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
 
@@ -15,6 +15,7 @@ export class TrancheEffects {
 	constructor(
 		private actions$: Actions,
 		private trancheFS: TrancheFirestoreService,
+		private trancheService: TrancheService,
 		private authFacade: AuthFacade,
 		private loadingCtrl: LoadingController,
 		private toastCtrl: ToastController,
@@ -56,7 +57,7 @@ export class TrancheEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.trancheFS.createTranche(contractUid, amount).then(
+					return this.trancheService.createTranche(contractUid, amount).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();

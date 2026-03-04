@@ -25,6 +25,11 @@
 		<div class="card-title">Anexo {{ tranche.sequence }}</div>
 
 		<div class="row">
+			<span class="label">Monto</span>
+			<span class="value">${{ tranche.amount }}</span>
+		</div>
+
+		<div class="row">
 			<span class="label">Total de depósito</span>
 			<span class="value">${{ tranche.totalDeposited }}</span>
 		</div>
@@ -39,7 +44,7 @@
 			<span class="value">{{ tranche.fundedAt | date:'short' }}</span>
 		</div>
 
-		
+
 		<div class="row">
 			<span class="label">Secuencia </span>
 			<span class="value">{{ tranche.sequence }}</span>
@@ -66,6 +71,10 @@
 		</div>
 	</div>
 	}
+
+	<ion-button (click)="createTranche()" expand="block" fill="clear" shape="round">
+		Crear anexo
+	</ion-button>
 
 	<hr>
 	<hr>

@@ -20,8 +20,10 @@ export class TrancheFirestoreService {
 		const q = query(ref, where('contractUid', '==', contractUid), where('_on', '==', true));
 
 		const snap = await getDocs(q);
+		
+		const tranches = snap.docs.map(d => d.data() as Tranche);
 
-		return snap.docs.map(d => d.data() as Tranche);
+		return tranches.sort((a, b) => a.sequence - b.sequence);
 	}
 
 	// ➕ Create tranche
