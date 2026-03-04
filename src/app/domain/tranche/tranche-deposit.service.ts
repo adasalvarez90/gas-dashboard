@@ -16,25 +16,51 @@ export class TrancheDepositService {
 
 	async registerDeposit(deposit: Deposit) {
 
-		// 1️⃣ Guardar depósito
-		const savedDeposit = await this.depositFS.createDeposit(deposit);
+		if (deposit.amount <= 0) {
+			throw new Error('El monto del depósito debe ser mayor a 0');
+		}
 
-		// 2️⃣ Obtener tranche actual
+		// 1️⃣ Obtener tranche actual
 		const tranches = await this.trancheFS.getTranches(deposit.contractUid);
 		const tranche = tranches.find(t => t.uid === deposit.trancheUid);
 
-		if (!tranche) return savedDeposit;
+		if (!tranche) {
+			throw new Error('Tranche no encontrado');
+		}
 
-		// 3️⃣ Calcular nuevo total
+		if (tranche.funded) {
+			throw new Error('Este tramo ya está fondeado al 100%');
+		}
+
+		// 2️⃣ Obtener contrato
+		const contracts = await this.contractFS.getContracts();
+		const contract = contracts.find(c => c.uid === deposit.contractUid);
+
+		if (!contract) {
+			throw new Error('Contrato no encontrado');
+		}
+
+		if (contract.accountStatus === 'CANCELLED') {
+			throw new Error('No se pueden registrar depósitos en un contrato cancelado');
+		}
+
+		// 3️⃣ Validar excedente
 		const newTotal = tranche.totalDeposited + deposit.amount;
+
+		if (newTotal > tranche.amount) {
+			throw new Error('El depósito excede el monto del tramo');
+		}
+
+		// 4️⃣ Guardar depósito
+		const savedDeposit = await this.depositFS.createDeposit(deposit);
+
 		tranche.totalDeposited = newTotal;
 
-		// 4️⃣ Validar si se fondeó
-		if (!tranche.funded && newTotal >= tranche.amount) {
+		// 5️⃣ Verificar si se fondeó
+		if (newTotal === tranche.amount) {
 			tranche.funded = true;
 			tranche.fundedAt = deposit.depositedAt;
 
-			// 🔥 Si es el primer tranche → activar contrato
 			if (tranche.sequence === 1) {
 				await this.activateContract(tranche.contractUid, tranche.fundedAt);
 			}
