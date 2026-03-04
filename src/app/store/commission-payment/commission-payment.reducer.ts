@@ -14,11 +14,7 @@ export const commissionPaymentReducer = createReducer(
 
 	on(CommissionPaymentsActions.selectCommissionPayment, (state, { commissionPayment }) => ({ ...state, selected: commissionPayment, })),
 
-	on(CommissionPaymentsActions.createCommissionPaymentSuccess, (state, { commissionPayment }) => adapter.addOne(commissionPayment, state)),
-
-	on(CommissionPaymentsActions.updateCommissionPaymentSuccess, (state, { commissionPayment }) => adapter.updateOne({ id: commissionPayment.uid, changes: commissionPayment, }, { ...state, selected: commissionPayment, loading: false, })),
-
-	on(CommissionPaymentsActions.deleteCommissionPaymentSuccess, (state, { uid }) => adapter.removeOne(uid, { ...state, selected: state.selected?.uid === uid ? null : state.selected, loading: false, })),
+	on(CommissionPaymentsActions.createCommissionPaymentSuccess, (state, { commissionPayments }) => adapter.addMany(commissionPayments, state)),
 
 	// Search actions
 	on(CommissionPaymentsActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),

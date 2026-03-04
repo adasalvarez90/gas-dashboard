@@ -5,6 +5,7 @@ import * as _ from 'lodash';
 
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { v4 as uuidv4 } from 'uuid';
+import { CommissionPaymentDraft } from '../models/commission-engine.model';
 
 @Injectable({
 	providedIn: 'root',
@@ -25,37 +26,28 @@ export class CommissionPaymentFirestoreService {
 	}
 
 	// ➕ Create commissionPayment
-	async createCommissionPayment(commissionPayment: CommissionPayment): Promise<CommissionPayment> {
-		const uid = uuidv4();
-		
-		const newCommissionPayment: CommissionPayment = {
-			...commissionPayment,
-			uid,
-			_create: Date.now(),
-			_on: true
-		};
+	async createManyCommissionPayment(payments: CommissionPaymentDraft[]): Promise<CommissionPayment[]> {
+		const createdPayments: CommissionPayment[] = [];
 
-		const ref = doc(this.firestore, this.collectionName, uid);
-		await setDoc(ref, newCommissionPayment);
+		for (const payment of payments) {
 
-		return newCommissionPayment;
-	}
+			const uid = uuidv4();
 
-	// ✏️ Update commissionPayment
-	async updateCommissionPayment(commissionPayment: CommissionPayment): Promise<CommissionPayment> {
-		let updateCommissionPayment = _.cloneDeep(commissionPayment);
+			const ref = doc(this.firestore, this.collectionName, uid);
 
-		updateCommissionPayment._update = Date.now();
-		
-		const ref = doc(this.firestore, this.collectionName, commissionPayment.uid);
-		await updateDoc(ref, { ...updateCommissionPayment });
-		
-		return updateCommissionPayment;
-	}
+			const newPayment = {
+				...payment,
+				uid,
+				paid: false,
+				cancelled: false,
+				_create: Date.now(),
+				_on: true
+			};
+			createdPayments.push(newPayment);
+			
+			await setDoc(ref, newPayment);
+		}
 
-	// 🗑️ Delete commissionPayment
-	async deleteCommissionPayment(uid: string): Promise<void> {
-		const ref = doc(this.firestore, this.collectionName, uid);
-		await updateDoc(ref, { _remove: Date.now(), _on: false });
+		return createdPayments;
 	}
 }

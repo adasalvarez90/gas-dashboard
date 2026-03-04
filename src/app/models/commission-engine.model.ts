@@ -6,15 +6,23 @@ export interface CommissionRoleSplit {
 
 export interface CommissionPaymentDraft {
 	contractUid: string;
-	advisorUid: string;
+	trancheUid: string;
 
+	advisorUid: string;
 	role: string;
 	source: string;
 
 	amount: number;
 
 	installment: number;
+
+	dueDate: number;
 	cutDate: number;
 
 	scheme: string;
+
+	grossCommissionPercent: number;
+	roleSplitPercent: number;
+
+	paymentType: 'IMMEDIATE' | 'RECURRING' | 'FINAL';
 }

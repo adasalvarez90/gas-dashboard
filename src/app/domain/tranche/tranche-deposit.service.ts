@@ -1,9 +1,17 @@
 import { Injectable } from '@angular/core';
+// Models
 import { Deposit } from 'src/app/store/deposit/deposit.model';
+import { Contract } from 'src/app/store/contract/contract.model';
+import { Tranche } from 'src/app/store/tranche/tranche.model';
+// Services
+import { CommissionEngineService } from '../engines/commission-engine.service';
+import { RoleResolverService } from '../engines/role-resolver.service';
+import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
+import { CommissionConfigFirestoreService } from 'src/app/services/commission-config-firestore.service';
+
 import { DepositFirestoreService } from 'src/app/services/deposit-firestore.service';
 import { TrancheFirestoreService } from 'src/app/services/tranche-firestore.service';
 import { ContractFirestoreService } from 'src/app/services/contract-firestore.service';
-import { Contract } from 'src/app/store/contract/contract.model';
 
 @Injectable({ providedIn: 'root' })
 export class TrancheDepositService {
@@ -11,7 +19,11 @@ export class TrancheDepositService {
 	constructor(
 		private depositFS: DepositFirestoreService,
 		private trancheFS: TrancheFirestoreService,
-		private contractFS: ContractFirestoreService
+		private contractFS: ContractFirestoreService,
+		private commissionEngine: CommissionEngineService,
+		private roleResolver: RoleResolverService,
+		private commissionPaymentFS: CommissionPaymentFirestoreService,
+		private commissionConfigFS: CommissionConfigFirestoreService,
 	) { }
 
 	async registerDeposit(deposit: Deposit) {
@@ -64,6 +76,9 @@ export class TrancheDepositService {
 			if (tranche.sequence === 1) {
 				await this.activateContract(tranche.contractUid, tranche.fundedAt);
 			}
+
+			// 🔥 generar comisiones
+			await this.generateCommissions(tranche);
 		}
 
 		await this.trancheFS.updateTranche(tranche);
@@ -106,5 +121,28 @@ export class TrancheDepositService {
 		}
 
 		return d.getTime();
+	}
+
+	private async generateCommissions(tranche: Tranche) {
+
+		const contracts = await this.contractFS.getContracts();
+		const contract = contracts.find(c => c.uid === tranche.contractUid);
+
+		if (!contract) return;
+
+		// Obtener matriz de comisiones
+		const configs = await this.commissionConfigFS.getCommissionConfigs();
+
+		const roleSplits =
+			this.roleResolver.resolveRoleSplits(contract, configs);
+
+		const drafts =
+			this.commissionEngine.generateForTranche(
+				contract,
+				tranche,
+				roleSplits
+			);
+
+		await this.commissionPaymentFS.createManyCommissionPayment(drafts);
 	}
 }

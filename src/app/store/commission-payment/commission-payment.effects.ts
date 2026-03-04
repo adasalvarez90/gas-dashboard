@@ -8,6 +8,7 @@ import * as CommissionPaymentActions from './commission-payment.actions';
 // Services
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
+import { CommissionPayment } from './commission-payment.model';
 
 @Injectable()
 export class CommissionPaymentEffects {
@@ -34,11 +35,11 @@ export class CommissionPaymentEffects {
 	);
 
 	// ➕ Create commissionPayment
-	createCommissionPayment$ = createEffect(() =>
+	createManyCommissionPayment$ = createEffect(() =>
 		this.actions$.pipe(
-			ofType(CommissionPaymentActions.createCommissionPayment),
+			ofType(CommissionPaymentActions.createManyCommissionPayment),
 			exhaustMap(
-				async ({ commissionPayment }) => {
+				async ({ commissionPayments }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
@@ -47,7 +48,7 @@ export class CommissionPaymentEffects {
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `El pago de "${commissionPayment.amount}" fue creado con éxito.`,
+						message: `El pago de "${commissionPayments.map(p => p.amount).join(', ')}" fue creado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -55,115 +56,23 @@ export class CommissionPaymentEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.commissionPaymentFS.createCommissionPayment(commissionPayment).then(
+					return this.commissionPaymentFS.createManyCommissionPayment(commissionPayments).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
 							// Show the toast
 							await toast.present();
 
-							return CommissionPaymentActions.createCommissionPaymentSuccess({ commissionPayment: response })
+							return CommissionPaymentActions.createCommissionPaymentSuccess({ commissionPayments: response })
 						},
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al crear el pago de "${commissionPayment.amount}": ${err.message}`;
+							toast.message = `Error al crear el pago de "${commissionPayments.map(p => p.amount).join(', ')}": ${err.message}`;
 							// Present the toast
 							toast.present();
 
 							return CommissionPaymentActions.createCommissionPaymentFailure({ error: err.message })
-						},
-					)
-				},
-			),
-		),
-	);
-
-	// ✏️ Update commissionPayment
-	updateCommissionPayment$ = createEffect(() =>
-		this.actions$.pipe(
-			ofType(CommissionPaymentActions.updateCommissionPayment),
-			exhaustMap(
-				async ({ commissionPayment }) => {
-					// Create the loading
-					const loading = await this.loadingCtrl.create({
-						cssClass: 'my-custom-class',
-						message: 'Editando pago. Espere, por favor.'
-					});
-					// Create the toast
-					const toast = await this.toastCtrl.create({
-						color: 'primary',
-						message: `El pago de "${commissionPayment.amount}" fue editado con éxito.`,
-						duration: 3000,
-						position: 'middle'
-					});
-
-					// Present the loading
-					await loading.present();
-
-					return this.commissionPaymentFS.updateCommissionPayment(commissionPayment).then(
-						async (response) => {
-							// Hide the loading
-							await loading.dismiss();
-							// Show the toast
-							await toast.present();
-
-							return CommissionPaymentActions.updateCommissionPaymentSuccess({ commissionPayment: response })
-						},
-						async (err) => {
-							await loading.dismiss();
-							// Change the toast message and show it
-							toast.message = `Error al editar el pago de "${commissionPayment.amount}": ${err.message}`;
-							// Present the toast
-							toast.present();
-
-							return CommissionPaymentActions.updateCommissionPaymentFailure({ error: err.message })
-						},
-					)
-				},
-			),
-		),
-	);
-
-	// 🗑️ Delete commissionPayment
-	deleteCommissionPayment$ = createEffect(() =>
-		this.actions$.pipe(
-			ofType(CommissionPaymentActions.deleteCommissionPayment),
-			exhaustMap(
-				async ({ uid }) => {
-					// Create the loading
-					const loading = await this.loadingCtrl.create({
-						cssClass: 'my-custom-class',
-						message: 'Eliminando pago. Espere, por favor.'
-					});
-					// Create the toast
-					const toast = await this.toastCtrl.create({
-						color: 'primary',
-						message: `El pago fue eliminado con éxito.`,
-						duration: 3000,
-						position: 'middle'
-					});
-
-					// Present the loading
-					await loading.present();
-
-					return this.commissionPaymentFS.deleteCommissionPayment(uid).then(
-						async () => {
-							// Hide the loading
-							await loading.dismiss();
-							// Show the toast
-							await toast.present();
-
-							return CommissionPaymentActions.deleteCommissionPaymentSuccess({ uid })
-						},
-						async (err) => {
-							await loading.dismiss();
-							// Change the toast message and show it
-							toast.message = `Error al eliminar el pago: ${err.message}`;
-							// Present the toast
-							toast.present();
-
-							return CommissionPaymentActions.deleteCommissionPaymentFailure({ error: err.message })
 						},
 					)
 				},
