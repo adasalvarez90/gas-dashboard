@@ -23,4 +23,8 @@ export interface CommissionPayment extends Metadata {
 	paidAt?: number;
 
 	cancelled: boolean;
+
+	installment: number;
+
+	scheme: string;
 }

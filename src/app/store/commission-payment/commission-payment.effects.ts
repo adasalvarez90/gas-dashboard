@@ -25,8 +25,8 @@ export class CommissionPaymentEffects {
 		this.actions$.pipe(
 			ofType(CommissionPaymentActions.loadCommissionPayments),
 			withLatestFrom(this.authFacade.user$),
-			switchMap(([{ contractUid, advisorUid }, user]) =>
-				this.commissionPaymentFS.getCommissionPayments(contractUid, advisorUid).then(
+			switchMap(([{ trancheUid }, user]) =>
+				this.commissionPaymentFS.getCommissionPayments(trancheUid).then(
 					commissionPayments => CommissionPaymentActions.loadCommissionPaymentsSuccess({ commissionPayments }),
 					err => CommissionPaymentActions.loadCommissionPaymentsFailure({ error: err.message }),
 				),

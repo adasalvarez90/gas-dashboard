@@ -1,14 +1,18 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
+
+import { Observable, tap } from 'rxjs';
+
 import { Contract } from 'src/app/store/contract/contract.model';
 import { Deposit } from 'src/app/store/deposit/deposit.model';
+import { Tranche } from 'src/app/store/tranche/tranche.model';
+import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 
 import { DepositFacade } from 'src/app/store/deposit/deposit.facade';
 import { TrancheFacade } from 'src/app/store/tranche/tranche.facade';
-import { Tranche } from 'src/app/store/tranche/tranche.model';
-import { Observable, tap } from 'rxjs';
-
+import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
+import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 
 @Component({
 	selector: 'app-contract-info',
@@ -26,18 +30,23 @@ export class ContractInfoComponent implements OnInit {
 
 	tranches$: Observable<Tranche[]> = this.trancheFacade.tranches$.pipe(
 		tap(tranches => {
-			console.log('Tranches loaded in ContractInfoComponent:', tranches);
 			if (tranches && tranches.length > 0) {
-				this.loadDeposits(tranches[0].uid);
+				this.loadData(tranches[0].uid);
 			}
 		})
 	);
 
 	deposits$: Observable<Deposit[]> = this.depositFacade.deposits$;
 
+	commissionPayments$: Observable<CommissionPayment[]> = this.commissionPaymentFacade.commissionPayments$;
+
+	advisorsDic$ = this.advisorFacade.entities$;
+
 	constructor(
 		private depositFacade: DepositFacade,
-		private trancheFacade: TrancheFacade
+		private trancheFacade: TrancheFacade,
+		private advisorFacade: AdvisorFacade,
+		private commissionPaymentFacade: CommissionPaymentFacade,
 	) {}
 
 	ngOnInit() {
@@ -45,12 +54,13 @@ export class ContractInfoComponent implements OnInit {
 		this.trancheFacade.loadTranches(this.contract?.uid || '');
 	}
 
-	loadDeposits(trancheUid: string) {
+	loadData(trancheUid: string) {
 		this.depositFacade.loadDeposits(trancheUid);
+		this.commissionPaymentFacade.loadCommissionPayments(trancheUid);
 	}
 
 	createTranche() {
-		this.trancheFacade.createTranche(this.contract.uid, 150000);
+		this.trancheFacade.createTranche(this.contract.uid, 100000);
 	}
 
 	deposit(tranche) {

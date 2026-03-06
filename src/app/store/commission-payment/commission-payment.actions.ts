@@ -4,7 +4,7 @@ import { CommissionPayment } from './commission-payment.model';
 import { CommissionPaymentDraft } from 'src/app/models/commission-engine.model';
 
 // Load
-export const loadCommissionPayments = createAction('[CommissionPayments] Load', props<{ contractUid: string, advisorUid: string }>());
+export const loadCommissionPayments = createAction('[CommissionPayments] Load', props<{ trancheUid: string }>());
 export const loadCommissionPaymentsSuccess = createAction('[CommissionPayments] Load Success', props<{ commissionPayments: CommissionPayment[] }>());
 export const loadCommissionPaymentsFailure = createAction('[CommissionPayments] Load Failure', props<{ error: string }>());
 

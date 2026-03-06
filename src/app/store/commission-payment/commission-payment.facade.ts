@@ -2,7 +2,9 @@ import { Injectable } from '@angular/core';
 import { Store } from '@ngrx/store';
 import * as CommissionPaymentActions from './commission-payment.actions';
 import * as fromCommissionPayment from './commission-payment.selectors';
+
 import { CommissionPayment } from './commission-payment.model';
+import { CommissionPaymentDraft } from 'src/app/models/commission-engine.model';
 
 @Injectable({ providedIn: 'root' })
 export class CommissionPaymentFacade {
@@ -14,24 +16,16 @@ export class CommissionPaymentFacade {
 
 	constructor(private store: Store) {}
 
-	loadCommissionPayments(contractUid: string, advisorUid: string) {
-		this.store.dispatch(CommissionPaymentActions.loadCommissionPayments({ contractUid, advisorUid }));
+	loadCommissionPayments(trancheUid: string) {
+		this.store.dispatch(CommissionPaymentActions.loadCommissionPayments({ trancheUid }));
 	}
 
 	selectCommissionPayment(commissionPayment: CommissionPayment) {
 		this.store.dispatch(CommissionPaymentActions.selectCommissionPayment({ commissionPayment }));
 	}
 
-	createCommissionPayment(commissionPayment: CommissionPayment) {
-		this.store.dispatch(CommissionPaymentActions.createCommissionPayment({ commissionPayment }));
-	}
-
-	updateCommissionPayment(commissionPayment: CommissionPayment) {
-		this.store.dispatch(CommissionPaymentActions.updateCommissionPayment({ commissionPayment }));
-	}
-
-	deleteCommissionPayment(uid: string) {
-		this.store.dispatch(CommissionPaymentActions.deleteCommissionPayment({ uid }));
+	createCommissionPayment(commissionPayments: CommissionPaymentDraft[]) {
+		this.store.dispatch(CommissionPaymentActions.createManyCommissionPayment({ commissionPayments }));
 	}
 
 	searchText(searchTerm: string) {

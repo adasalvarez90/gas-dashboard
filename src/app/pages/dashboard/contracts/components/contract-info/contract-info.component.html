@@ -20,7 +20,7 @@
 		</div>
 	</div>
 
-	@for (tranche of (tranches$ | async);; track tranche.uid) {
+	@for (tranche of (tranches$ | async); track tranche.uid) {
 	<div class="card">
 		<div class="card-title">Anexo {{ tranche.sequence }}</div>
 
@@ -55,8 +55,7 @@
 		</ion-button>
 	</div>
 	}
-
-	@for (deposit of (deposits$ | async);; track deposit.uid) {
+	@for (deposit of (deposits$ | async); track deposit.uid) {
 	<div class="card">
 		<div class="card-title">info</div>
 
@@ -70,6 +69,60 @@
 			<span class="value">{{ deposit.depositedAt | date:'short' }}</span>
 		</div>
 	</div>
+	}
+	@if ((advisorsDic$ | async); as advisorsDic) {
+		@for (commissionPayment of (commissionPayments$ | async); track commissionPayment.uid) {
+		<div class="card">
+			<div class="card-title">Pago de comisión</div>
+
+			<div class="row">
+				<span class="label">Asesor</span>
+				<span class="value">
+					{{ advisorsDic[commissionPayment.advisorUid]?.name || 'Desconocido' }}
+				</span>
+			</div>
+
+			<div class="row">
+				<span class="label">Rol</span>
+				<span class="value">{{ commissionPayment.role }}</span>
+			</div>
+
+			<div class="row">
+				<span class="label">Tipo de pago</span>
+				<span class="value">{{ commissionPayment.paymentType }}</span>
+			</div>
+			
+			<div class="row">
+				<span class="label">Installment</span>
+				<span class="value">{{ commissionPayment.installment }}</span>
+			</div>
+
+			<div class="row">
+				<span class="label">Porcentaje</span>
+				<span class="value">%{{ commissionPayment.roleSplitPercent }}</span>
+			</div>
+	
+			<div class="row">
+				<span class="label">Monto</span>
+				<span class="value">${{ commissionPayment.amount }}</span>
+			</div>
+
+			<div class="row">
+				<span class="label">Fecha de corte</span>
+				<span class="value">{{ commissionPayment.cutDate | date:'short' }}</span>
+			</div>
+	
+			<div class="row">
+				<span class="label">Fecha de pago</span>
+				<span class="value">{{ commissionPayment.dueDate | date:'short' }}</span>
+			</div>
+
+			<div class="row">
+				<span class="label">Pagado</span>
+				<span class="value">{{ commissionPayment.paidAt | date:'short' }}</span>
+			</div>
+		</div>
+		}
 	}
 
 	<ion-button (click)="createTranche()" expand="block" fill="clear" shape="round">

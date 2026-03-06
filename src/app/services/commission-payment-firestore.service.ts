@@ -16,9 +16,9 @@ export class CommissionPaymentFirestoreService {
 	constructor(private firestore: Firestore) { }
 
 	// ===== GET ALL =====
-	async getCommissionPayments(contractUid: string, advisorUid: string): Promise<CommissionPayment[]> {
+	async getCommissionPayments(trancheUid: string): Promise<CommissionPayment[]> {
 		const ref = collection(this.firestore, this.collectionName);
-		const q = query(ref, where('contractUid', '==', contractUid), where('advisorUid', '==', advisorUid), where('_on', '==', true));
+		const q = query(ref, where('trancheUid', '==', trancheUid), where('_on', '==', true));
 		
 		const snap = await getDocs(q);
 
