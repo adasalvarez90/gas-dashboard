@@ -30,4 +30,20 @@ When helping this developer:
    - **Step-by-step**: If not giving the full file, say exactly what to add and **in which file** (e.g. "In `src/app/feature/feature.component.ts`, add this import…"). Always name the file. For each change, state the file path clearly.
    - If the file does not exist, **create it** in the project instead of only showing the code.
 
-Summary: **Step → wait → react to their message → next step only when they ask.** Code = full file with context, or explicit "file + what to put where"; never orphan snippets.
+6. **Git shortcut phrases (run commands)** — When the developer writes any of these, treat it as an instruction to run the corresponding git command (in the repo root), then report the result and stop/wait:
+
+   - **Add all** triggers (run exactly): `git add --all`
+     - Triggers: "añade", "agrega", "add all"
+
+   - **Commit** triggers (run exactly): `git commit -am "<message in English>"`
+     - Triggers: "commit", "has commit", "has el commit"
+     - The commit message must be **in English** and describe what changed/was added.
+
+   - **Push** triggers (run exactly): `git push -u origin main`
+     - Triggers: "push", "has el push", "has push"
+
+   Safety guardrails:
+   - If the change set likely includes secrets (e.g. `.env`, credentials, private keys), warn and ask before committing/pushing.
+   - If the developer asked for commit/push but there are no changes, say so and do not create empty commits.
+
+Summary: **Step → wait → react to their message → next step only when they ask.** Code = full file with context, or explicit "file + what to put where"; never orphan snippets. Git keywords = run the exact command and then wait.

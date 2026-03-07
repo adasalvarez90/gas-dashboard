@@ -67,6 +67,7 @@ export class TrancheDepositService {
 		const savedDeposit = await this.depositFS.createDeposit(deposit);
 
 		tranche.totalDeposited = newTotal;
+		tranche.lastDepositAt = deposit.depositedAt;
 
 		// 5️⃣ Verificar si se fondeó
 		if (newTotal === tranche.amount) {
@@ -84,6 +85,99 @@ export class TrancheDepositService {
 		await this.trancheFS.updateTranche(tranche);
 
 		return savedDeposit;
+	}
+
+	/**
+	 * Enmienda de monto del tranche (antes de funded=true).
+	 *
+	 * Regla clave: nuevoAmount NO puede ser menor a totalDeposited.
+	 * Si al enmendar se alcanza el fondeo (totalDeposited === nuevoAmount),
+	 * fundedAt se fija como la fecha del ÚLTIMO depósito (regla B).
+	 */
+	async amendTrancheAmount(params: {
+		contractUid: string;
+		trancheUid: string;
+		newAmount: number;
+		amendedAt: number;
+		reason?: string;
+	}) {
+		const { contractUid, trancheUid, newAmount, amendedAt, reason } = params;
+
+		if (newAmount <= 0) {
+			throw new Error('El monto del tramo debe ser mayor a 0');
+		}
+
+		// 1️⃣ Obtener tranche actual
+		const tranches = await this.trancheFS.getTranches(contractUid);
+		const tranche = tranches.find(t => t.uid === trancheUid);
+
+		if (!tranche) {
+			throw new Error('Tranche no encontrado');
+		}
+
+		if (tranche.funded) {
+			throw new Error('No se puede modificar un tramo ya fondeado');
+		}
+
+		// Si ya existen comisiones, no permitimos enmiendas (historial financiero ya creado)
+		const existing = await this.commissionPaymentFS.getCommissionPayments(tranche.uid);
+		if (existing.length > 0) {
+			throw new Error('No se puede modificar el tramo porque ya existen comisiones generadas');
+		}
+
+		// 2️⃣ Obtener contrato
+		const contracts = await this.contractFS.getContracts();
+		const contract = contracts.find(c => c.uid === contractUid);
+
+		if (!contract) {
+			throw new Error('Contrato no encontrado');
+		}
+
+		if (contract.accountStatus === 'CANCELLED') {
+			throw new Error('No se puede modificar un tramo en un contrato cancelado');
+		}
+
+		// 3️⃣ Validar que no quede por debajo de lo ya depositado
+		if (newAmount < tranche.totalDeposited) {
+			throw new Error('El monto del tramo no puede ser menor al total ya depositado');
+		}
+
+		const prevAmount = tranche.amount;
+		tranche.amount = newAmount;
+		tranche.amountAmendments = [
+			...(tranche.amountAmendments || []),
+			{ at: amendedAt, from: prevAmount, to: newAmount, reason }
+		];
+
+		// 4️⃣ Si con la enmienda ya quedó fondeado, fijar fundedAt por regla B
+		if (tranche.totalDeposited === tranche.amount) {
+			tranche.funded = true;
+
+			let lastDepositAt = tranche.lastDepositAt;
+
+			// Backfill: si no tenemos lastDepositAt pero hay depósitos, calcularlo
+			if (!lastDepositAt && tranche.totalDeposited > 0) {
+				const deposits = await this.depositFS.getDeposits(tranche.uid);
+				lastDepositAt = deposits.reduce((max, d) => Math.max(max, d.depositedAt || 0), 0) || undefined;
+				tranche.lastDepositAt = lastDepositAt;
+			}
+
+			if (!lastDepositAt) {
+				throw new Error('No se puede determinar la fecha del último depósito para fondear el tramo');
+			}
+
+			tranche.fundedAt = lastDepositAt;
+
+			if (tranche.sequence === 1) {
+				await this.activateContract(tranche.contractUid, tranche.fundedAt);
+			}
+
+			await this.generateCommissions(tranche);
+		}
+
+		await this.trancheFS.updateTranche(tranche);
+
+		return tranche;
 	}
 
 	private async activateContract(contractUid: string, fundedAt: number) {
@@ -129,6 +223,10 @@ export class TrancheDepositService {
 		const contract = contracts.find(c => c.uid === tranche.contractUid);
 
 		if (!contract) return;
+
+		// Idempotencia: nunca generar dos veces para el mismo tranche
+		const existing = await this.commissionPaymentFS.getCommissionPayments(tranche.uid);
+		if (existing.length > 0) return;
 
 		// Obtener matriz de comisiones
 		const configs = await this.commissionConfigFS.getCommissionConfigs();

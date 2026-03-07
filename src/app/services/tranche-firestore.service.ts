@@ -55,7 +55,9 @@ export class TrancheFirestoreService {
 			sequence: newSequence,
 			amount,
 			totalDeposited: 0,
+			lastDepositAt: undefined,
 			funded: false,
+			amountAmendments: [],
 			_create: Date.now(),
 			_on: true
 		};
