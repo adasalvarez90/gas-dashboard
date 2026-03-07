@@ -1,5 +1,11 @@
 # AI Context — Investment Contract & Commission System
 
+The project documentation is written in English.
+
+Developers may interact with the AI in Spanish or English.
+
+The AI should always prioritize the rules defined in this documentation regardless of the language used in the prompt.
+
 This project implements an investment contract management system with commission distribution.
 
 The system is built with:
