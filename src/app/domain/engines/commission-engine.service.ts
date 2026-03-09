@@ -61,7 +61,7 @@ export class CommissionEngineService {
 				paymentType: 'IMMEDIATE',
 
 				dueDate: startDate,
-				cutDate: startDate
+				cutDate: this.getCutDateForDueDate(startDate)
 			});
 
 			// =========================
@@ -108,7 +108,7 @@ export class CommissionEngineService {
 						paymentType: 'RECURRING',
 
 						dueDate,
-						cutDate: dueDate
+						cutDate: this.getCutDateForDueDate(dueDate)
 					});
 				}
 			}
@@ -152,7 +152,7 @@ export class CommissionEngineService {
 					paymentType: 'FINAL',
 
 					dueDate,
-					cutDate: dueDate
+					cutDate: this.getCutDateForDueDate(dueDate)
 				});
 			}
 
@@ -201,6 +201,25 @@ export class CommissionEngineService {
 		const newDate = new Date(year, month + months, day);
 
 		return newDate.getTime();
+	}
+
+	/**
+	 * Commission cut dates: 7 and 21 of each month.
+	 * dueDate day ≤ 7 → cut day 7 of same month; ≤ 21 → cut day 21 of same month; > 21 → cut day 7 of next month.
+	 */
+	private getCutDateForDueDate(dueDate: number): number {
+		const d = new Date(dueDate);
+		const year = d.getFullYear();
+		const month = d.getMonth();
+		const day = d.getDate();
+
+		if (day <= 7) {
+			return new Date(year, month, 7).getTime();
+		}
+		if (day <= 21) {
+			return new Date(year, month, 21).getTime();
+		}
+		return new Date(year, month + 1, 7).getTime();
 	}
 
 }

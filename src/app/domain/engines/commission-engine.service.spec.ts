@@ -336,4 +336,54 @@ describe('CommissionEngineService', () => {
       expect(finalPayments[0].dueDate).toBe(addMonths(startDate, 12));
     });
   });
+
+  describe('Cut dates (7 and 21)', () => {
+    it('dueDate day ≤ 7 → cutDate is day 7 of same month', () => {
+      const startDate = new Date(2026, 0, 5).getTime(); // Jan 5
+      const endDate = addMonths(startDate, 12);
+      const contract: Partial<Contract> = { uid: 'c1', scheme: 'A', source: 'COMUNIDAD', startDate, endDate };
+      const tranche: Partial<Tranche> = { uid: 't1', contractUid: 'c1', amount: 100000, sequence: 1, fundedAt: startDate };
+      const roleSplits: CommissionRoleSplit[] = [{ role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }];
+
+      const drafts = service.generateForTranche(contract as Contract, tranche as Tranche, roleSplits);
+      const immediate = drafts.find((d) => d.paymentType === 'IMMEDIATE');
+      expect(immediate).toBeDefined();
+      const cutDate = new Date(immediate!.cutDate);
+      expect(cutDate.getDate()).toBe(7);
+      expect(cutDate.getMonth()).toBe(0);
+      expect(cutDate.getFullYear()).toBe(2026);
+    });
+
+    it('dueDate day ≤ 21 → cutDate is day 21 of same month', () => {
+      const startDate = new Date(2026, 0, 15).getTime(); // Jan 15
+      const endDate = addMonths(startDate, 12);
+      const contract: Partial<Contract> = { uid: 'c1', scheme: 'A', source: 'COMUNIDAD', startDate, endDate };
+      const tranche: Partial<Tranche> = { uid: 't1', contractUid: 'c1', amount: 100000, sequence: 1, fundedAt: startDate };
+      const roleSplits: CommissionRoleSplit[] = [{ role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }];
+
+      const drafts = service.generateForTranche(contract as Contract, tranche as Tranche, roleSplits);
+      const firstRecurring = drafts.find((d) => d.paymentType === 'RECURRING' && d.installment === 2);
+      expect(firstRecurring).toBeDefined();
+      const cutDate = new Date(firstRecurring!.cutDate);
+      expect(cutDate.getDate()).toBe(21);
+      expect(cutDate.getMonth()).toBe(1); // Feb
+      expect(cutDate.getFullYear()).toBe(2026);
+    });
+
+    it('dueDate day > 21 → cutDate is day 7 of next month', () => {
+      const startDate = new Date(2026, 0, 25).getTime(); // Jan 25
+      const endDate = addMonths(startDate, 12);
+      const contract: Partial<Contract> = { uid: 'c1', scheme: 'A', source: 'COMUNIDAD', startDate, endDate };
+      const tranche: Partial<Tranche> = { uid: 't1', contractUid: 'c1', amount: 100000, sequence: 1, fundedAt: startDate };
+      const roleSplits: CommissionRoleSplit[] = [{ role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }];
+
+      const drafts = service.generateForTranche(contract as Contract, tranche as Tranche, roleSplits);
+      const immediate = drafts.find((d) => d.paymentType === 'IMMEDIATE');
+      expect(immediate).toBeDefined();
+      const cutDate = new Date(immediate!.cutDate);
+      expect(cutDate.getDate()).toBe(7);
+      expect(cutDate.getMonth()).toBe(1); // Feb
+      expect(cutDate.getFullYear()).toBe(2026);
+    });
+  });
 });
