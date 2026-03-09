@@ -5,6 +5,7 @@ import {
 	CommissionRoleSplit,
 	CommissionPaymentDraft
 } from 'src/app/models/commission-engine.model';
+import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
 import { CommissionEngineService } from '../engines/commission-engine.service';
 import { RegisterDepositResult, AmendTrancheResult } from './deposit-orchestrator.model';
 
@@ -26,7 +27,8 @@ export class DepositOrchestratorService {
 		deposit: { amount: number; depositedAt: number },
 		tranche: Tranche,
 		contract: Contract,
-		roleSplits: CommissionRoleSplit[]
+		roleSplits: CommissionRoleSplit[],
+		commissionPolicy?: CommissionPolicy | null
 	): RegisterDepositResult {
 		if (deposit.amount <= 0) {
 			throw new Error('El monto del depósito debe ser mayor a 0');
@@ -56,7 +58,8 @@ export class DepositOrchestratorService {
 			commissionDrafts = this.commissionEngine.generateForTranche(
 				contract,
 				updatedTranche,
-				roleSplits
+				roleSplits,
+				commissionPolicy
 			);
 		}
 
@@ -79,8 +82,9 @@ export class DepositOrchestratorService {
 		amendedAt: number;
 		reason?: string;
 		roleSplits: CommissionRoleSplit[];
+		commissionPolicy?: CommissionPolicy | null;
 	}): AmendTrancheResult {
-		const { tranche, contract, newAmount, amendedAt, reason, roleSplits } = params;
+		const { tranche, contract, newAmount, amendedAt, reason, roleSplits, commissionPolicy } = params;
 
 		if (newAmount <= 0) {
 			throw new Error('El monto del tramo debe ser mayor a 0');
@@ -118,7 +122,8 @@ export class DepositOrchestratorService {
 			commissionDrafts = this.commissionEngine.generateForTranche(
 				contract,
 				updatedTranche,
-				roleSplits
+				roleSplits,
+				commissionPolicy
 			);
 		}
 

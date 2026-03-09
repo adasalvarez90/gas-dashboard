@@ -3,6 +3,7 @@ import { CommissionEngineService } from './commission-engine.service';
 import { Contract } from 'src/app/store/contract/contract.model';
 import { Tranche } from 'src/app/store/tranche/tranche.model';
 import { CommissionRoleSplit } from 'src/app/models/commission-engine.model';
+import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
 
 function addMonths(ts: number, months: number): number {
   const d = new Date(ts);
@@ -384,6 +385,82 @@ describe('CommissionEngineService', () => {
       expect(cutDate.getDate()).toBe(7);
       expect(cutDate.getMonth()).toBe(1); // Feb
       expect(cutDate.getFullYear()).toBe(2026);
+    });
+  });
+
+  describe('CommissionPolicy dynamics (Scheme A immediate bonus)', () => {
+    it('applies extra commission only to immediate (5% immediate, 5% recurring)', () => {
+      const startDate = new Date(2026, 11, 15).getTime(); // Dec 15 2026
+      const endDate = addMonths(startDate, 12);
+
+      const contract: Partial<Contract> = {
+        uid: 'c1',
+        scheme: 'A',
+        source: 'COMUNIDAD',
+        startDate,
+        endDate,
+        yieldPercent: 13
+      };
+
+      const tranche: Partial<Tranche> = {
+        uid: 't1',
+        contractUid: 'c1',
+        amount: 100000,
+        sequence: 1,
+        fundedAt: startDate
+      };
+
+      const policy: Partial<CommissionPolicy> = {
+        uid: 'p1',
+        scheme: 'A',
+        active: true,
+        validFrom: startDate - 1,
+        validTo: startDate + 1,
+        overrideImmediatePercent: 5,
+        overrideTotalCommissionPercent: 10
+      };
+
+      const roleSplits: CommissionRoleSplit[] = [
+        { role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }
+      ];
+
+      const drafts = service.generateForTranche(
+        contract as Contract,
+        tranche as Tranche,
+        roleSplits,
+        policy as CommissionPolicy
+      );
+
+      const immediate = drafts.find((d) => d.paymentType === 'IMMEDIATE')!;
+      expect(immediate.amount).toBe(5000);
+      expect(immediate.grossCommissionPercent).toBe(10);
+      expect(immediate.policyUid).toBe('p1');
+
+      const recurring = drafts.filter((d) => d.paymentType === 'RECURRING');
+      const recurringSum = recurring.reduce((acc, d) => acc + d.amount, 0);
+      expect(Math.abs(recurringSum - 5000)).toBeLessThan(0.01);
+    });
+
+    it('if only total is overridden, immediate is derived as total - 5%', () => {
+      const startDate = new Date(2026, 11, 15).getTime();
+      const endDate = addMonths(startDate, 12);
+
+      const contract: Partial<Contract> = { uid: 'c1', scheme: 'A', source: 'COMUNIDAD', startDate, endDate };
+      const tranche: Partial<Tranche> = { uid: 't1', contractUid: 'c1', amount: 100000, sequence: 1, fundedAt: startDate };
+      const policy: Partial<CommissionPolicy> = {
+        uid: 'p1',
+        scheme: 'A',
+        active: true,
+        validFrom: startDate - 1,
+        validTo: startDate + 1,
+        overrideTotalCommissionPercent: 10
+      };
+      const roleSplits: CommissionRoleSplit[] = [{ role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }];
+
+      const drafts = service.generateForTranche(contract as Contract, tranche as Tranche, roleSplits, policy as CommissionPolicy);
+      const immediate = drafts.find((d) => d.paymentType === 'IMMEDIATE')!;
+      expect(immediate.amount).toBe(5000);
+      expect(immediate.grossCommissionPercent).toBe(10);
     });
   });
 });

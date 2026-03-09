@@ -5,6 +5,7 @@ import { TrancheFirestoreService } from 'src/app/services/tranche-firestore.serv
 import { ContractFirestoreService } from 'src/app/services/contract-firestore.service';
 import { CommissionConfigFirestoreService } from 'src/app/services/commission-config-firestore.service';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
+import { CommissionPolicyFirestoreService } from 'src/app/services/commission-policy-firestore.service';
 import { DepositOrchestratorService } from './deposit-orchestrator.service';
 import { RoleResolverService } from '../engines/role-resolver.service';
 
@@ -20,6 +21,7 @@ describe('TrancheDepositService', () => {
         { provide: ContractFirestoreService, useValue: {} },
         { provide: CommissionConfigFirestoreService, useValue: {} },
         { provide: CommissionPaymentFirestoreService, useValue: {} },
+        { provide: CommissionPolicyFirestoreService, useValue: { getCommissionPolicies: async () => [] } },
         { provide: DepositOrchestratorService, useValue: {} },
         { provide: RoleResolverService, useValue: {} }
       ]

@@ -9,6 +9,8 @@ import { TrancheFirestoreService } from 'src/app/services/tranche-firestore.serv
 import { ContractFirestoreService } from 'src/app/services/contract-firestore.service';
 import { CommissionConfigFirestoreService } from 'src/app/services/commission-config-firestore.service';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
+import { CommissionPolicyFirestoreService } from 'src/app/services/commission-policy-firestore.service';
+import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
 
 /**
  * Application service: coordinates persistence and domain.
@@ -23,6 +25,7 @@ export class TrancheDepositService {
 		private contractFS: ContractFirestoreService,
 		private commissionConfigFS: CommissionConfigFirestoreService,
 		private commissionPaymentFS: CommissionPaymentFirestoreService,
+		private commissionPolicyFS: CommissionPolicyFirestoreService,
 		private orchestrator: DepositOrchestratorService,
 		private roleResolver: RoleResolverService
 	) {}
@@ -42,11 +45,17 @@ export class TrancheDepositService {
 		const configs = await this.commissionConfigFS.getCommissionConfigs();
 		const roleSplits = this.roleResolver.resolveRoleSplits(contract, configs);
 
+		const willFund = tranche.totalDeposited + deposit.amount === tranche.amount;
+		const commissionPolicy = willFund
+			? await this.resolveCommissionPolicy(contract, deposit.depositedAt)
+			: null;
+
 		const result = this.orchestrator.registerDeposit(
 			{ amount: deposit.amount, depositedAt: deposit.depositedAt },
 			tranche,
 			contract,
-			roleSplits
+			roleSplits,
+			commissionPolicy
 		);
 
 		const savedDeposit = await this.depositFS.createDeposit(deposit);
@@ -112,13 +121,20 @@ export class TrancheDepositService {
 		const configs = await this.commissionConfigFS.getCommissionConfigs();
 		const roleSplits = this.roleResolver.resolveRoleSplits(contract, configs);
 
+		const willFundByAmendment = trancheForOrchestrator.totalDeposited === newAmount;
+		const fundedAt = trancheForOrchestrator.lastDepositAt;
+		const commissionPolicy = willFundByAmendment && fundedAt != null
+			? await this.resolveCommissionPolicy(contract, fundedAt)
+			: null;
+
 		const result = this.orchestrator.amendTrancheAmount({
 			tranche: trancheForOrchestrator,
 			contract,
 			newAmount,
 			amendedAt,
 			reason,
-			roleSplits
+			roleSplits,
+			commissionPolicy
 		});
 
 		await this.trancheFS.updateTranche(result.updatedTranche);
@@ -132,6 +148,32 @@ export class TrancheDepositService {
 		}
 
 		return result.updatedTranche;
+	}
+
+	private async resolveCommissionPolicy(contract: Contract, fundedAt: number): Promise<CommissionPolicy | null> {
+		// Business rule: dynamics apply only to Scheme A.
+		if (contract.scheme !== 'A') return null;
+
+		const policies = await this.commissionPolicyFS.getCommissionPolicies();
+
+		const applicable = policies.filter(p =>
+			!!p &&
+			p._on === true &&
+			p.active === true &&
+			p.scheme === 'A' &&
+			(p.validFrom ?? 0) <= fundedAt &&
+			fundedAt <= (p.validTo ?? Number.POSITIVE_INFINITY)
+		);
+
+		if (applicable.length === 0) return null;
+
+		// Deterministic pick: most recent validFrom, then newest _create.
+		applicable.sort((a, b) =>
+			(b.validFrom - a.validFrom) ||
+			((b._create || 0) - (a._create || 0))
+		);
+
+		return applicable[0];
 	}
 
 	private async activateContract(contractUid: string, fundedAt: number) {

@@ -232,6 +232,23 @@ Recurring commission:
 
 5,000 / 9
 
+---
+
+# CommissionPolicy (Dynamics) — Scheme A Only
+
+Some special dynamics (e.g. offering +1%, +2%, +3% commission) apply **only** to **Scheme A** and **only** as an **immediate bonus**.
+
+Rules:
+
+- Base Scheme A stays: **5% recurring** (split across 12 months or remaining months for annexes)
+- The bonus increases the **immediate commission** (e.g. 4% → 5%)
+- Total commission increases accordingly (e.g. 9% → 10%), keeping recurring at 5%
+
+Example:
+
+- Normal Scheme A: 4% immediate + 5% recurring = 9%
+- Dynamic +1%: 5% immediate + 5% recurring = 10%
+
 
 ---
 

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Contract } from '../../store/contract/contract.model';
 import { Tranche } from '../../store/tranche/tranche.model';
 import { CommissionPaymentDraft } from '../../models/commission-engine.model';
+import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
 
 @Injectable({ providedIn: 'root' })
 export class CommissionEngineService {
@@ -9,15 +10,20 @@ export class CommissionEngineService {
 	generateForTranche(
 		contract: Contract,
 		tranche: Tranche,
-		roleSplits
+		roleSplits,
+		commissionPolicy?: CommissionPolicy | null
 	): CommissionPaymentDraft[] {
 
 		if (!tranche.fundedAt) return [];
 
 		const drafts: CommissionPaymentDraft[] = [];
 
+		const schemeARecurringPercent = 5;
+
+		const schemeAImmediatePercent = this.getSchemeAImmediatePercent(commissionPolicy);
+
 		const grossCommissionPercent = contract.scheme === 'A'
-			? 9
+			? schemeAImmediatePercent + schemeARecurringPercent
 			: 4 + this.getSchemeBExtraPercentByYield(contract.yieldPercent ?? 20);
 
 		const totalCommission =
@@ -31,10 +37,12 @@ export class CommissionEngineService {
 				totalCommission * (split.percent / 100);
 
 			// =========================
-			// IMMEDIATE (4% both schemes)
+			// IMMEDIATE
 			// =========================
 
-			const immediatePercent = 4;
+			const immediatePercent = contract.scheme === 'A'
+				? schemeAImmediatePercent
+				: 4;
 
 			const immediateAmount =
 				tranche.amount *
@@ -48,6 +56,7 @@ export class CommissionEngineService {
 				advisorUid: split.advisorUid,
 				role: split.role,
 				source: contract.source,
+				policyUid: this.getPolicyUidForDraft(contract, commissionPolicy),
 
 				amount: immediateAmount,
 
@@ -70,7 +79,7 @@ export class CommissionEngineService {
 
 			if (contract.scheme === 'A') {
 
-				const recurringPercent = 5;
+				const recurringPercent = schemeARecurringPercent;
 
 				const recurringTotal =
 					tranche.amount *
@@ -95,6 +104,7 @@ export class CommissionEngineService {
 						advisorUid: split.advisorUid,
 						role: split.role,
 						source: contract.source,
+						policyUid: this.getPolicyUidForDraft(contract, commissionPolicy),
 
 						amount,
 
@@ -139,6 +149,7 @@ export class CommissionEngineService {
 					advisorUid: split.advisorUid,
 					role: split.role,
 					source: contract.source,
+					policyUid: this.getPolicyUidForDraft(contract, commissionPolicy),
 
 					amount: remainingAmount,
 
@@ -167,6 +178,43 @@ export class CommissionEngineService {
 	private getSchemeBExtraPercentByYield(yieldPercent: number): number {
 		const extra = 20 - yieldPercent;
 		return Math.max(0, Math.min(4, extra));
+	}
+
+	/**
+	 * CommissionPolicy (dinámicas): apply ONLY to Scheme A and ONLY as an immediate bonus.
+	 *
+	 * Base Scheme A is 4% immediate + 5% recurring.
+	 * A policy may set:
+	 * - overrideImmediatePercent (preferred)
+	 * - overrideTotalCommissionPercent (interpreted as total = immediate + 5%)
+	 */
+	private getSchemeAImmediatePercent(commissionPolicy?: CommissionPolicy | null): number {
+		const baseImmediate = 4;
+		const baseRecurring = 5;
+		const baseTotal = baseImmediate + baseRecurring;
+
+		if (!commissionPolicy || commissionPolicy.scheme !== 'A') return baseImmediate;
+
+		const immediateOverride = commissionPolicy.overrideImmediatePercent;
+		if (immediateOverride != null) {
+			return immediateOverride;
+		}
+
+		const totalOverride = commissionPolicy.overrideTotalCommissionPercent;
+		if (totalOverride != null) {
+			// Enforce rule: bonus goes to immediate, recurring stays 5%.
+			return totalOverride - baseRecurring;
+		}
+
+		// No overrides -> default
+		return baseImmediate;
+	}
+
+	private getPolicyUidForDraft(contract: Contract, commissionPolicy?: CommissionPolicy | null): string | undefined {
+		// By business rule, dynamics apply only to Scheme A.
+		if (contract.scheme !== 'A') return undefined;
+		if (!commissionPolicy || commissionPolicy.scheme !== 'A') return undefined;
+		return commissionPolicy.uid;
 	}
 
 	// =========================

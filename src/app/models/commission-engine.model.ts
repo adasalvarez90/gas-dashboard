@@ -12,6 +12,8 @@ export interface CommissionPaymentDraft {
 	role: string;
 	source: string;
 
+	policyUid?: string;
+
 	amount: number;
 
 	installment: number;
