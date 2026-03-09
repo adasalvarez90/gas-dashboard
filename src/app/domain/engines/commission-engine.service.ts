@@ -16,8 +16,9 @@ export class CommissionEngineService {
 
 		const drafts: CommissionPaymentDraft[] = [];
 
-		const grossCommissionPercent =
-			contract.scheme === 'A' ? 9 : 4;
+		const grossCommissionPercent = contract.scheme === 'A'
+			? 9
+			: 4 + this.getSchemeBExtraPercentByYield(contract.yieldPercent ?? 20);
 
 		const totalCommission =
 			tranche.amount * (grossCommissionPercent / 100);
@@ -30,11 +31,10 @@ export class CommissionEngineService {
 				totalCommission * (split.percent / 100);
 
 			// =========================
-			// IMMEDIATE
+			// IMMEDIATE (4% both schemes)
 			// =========================
 
-			const immediatePercent =
-				contract.scheme === 'A' ? 4 : 4;
+			const immediatePercent = 4;
 
 			const immediateAmount =
 				tranche.amount *
@@ -113,9 +113,60 @@ export class CommissionEngineService {
 				}
 			}
 
+			// =========================
+			// FINAL (Scheme B only): extra by yield at month 6 or month 12 of contract
+			// =========================
+
+			if (contract.scheme === 'B') {
+				const remainingPercent = grossCommissionPercent - immediatePercent;
+				if (remainingPercent <= 0) return;
+
+				const remainingAmount =
+					tranche.amount *
+					(remainingPercent / 100) *
+					(split.percent / 100);
+
+				const contractStart = contract.startDate ?? tranche.fundedAt!;
+				const month6 = this.addMonths(contractStart, 6);
+				const month12 = this.addMonths(contractStart, 12);
+
+				const dueDate = tranche.fundedAt! < month6 ? month6 : month12;
+
+				drafts.push({
+					contractUid: contract.uid,
+					trancheUid: tranche.uid,
+
+					advisorUid: split.advisorUid,
+					role: split.role,
+					source: contract.source,
+
+					amount: remainingAmount,
+
+					installment: 2,
+
+					scheme: contract.scheme,
+
+					grossCommissionPercent,
+					roleSplitPercent: split.percent,
+
+					paymentType: 'FINAL',
+
+					dueDate,
+					cutDate: dueDate
+				});
+			}
+
 		});
 
 		return drafts;
+	}
+
+	/**
+	 * Scheme B: extra commission % by yield. 16%→+4%, 17%→+3%, 18%→+2%, 19%→+1%, 20%→+0%.
+	 */
+	private getSchemeBExtraPercentByYield(yieldPercent: number): number {
+		const extra = 20 - yieldPercent;
+		return Math.max(0, Math.min(4, extra));
 	}
 
 	// =========================

@@ -237,21 +237,17 @@ Recurring commission:
 
 # Scheme B
 
-Total commission includes an immediate payment and two later payments.
+4% commission **immediate**. The **extra** (depending on yield) is paid in the **sixth month of the contract term** (vigencia del contrato).
 
 Structure:
 
+- 4% immediate
+- Remaining commission (extra by yield) paid at **month 6** of the contract term
 
-4% immediate
-remaining commission paid at month 6
-remaining commission paid at month 12
+Annex rule:
 
-
-Special rule:
-
-If an annex contribution happens **before month 6**, its remaining commission is paid at **month 6**.
-
-If it happens **after month 6**, the remaining commission is paid at **contract end (month 12)**.
+- **Annex before month 6** of the contract term: 4% immediate; extra (by yield) is paid at **month 6** (together with any other due at that date).
+- **Annex from month 6 onward** of the contract term: 4% immediate; remaining (by yield) is paid at **month 12** of the contract term.
 
 ---
 

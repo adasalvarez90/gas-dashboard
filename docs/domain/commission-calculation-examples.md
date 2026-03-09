@@ -163,85 +163,37 @@ Final payment month 12:
 
 # Scheme B
 
-Scheme B uses a different structure.
+- 4% commission **immediate**.
+- The **extra** (depending on yield) is paid in the **sixth month of the contract term**.
 
-Base commission:
-
-
-4%
-
-
-Additional commission depends on yield offered.
+Additional commission depends on yield offered:
 
 Yield → Extra Commission
 
+- 16% yield → +4%
+- 17% yield → +3%
+- 18% yield → +2%
+- 19% yield → +1%
+- 20% yield → +0%
 
-16% yield → +4%
-17% yield → +3%
-18% yield → +2%
-19% yield → +1%
-20% yield → +0%
+Example: yield 16% → total commission 8% (4% immediate + 4% at month 6).
 
+Annex rule:
 
-Example:
-
-Yield offered = 16%
-
-Total commission:
-
-
-8%
-
-
-Distribution:
-
-Immediate payment
-
-
-4%
-
-
-Remaining commission
-
-
-4%
-
-
-Payment schedule:
-
-Remaining commission is paid at **month 6**.
+- **Annex before month 6** of the contract term: 4% immediate; extra (by yield) paid at **month 6** (together with the original tranche if applicable).
+- **Annex from month 6 onward** of the contract term: 4% immediate; remaining (by yield) paid at **month 12** of the contract term.
 
 ---
 
 # Example — Scheme B Annex Before Month 6
 
-Investment:
-
-100,000
-
-Immediate commission:
-
-
-4% = 4,000
-
-
-Remaining commission:
-
-
-4% = 4,000
-
-
-If annex occurs before month 6:
-
-The remaining payment occurs at **month 6** together with the original tranche.
+Investment: 100,000. Immediate: 4% = 4,000. Remaining (e.g. 4%): 4,000. If annex occurs before month 6, the remaining payment occurs at **month 6**.
 
 ---
 
 # Example — Scheme B Annex After Month 6
 
-If annex occurs after month 6:
-
-Remaining commission is paid at **month 12**.
+If annex occurs from month 6 onward, remaining commission is paid at **month 12**.
 
 ---
 

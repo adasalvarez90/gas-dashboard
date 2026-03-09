@@ -44,18 +44,13 @@ If the tranche is an annex, the recurring commission must be divided across **re
 
 # Scheme B
 
-Structure:
+- 4% commission **immediate**.
+- The **extra** (depending on yield) is paid in the **sixth month of the contract term**.
 
+Annex rule:
 
-4% immediate
-Remaining paid at month 6
-
-
-Special rule:
-
-If annex occurs before month 6 → first payment indediate 4% and then remaining payment happens at month 6.
-
-If annex occurs after month 6 → first payment indediate 4% and then remaining payment happens at month 12.
+- **Annex before month 6** of the contract term: 4% immediate; extra (by yield) paid at **month 6**.
+- **Annex from month 6 onward** of the contract term: 4% immediate; remaining (by yield) paid at **month 12** of the contract term.
 
 ---
 
