@@ -158,5 +158,71 @@ describe('CommissionEngineService', () => {
       const expectedRecurringTotal = 100000 * 0.05 * 1; // 5,000
       expect(Math.abs(sum - expectedRecurringTotal)).toBeLessThan(0.01);
     });
+
+    it('annex in month 4 generates 9 recurring installments (May to Jan)', () => {
+      const startDate = new Date(2026, 0, 15).getTime(); // Jan 15 2026
+      const endDate = addMonths(startDate, 12); // Jan 15 2027
+      const annexFundedAt = addMonths(startDate, 3); // Apr 15 2026 (month 4)
+
+      const contract: Partial<Contract> = {
+        uid: 'c1',
+        scheme: 'A',
+        source: 'COMUNIDAD',
+        startDate,
+        endDate
+      };
+      const tranche: Partial<Tranche> = {
+        uid: 't2',
+        contractUid: 'c1',
+        amount: 100000,
+        sequence: 2,
+        fundedAt: annexFundedAt
+      };
+      const roleSplits: CommissionRoleSplit[] = [
+        { role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }
+      ];
+
+      const drafts = service.generateForTranche(
+        contract as Contract,
+        tranche as Tranche,
+        roleSplits
+      );
+
+      const recurring = drafts.filter((d) => d.paymentType === 'RECURRING');
+      expect(recurring).toHaveSize(9);
+    });
+
+    it('annex in month 11 generates 2 recurring installments (Dec and Jan)', () => {
+      const startDate = new Date(2026, 0, 15).getTime(); // Jan 15 2026
+      const endDate = addMonths(startDate, 12); // Jan 15 2027
+      const annexFundedAt = addMonths(startDate, 10); // Nov 15 2026 (month 11 → 2 months left)
+
+      const contract: Partial<Contract> = {
+        uid: 'c1',
+        scheme: 'A',
+        source: 'COMUNIDAD',
+        startDate,
+        endDate
+      };
+      const tranche: Partial<Tranche> = {
+        uid: 't2',
+        contractUid: 'c1',
+        amount: 100000,
+        sequence: 2,
+        fundedAt: annexFundedAt
+      };
+      const roleSplits: CommissionRoleSplit[] = [
+        { role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }
+      ];
+
+      const drafts = service.generateForTranche(
+        contract as Contract,
+        tranche as Tranche,
+        roleSplits
+      );
+
+      const recurring = drafts.filter((d) => d.paymentType === 'RECURRING');
+      expect(recurring).toHaveSize(2);
+    });
   });
 });
