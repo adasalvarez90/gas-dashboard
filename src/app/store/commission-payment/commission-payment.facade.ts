@@ -20,12 +20,24 @@ export class CommissionPaymentFacade {
 		this.store.dispatch(CommissionPaymentActions.loadCommissionPayments({ trancheUid }));
 	}
 
+	loadCommissionPaymentsByCutDate(cutDate: number) {
+		this.store.dispatch(CommissionPaymentActions.loadCommissionPaymentsByCutDate({ cutDate }));
+	}
+
 	selectCommissionPayment(commissionPayment: CommissionPayment) {
 		this.store.dispatch(CommissionPaymentActions.selectCommissionPayment({ commissionPayment }));
 	}
 
 	createCommissionPayment(commissionPayments: CommissionPaymentDraft[]) {
 		this.store.dispatch(CommissionPaymentActions.createManyCommissionPayment({ commissionPayments }));
+	}
+
+	markPaidByCutDate(cutDate: number, paidAt?: number) {
+		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentsPaidByCutDate({ cutDate, paidAt }));
+	}
+
+	createAdjustment(adjustment: Parameters<typeof CommissionPaymentActions.createAdjustmentCommissionPayment>[0]['adjustment']) {
+		this.store.dispatch(CommissionPaymentActions.createAdjustmentCommissionPayment({ adjustment }));
 	}
 
 	searchText(searchTerm: string) {

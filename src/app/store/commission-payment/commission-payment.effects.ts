@@ -34,6 +34,20 @@ export class CommissionPaymentEffects {
 		),
 	);
 
+	// 🔎 Load commissionPayments by cutDate
+	loadCommissionPaymentsByCutDate$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.loadCommissionPaymentsByCutDate),
+			withLatestFrom(this.authFacade.user$),
+			switchMap(([{ cutDate }, user]) =>
+				this.commissionPaymentFS.getCommissionPaymentsByCutDate(cutDate).then(
+					commissionPayments => CommissionPaymentActions.loadCommissionPaymentsByCutDateSuccess({ commissionPayments }),
+					err => CommissionPaymentActions.loadCommissionPaymentsByCutDateFailure({ error: err.message }),
+				),
+			),
+		),
+	);
+
 	// ➕ Create commissionPayment
 	createManyCommissionPayment$ = createEffect(() =>
 		this.actions$.pipe(
@@ -77,6 +91,86 @@ export class CommissionPaymentEffects {
 					)
 				},
 			),
+		),
+	);
+
+	// ✅ Mark as paid by cutDate (atomic batch)
+	markCommissionPaymentsPaidByCutDate$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.markCommissionPaymentsPaidByCutDate),
+			exhaustMap(async ({ cutDate, paidAt }) => {
+				const loading = await this.loadingCtrl.create({
+					cssClass: 'my-custom-class',
+					message: 'Marcando pagos como pagados. Espere, por favor.'
+				});
+
+				await loading.present();
+
+				return this.commissionPaymentFS.markCommissionPaymentsPaidByCutDate(cutDate, paidAt).then(
+					async (updatedCount) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'primary',
+							message: `Se marcaron ${updatedCount} pagos como pagados.`,
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateSuccess({ updatedCount });
+					},
+					async (err) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'danger',
+							message: `Error al marcar pagos como pagados: ${err.message}`,
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateFailure({ error: err.message });
+					},
+				);
+			}),
+		),
+	);
+
+	// ➕ Create adjustment commissionPayment
+	createAdjustmentCommissionPayment$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.createAdjustmentCommissionPayment),
+			exhaustMap(async ({ adjustment }) => {
+				const loading = await this.loadingCtrl.create({
+					cssClass: 'my-custom-class',
+					message: 'Creando ajuste de comisión. Espere, por favor.'
+				});
+
+				await loading.present();
+
+				return this.commissionPaymentFS.createAdjustmentCommissionPayment(adjustment).then(
+					async (commissionPayment) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'primary',
+							message: `El ajuste por "${commissionPayment.amount}" fue creado con éxito.`,
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.createAdjustmentCommissionPaymentSuccess({ commissionPayment });
+					},
+					async (err) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'danger',
+							message: `Error al crear el ajuste: ${err.message}`,
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.createAdjustmentCommissionPaymentFailure({ error: err.message });
+					},
+				);
+			}),
 		),
 	);
 }

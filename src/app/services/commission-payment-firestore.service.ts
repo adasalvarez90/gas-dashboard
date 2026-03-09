@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where, writeBatch } from '@angular/fire/firestore';
 
 import * as _ from 'lodash';
 
@@ -23,6 +23,69 @@ export class CommissionPaymentFirestoreService {
 		const snap = await getDocs(q);
 
 		return snap.docs.map(d => d.data() as CommissionPayment);
+	}
+
+	// ===== GET BY CUT DATE =====
+	async getCommissionPaymentsByCutDate(cutDate: number): Promise<CommissionPayment[]> {
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(
+			ref,
+			where('cutDate', '==', cutDate),
+			where('_on', '==', true),
+		);
+
+		const snap = await getDocs(q);
+
+		return snap.docs.map(d => d.data() as CommissionPayment);
+	}
+
+	// ===== MARK PAID BY CUT DATE =====
+	async markCommissionPaymentsPaidByCutDate(cutDate: number, paidAt: number = Date.now()): Promise<number> {
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(
+			ref,
+			where('cutDate', '==', cutDate),
+			where('paid', '==', false),
+			where('cancelled', '==', false),
+			where('_on', '==', true),
+		);
+
+		const snap = await getDocs(q);
+		const batch = writeBatch(this.firestore);
+
+		snap.docs.forEach(d => {
+			batch.update(d.ref, { paid: true, paidAt, _update: paidAt });
+		});
+
+		await batch.commit();
+		return snap.size;
+	}
+
+	// ===== CANCEL FUTURE UNPAID BY CONTRACT =====
+	async cancelFutureUnpaidByContract(contractUid: string, cancelledAt: number = Date.now()): Promise<number> {
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(
+			ref,
+			where('contractUid', '==', contractUid),
+			where('paid', '==', false),
+			where('_on', '==', true),
+		);
+
+		const snap = await getDocs(q);
+		const batch = writeBatch(this.firestore);
+		let updated = 0;
+
+		snap.docs.forEach(d => {
+			const payment = d.data() as CommissionPayment;
+			if (payment.cancelled) return;
+			if (payment.dueDate > cancelledAt) {
+				updated++;
+				batch.update(d.ref, { cancelled: true, _update: cancelledAt });
+			}
+		});
+
+		await batch.commit();
+		return updated;
 	}
 
 	// ➕ Create commissionPayment
@@ -49,5 +112,65 @@ export class CommissionPaymentFirestoreService {
 		}
 
 		return createdPayments;
+	}
+
+	// ➕ Create adjustment commissionPayment (separate entry, never mutates paid payments)
+	async createAdjustmentCommissionPayment(params: {
+		contractUid: string;
+		trancheUid: string;
+		advisorUid: string;
+		role: string;
+		amount: number; // can be positive or negative
+		dueDate: number;
+		policyUid?: string;
+		adjustsPaymentUid?: string;
+		adjustmentReason?: string;
+		scheme: string;
+		grossCommissionPercent: number;
+		roleSplitPercent: number;
+	}): Promise<CommissionPayment> {
+		const uid = uuidv4();
+		const now = Date.now();
+
+		const cutDate = this.getCutDateForDueDate(params.dueDate);
+
+		const newPayment: CommissionPayment = {
+			uid,
+			contractUid: params.contractUid,
+			trancheUid: params.trancheUid,
+			advisorUid: params.advisorUid,
+			role: params.role,
+			policyUid: params.policyUid,
+			adjustsPaymentUid: params.adjustsPaymentUid,
+			adjustmentReason: params.adjustmentReason,
+			grossCommissionPercent: params.grossCommissionPercent,
+			roleSplitPercent: params.roleSplitPercent,
+			amount: params.amount,
+			paymentType: 'ADJUSTMENT',
+			dueDate: params.dueDate,
+			cutDate,
+			paid: false,
+			cancelled: false,
+			installment: 0,
+			scheme: params.scheme,
+			_create: now,
+			_on: true
+		};
+
+		const ref = doc(this.firestore, this.collectionName, uid);
+		await setDoc(ref, newPayment);
+
+		return newPayment;
+	}
+
+	private getCutDateForDueDate(dueDate: number): number {
+		const d = new Date(dueDate);
+		const year = d.getFullYear();
+		const month = d.getMonth();
+		const day = d.getDate();
+
+		if (day <= 7) return new Date(year, month, 7).getTime();
+		if (day <= 21) return new Date(year, month, 21).getTime();
+		return new Date(year, month + 1, 7).getTime();
 	}
 }

@@ -12,9 +12,17 @@ export const commissionPaymentReducer = createReducer(
 
 	on(CommissionPaymentsActions.loadCommissionPaymentsFailure, (state, { error }) => ({ ...state, loading: false, selected: null, error, })),
 
+	on(CommissionPaymentsActions.loadCommissionPaymentsByCutDate, (state) => ({ ...state, loading: true, selected: null, error: null, })),
+
+	on(CommissionPaymentsActions.loadCommissionPaymentsByCutDateSuccess, (state, { commissionPayments }) => adapter.setAll(commissionPayments, { ...state, selected: null, loading: false })),
+
+	on(CommissionPaymentsActions.loadCommissionPaymentsByCutDateFailure, (state, { error }) => ({ ...state, loading: false, selected: null, error, })),
+
 	on(CommissionPaymentsActions.selectCommissionPayment, (state, { commissionPayment }) => ({ ...state, selected: commissionPayment, })),
 
 	on(CommissionPaymentsActions.createCommissionPaymentSuccess, (state, { commissionPayments }) => adapter.addMany(commissionPayments, state)),
+
+	on(CommissionPaymentsActions.createAdjustmentCommissionPaymentSuccess, (state, { commissionPayment }) => adapter.addOne(commissionPayment, state)),
 
 	// Search actions
 	on(CommissionPaymentsActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),

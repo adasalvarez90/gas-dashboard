@@ -92,7 +92,8 @@ export class ContractFirestoreService {
 		await updateDoc(
 			doc(this.firestore, 'contracts', contract.uid),
 			{
-				status: 'CANCELLED',
+				contractStatus: 'CANCELLED',
+				accountStatus: 'CANCELLED',
 				cancelledAt: now,
 				_update: now
 			}
@@ -100,9 +101,10 @@ export class ContractFirestoreService {
 
 		// Cancelar comisiones futuras
 		const q = query(
-			collection(this.firestore, 'commission-payments'),
+			collection(this.firestore, 'commissionPayments'),
 			where('contractUid', '==', contract.uid),
-			where('paid', '==', false)
+			where('paid', '==', false),
+			where('_on', '==', true)
 		);
 
 		const snap = await getDocs(q);
@@ -112,8 +114,10 @@ export class ContractFirestoreService {
 		snap.docs.forEach(d => {
 			const payment = d.data() as CommissionPayment;
 
+			if (payment.cancelled) return;
+
 			if (payment.dueDate > now) {
-				batch.update(d.ref, { cancelled: true });
+				batch.update(d.ref, { cancelled: true, _update: now });
 			}
 		});
 

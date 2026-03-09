@@ -10,11 +10,16 @@ export interface CommissionPayment extends Metadata {
 	role: string;
 
 	policyUid?: string;
+	/**
+	 * Adjustment metadata (never mutates paid payments; use a new ADJUSTMENT entry instead).
+	 */
+	adjustsPaymentUid?: string;
+	adjustmentReason?: string;
 	grossCommissionPercent: number;   // ejemplo 9% o 10%
 	roleSplitPercent: number;         // porcentaje según matriz
 	amount: number;
 
-	paymentType: 'IMMEDIATE' | 'RECURRING' | 'FINAL';
+	paymentType: 'IMMEDIATE' | 'RECURRING' | 'FINAL' | 'ADJUSTMENT';
 
 	dueDate: number;
 	cutDate: number;
