@@ -2,19 +2,42 @@
 
 	<div class="filters">
 
-		<div class="tabs">
-			<ion-chip color="dark" mode="ios" outline="true" class="tab" [class.active]="currentFilter === 'pending'"
-				(click)="setFilter('pending')">
-				<ion-label>Pendientes</ion-label>
-			</ion-chip>
-			<ion-chip color="dark" mode="ios" outline="true" class="tab" [class.active]="currentFilter === 'signed'"
-				(click)="setFilter('signed')">
-				<ion-label>Firmados</ion-label>
-			</ion-chip>
-		</div>
-
 		<ion-searchbar debounce="400" (ionInput)="filter($event.target.value)"
-			placeholder="Buscar contratos"></ion-searchbar>
+			placeholder="Buscar por inversionista, esquema, consultora…"></ion-searchbar>
+
+		<div class="tabs">
+			@if ((statusFilter$ | async); as statusFilter) {
+				@if ((statusCounts$ | async); as counts) {
+					<ion-chip color="dark" mode="ios" outline="true" class="tab"
+						[class.active]="statusFilter === 'PENDING'"
+						(click)="setStatusFilter('PENDING')">
+						<ion-label>Pendientes</ion-label>
+						<ion-badge class="count">{{ counts.PENDING }}</ion-badge>
+					</ion-chip>
+
+					<ion-chip color="dark" mode="ios" outline="true" class="tab"
+						[class.active]="statusFilter === 'ACTIVE'"
+						(click)="setStatusFilter('ACTIVE')">
+						<ion-label>Activos</ion-label>
+						<ion-badge class="count">{{ counts.ACTIVE }}</ion-badge>
+					</ion-chip>
+
+					<ion-chip color="dark" mode="ios" outline="true" class="tab"
+						[class.active]="statusFilter === 'FINISHED'"
+						(click)="setStatusFilter('FINISHED')">
+						<ion-label>Finalizados</ion-label>
+						<ion-badge class="count">{{ counts.FINISHED }}</ion-badge>
+					</ion-chip>
+
+					<ion-chip color="dark" mode="ios" outline="true" class="tab"
+						[class.active]="statusFilter === 'CANCELLED'"
+						(click)="setStatusFilter('CANCELLED')">
+						<ion-label>Cancelados</ion-label>
+						<ion-badge class="count">{{ counts.CANCELLED }}</ion-badge>
+					</ion-chip>
+				}
+			}
+		</div>
 
 	</div>
 
@@ -40,8 +63,15 @@
 					{{ contract.yieldPercent }}% · {{ contract.term }}m
 				</span>
 
-				<span class="status" [class.signed]="contract.signed">
-					{{ contract.signed ? 'Firmado' : 'Pendiente' }}
+				<span class="status"
+					[class.pending]="contract.contractStatus === 'PENDING'"
+					[class.active]="contract.contractStatus === 'ACTIVE'"
+					[class.finished]="contract.contractStatus === 'FINISHED'"
+					[class.cancelled]="contract.contractStatus === 'CANCELLED'">
+					@if (contract.contractStatus === 'PENDING') { Pendiente }
+					@if (contract.contractStatus === 'ACTIVE') { Activo }
+					@if (contract.contractStatus === 'FINISHED') { Finalizado }
+					@if (contract.contractStatus === 'CANCELLED') { Cancelado }
 				</span>
 			</div>
 

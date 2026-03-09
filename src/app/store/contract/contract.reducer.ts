@@ -23,5 +23,8 @@ export const contractReducer = createReducer(
 	// Search actions
 	on(ContractsActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),
 
+	// Status filter actions
+	on(ContractsActions.setStatusFilter, (state, { statusFilter }) => ({ ...state, statusFilter })),
+
 	on(ContractsActions.clearContracts, () => initialState)
 );

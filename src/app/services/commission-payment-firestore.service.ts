@@ -19,7 +19,17 @@ export class CommissionPaymentFirestoreService {
 	async getCommissionPayments(trancheUid: string): Promise<CommissionPayment[]> {
 		const ref = collection(this.firestore, this.collectionName);
 		const q = query(ref, where('trancheUid', '==', trancheUid), where('_on', '==', true));
-		
+
+		const snap = await getDocs(q);
+
+		return snap.docs.map(d => d.data() as CommissionPayment);
+	}
+
+	// ===== GET BY CONTRACT (all tranches) =====
+	async getCommissionPaymentsByContract(contractUid: string): Promise<CommissionPayment[]> {
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(ref, where('contractUid', '==', contractUid), where('_on', '==', true));
+
 		const snap = await getDocs(q);
 
 		return snap.docs.map(d => d.data() as CommissionPayment);
@@ -37,6 +47,29 @@ export class CommissionPaymentFirestoreService {
 		const snap = await getDocs(q);
 
 		return snap.docs.map(d => d.data() as CommissionPayment);
+	}
+
+	// ===== MARK PAID BY TRANCH + ADVISOR =====
+	async markCommissionPaymentsPaidByTrancheAndAdvisor(trancheUid: string, advisorUid: string, paidAt: number = Date.now()): Promise<number> {
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(
+			ref,
+			where('trancheUid', '==', trancheUid),
+			where('advisorUid', '==', advisorUid),
+			where('paid', '==', false),
+			where('cancelled', '==', false),
+			where('_on', '==', true),
+		);
+
+		const snap = await getDocs(q);
+		const batch = writeBatch(this.firestore);
+
+		snap.docs.forEach(d => {
+			batch.update(d.ref, { paid: true, paidAt, _update: paidAt });
+		});
+
+		await batch.commit();
+		return snap.size;
 	}
 
 	// ===== MARK PAID BY CUT DATE =====

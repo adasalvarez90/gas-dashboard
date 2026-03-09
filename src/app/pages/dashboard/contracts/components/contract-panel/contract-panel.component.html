@@ -12,17 +12,38 @@
 		</ion-button>
 		}
 
-		<div class="amount">
-			<!-- {{ contract.capitalMXN | currency:'MXN':'symbol':'1.0-0' }} -->
+		<div class="header-top">
+			<div class="title-stack">
+				<div class="title">
+					{{ contract.investor }}
+				</div>
+				<div class="subtitle">
+					<span class="mono">{{ contract.clientAccount }}</span>
+					<span class="dot">·</span>
+					<span>{{ contract.scheme }}</span>
+					<span class="dot">·</span>
+					<span>{{ contract.source }}</span>
+				</div>
+			</div>
+
+			<ion-chip class="status-chip"
+				[class.pending]="contract.contractStatus === 'PENDING'"
+				[class.active]="contract.contractStatus === 'ACTIVE'"
+				[class.finished]="contract.contractStatus === 'FINISHED'"
+				[class.cancelled]="contract.contractStatus === 'CANCELLED'"
+				outline="true">
+				<ion-label>
+					@if (contract.contractStatus === 'PENDING') { Pendiente }
+					@if (contract.contractStatus === 'ACTIVE') { Activo }
+					@if (contract.contractStatus === 'FINISHED') { Finalizado }
+					@if (contract.contractStatus === 'CANCELLED') { Cancelado }
+				</ion-label>
+			</ion-chip>
 		</div>
 
 		<div class="meta">
-			<span>{{ contract.scheme }}</span>
-			<span>·</span>
-			<span>{{ contract.source }}</span>
-			<span>·</span>
 			<span [class.signed]="contract.signed">
-				{{ contract.signed ? 'Firmado' : 'Pendiente' }}
+				{{ contract.signed ? 'Firmado' : 'Sin firma' }}
 			</span>
 		</div>
 	</div>
@@ -30,35 +51,31 @@
 	<!-- TABS -->
 	<div class="tabs">
 
-		<div class="tab" [class.active]="activeTab === 'info'" (click)="activeTab = 'info'">
-			Información
-		</div>
+		<ion-chip mode="ios" outline="true" class="tab-chip" [class.active]="activeTab === 'info'"
+			(click)="activeTab = 'info'">
+			<ion-icon name="information-circle-outline"></ion-icon>
+			<ion-label>Info</ion-label>
+		</ion-chip>
 
-		<div class="tab" [class.active]="activeTab === 'deposits'" (click)="activeTab = 'deposits'">
-			Depósitos
-		</div>
+		<ion-chip mode="ios" outline="true" class="tab-chip" [class.active]="activeTab === 'deposits'"
+			(click)="activeTab = 'deposits'">
+			<ion-icon name="wallet-outline"></ion-icon>
+			<ion-label>Depósitos</ion-label>
+		</ion-chip>
 
-		<div class="tab" [class.active]="activeTab === 'commissions'" (click)="activeTab = 'commissions'">
-			Comisiones
-		</div>
+		<ion-chip mode="ios" outline="true" class="tab-chip" [class.active]="activeTab === 'commissions'"
+			(click)="activeTab = 'commissions'">
+			<ion-icon name="people-outline"></ion-icon>
+			<ion-label>Comisiones</ion-label>
+		</ion-chip>
 
 	</div>
 
 	<!-- CONTENT -->
 	<div class="panel-content fade-slide">
-
-		@if (activeTab === 'info') {
-		<app-contract-info [contract]="contract"></app-contract-info>
-		}
-
-		@if (activeTab === 'deposits') {
-		<!-- <app-contract-deposits [contract]="contract"></app-contract-deposits> -->
-		}
-
-		@if (activeTab === 'commissions') {
-		<!-- <app-contract-commissions [contract]="contract"></app-contract-commissions> -->
-		}
-
+		<div class="content-fixed">
+			<app-contract-info [contract]="contract" [activeTab]="activeTab"></app-contract-info>
+		</div>
 	</div>
 
 	} @else {

@@ -1,6 +1,6 @@
 // Libraries
 import { EntityState, EntityAdapter, createEntityAdapter, Dictionary } from '@ngrx/entity';
-import { Contract } from './contract.model';
+import { Contract, ContractStatus } from './contract.model';
 
 export function selectId(contract: Contract) {
 	//
@@ -9,6 +9,7 @@ export function selectId(contract: Contract) {
 
 export interface State extends EntityState<Contract> {
   searchTerm: string;
+  statusFilter: ContractStatus;
   selected: Contract | null;
   loading: boolean;
   error: string | null;
@@ -21,6 +22,7 @@ export const adapter: EntityAdapter<Contract> = createEntityAdapter<Contract>({
 
 export const initialState: State = adapter.getInitialState({
   searchTerm: '',
+  statusFilter: 'PENDING',
   selected: null,
   loading: false,
   error: null

@@ -11,20 +11,31 @@
 
 .tabs {
     display: flex;
-    gap: 16px;
-    margin-bottom: 10px;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
 }
 
 .tab {
 	font-size: 14px;
 	font-weight: 400;
 	transition: .2s ease;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .tab.active {
 	border: 1px solid rgba(33, 192, 99, .2);
 	color: #D9FDD3;
 	background-color: #103529;
+}
+
+.count {
+	font-size: 11px;
+	border-radius: 999px;
+	padding: 2px 8px;
+	opacity: .9;
 }
 
 .contracts {
@@ -65,6 +76,18 @@
     margin-top: 6px;
 }
 
-.status.signed {
-    color: var(--ion-color-success);
+.status.pending {
+	color: var(--ion-color-medium);
+}
+
+.status.active {
+	color: var(--ion-color-success);
+}
+
+.status.finished {
+	color: var(--ion-color-tertiary);
+}
+
+.status.cancelled {
+	color: var(--ion-color-danger);
 }

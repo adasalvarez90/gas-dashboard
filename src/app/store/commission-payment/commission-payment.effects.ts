@@ -34,6 +34,20 @@ export class CommissionPaymentEffects {
 		),
 	);
 
+	// 🔎 Load commissionPayments by contract (all tranches)
+	loadCommissionPaymentsByContract$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.loadCommissionPaymentsByContract),
+			withLatestFrom(this.authFacade.user$),
+			switchMap(([{ contractUid }, user]) =>
+				this.commissionPaymentFS.getCommissionPaymentsByContract(contractUid).then(
+					commissionPayments => CommissionPaymentActions.loadCommissionPaymentsByContractSuccess({ commissionPayments }),
+					err => CommissionPaymentActions.loadCommissionPaymentsByContractFailure({ error: err.message }),
+				),
+			),
+		),
+	);
+
 	// 🔎 Load commissionPayments by cutDate
 	loadCommissionPaymentsByCutDate$ = createEffect(() =>
 		this.actions$.pipe(
@@ -99,6 +113,7 @@ export class CommissionPaymentEffects {
 		this.actions$.pipe(
 			ofType(CommissionPaymentActions.markCommissionPaymentsPaidByCutDate),
 			exhaustMap(async ({ cutDate, paidAt }) => {
+				const resolvedPaidAt = paidAt ?? Date.now();
 				const loading = await this.loadingCtrl.create({
 					cssClass: 'my-custom-class',
 					message: 'Marcando pagos como pagados. Espere, por favor.'
@@ -106,7 +121,7 @@ export class CommissionPaymentEffects {
 
 				await loading.present();
 
-				return this.commissionPaymentFS.markCommissionPaymentsPaidByCutDate(cutDate, paidAt).then(
+				return this.commissionPaymentFS.markCommissionPaymentsPaidByCutDate(cutDate, resolvedPaidAt).then(
 					async (updatedCount) => {
 						await loading.dismiss();
 						const toast = await this.toastCtrl.create({
@@ -116,7 +131,7 @@ export class CommissionPaymentEffects {
 							position: 'middle'
 						});
 						await toast.present();
-						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateSuccess({ updatedCount });
+						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateSuccess({ cutDate, paidAt: resolvedPaidAt, updatedCount });
 					},
 					async (err) => {
 						await loading.dismiss();
@@ -128,6 +143,45 @@ export class CommissionPaymentEffects {
 						});
 						await toast.present();
 						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateFailure({ error: err.message });
+					},
+				);
+			}),
+		),
+	);
+
+	// ✅ Mark as paid by tranche + advisor
+	markCommissionPaymentsPaidByTrancheAndAdvisor$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.markCommissionPaymentsPaidByTrancheAndAdvisor),
+			exhaustMap(async ({ trancheUid, advisorUid, paidAt }) => {
+				const resolvedPaidAt = paidAt ?? Date.now();
+				const loading = await this.loadingCtrl.create({
+					cssClass: 'my-custom-class',
+					message: 'Marcando pagos del asesor como pagados…'
+				});
+				await loading.present();
+				return this.commissionPaymentFS.markCommissionPaymentsPaidByTrancheAndAdvisor(trancheUid, advisorUid, resolvedPaidAt).then(
+					async (updatedCount) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'primary',
+							message: `Se marcaron ${updatedCount} pago(s) del asesor como pagados.`,
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByTrancheAndAdvisorSuccess({ trancheUid, advisorUid, paidAt: resolvedPaidAt, updatedCount });
+					},
+					async (err) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'danger',
+							message: `Error: ${err.message}`,
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByTrancheAndAdvisorFailure({ error: err.message });
 					},
 				);
 			}),

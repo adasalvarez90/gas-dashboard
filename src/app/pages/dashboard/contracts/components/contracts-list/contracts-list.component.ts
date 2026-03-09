@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
-import { Contract } from 'src/app/store/contract/contract.model';
+import { Contract, ContractStatus } from 'src/app/store/contract/contract.model';
 
 @Component({
 	selector: 'app-contracts-list',
@@ -17,10 +17,10 @@ import { Contract } from 'src/app/store/contract/contract.model';
 })
 export class ContractsListComponent {
 
-	contracts$ = this.contractFacade.contracts$;
+	contracts$ = this.contractFacade.contractsByStatus$;
 	selectedContract$ = this.contractFacade.selectedContract$;
-
-	currentFilter: 'pending' | 'signed' = 'pending';
+	statusFilter$ = this.contractFacade.statusFilter$;
+	statusCounts$ = this.contractFacade.statusCounts$;
 
 	constructor(private contractFacade: ContractFacade) { }
 
@@ -28,8 +28,8 @@ export class ContractsListComponent {
 		this.contractFacade.selectContract(contract);
 	}
 
-	setFilter(filter: 'pending' | 'signed') {
-		this.currentFilter = filter;
+	setStatusFilter(statusFilter: ContractStatus) {
+		this.contractFacade.setStatusFilter(statusFilter);
 	}
 
 	filter(search: string) {

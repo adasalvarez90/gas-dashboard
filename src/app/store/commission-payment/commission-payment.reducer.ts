@@ -12,6 +12,12 @@ export const commissionPaymentReducer = createReducer(
 
 	on(CommissionPaymentsActions.loadCommissionPaymentsFailure, (state, { error }) => ({ ...state, loading: false, selected: null, error, })),
 
+	on(CommissionPaymentsActions.loadCommissionPaymentsByContract, (state) => ({ ...state, loading: true, selected: null, error: null, })),
+
+	on(CommissionPaymentsActions.loadCommissionPaymentsByContractSuccess, (state, { commissionPayments }) => adapter.setAll(commissionPayments, { ...state, selected: null, loading: false })),
+
+	on(CommissionPaymentsActions.loadCommissionPaymentsByContractFailure, (state, { error }) => ({ ...state, loading: false, selected: null, error, })),
+
 	on(CommissionPaymentsActions.loadCommissionPaymentsByCutDate, (state) => ({ ...state, loading: true, selected: null, error: null, })),
 
 	on(CommissionPaymentsActions.loadCommissionPaymentsByCutDateSuccess, (state, { commissionPayments }) => adapter.setAll(commissionPayments, { ...state, selected: null, loading: false })),
@@ -23,6 +29,32 @@ export const commissionPaymentReducer = createReducer(
 	on(CommissionPaymentsActions.createCommissionPaymentSuccess, (state, { commissionPayments }) => adapter.addMany(commissionPayments, state)),
 
 	on(CommissionPaymentsActions.createAdjustmentCommissionPaymentSuccess, (state, { commissionPayment }) => adapter.addOne(commissionPayment, state)),
+
+	// Mark paid by cutDate
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDate, (state) => ({ ...state, loading: true, error: null })),
+
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateSuccess, (state, { cutDate, paidAt }) => {
+		const updates = Object.values(state.entities)
+			.filter((p) => !!p && p.cutDate === cutDate && !p.paid && !p.cancelled)
+			.map((p) => ({
+				id: p!.uid,
+				changes: { paid: true, paidAt },
+			}));
+
+		return adapter.updateMany(updates, { ...state, loading: false });
+	}),
+
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateFailure, (state, { error }) => ({ ...state, loading: false, error })),
+
+	// Mark paid by tranche + advisor
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisor, (state) => ({ ...state, loading: true, error: null })),
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisorSuccess, (state, { trancheUid, advisorUid, paidAt }) => {
+		const updates = Object.values(state.entities)
+			.filter((p) => !!p && p.trancheUid === trancheUid && p.advisorUid === advisorUid && !p.paid && !p.cancelled)
+			.map((p) => ({ id: p!.uid, changes: { paid: true, paidAt } }));
+		return adapter.updateMany(updates, { ...state, loading: false });
+	}),
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisorFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
 	// Search actions
 	on(CommissionPaymentsActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),

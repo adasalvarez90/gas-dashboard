@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 
-import { Contract } from './contract.model';
+import { Contract, ContractStatus } from './contract.model';
 
 // Load
 export const loadContracts = createAction('[Contracts] Load');
@@ -27,5 +27,8 @@ export const deleteContractFailure = createAction('[Contracts] Delete Failure', 
 
 // Search
 export const setSearchTerm = createAction('[Contracts] Set Search Term', props<{ searchTerm: string }>());
+
+// Status filter
+export const setStatusFilter = createAction('[Contracts] Set Status Filter', props<{ statusFilter: ContractStatus }>());
 
 export const clearContracts = createAction('[Contracts] Clear Contracts');
