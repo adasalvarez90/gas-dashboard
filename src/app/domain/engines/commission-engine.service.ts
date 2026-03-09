@@ -65,7 +65,7 @@ export class CommissionEngineService {
 			});
 
 			// =========================
-			// RECURRING
+			// RECURRING (Scheme A only)
 			// =========================
 
 			if (contract.scheme === 'A') {
@@ -77,13 +77,16 @@ export class CommissionEngineService {
 					(recurringPercent / 100) *
 					(split.percent / 100);
 
-				const monthlyAmount =
-					recurringTotal / 12;
+				const recurringMonths = this.getRecurringMonths(contract, tranche);
+				const monthlyAmount = recurringTotal / recurringMonths;
 
-				for (let i = 1; i <= 12; i++) {
-
-					const dueDate =
-						this.addMonths(startDate, i);
+				for (let i = 1; i <= recurringMonths; i++) {
+					const dueDate = this.addMonths(startDate, i);
+					// Last installment corrects rounding so sum(installments) === recurringTotal (FINANCIAL_GUARDS #9)
+					const isLast = i === recurringMonths;
+					const amount = isLast
+						? recurringTotal - monthlyAmount * (recurringMonths - 1)
+						: monthlyAmount;
 
 					drafts.push({
 						contractUid: contract.uid,
@@ -93,7 +96,7 @@ export class CommissionEngineService {
 						role: split.role,
 						source: contract.source,
 
-						amount: monthlyAmount,
+						amount,
 
 						installment: i + 1,
 
@@ -107,9 +110,7 @@ export class CommissionEngineService {
 						dueDate,
 						cutDate: dueDate
 					});
-
 				}
-
 			}
 
 		});
@@ -118,8 +119,25 @@ export class CommissionEngineService {
 	}
 
 	// =========================
-	// MONTH ANNIVERSARY
+	// MONTH ANNIVERSARY & RECURRING MONTHS
 	// =========================
+
+	/**
+	 * For Scheme A: initial tranche = 12 months; annex = months from fundedAt to contract.endDate.
+	 */
+	private getRecurringMonths(contract: Contract, tranche: Tranche): number {
+		if (tranche.sequence === 1) return 12;
+		const endDate = contract.endDate;
+		const startDate = tranche.fundedAt!;
+		if (endDate == null || startDate >= endDate) return 12;
+		let count = 0;
+		for (let i = 1; i <= 12; i++) {
+			const due = this.addMonths(startDate, i);
+			if (due <= endDate) count++;
+			else break;
+		}
+		return count > 0 ? count : 12;
+	}
 
 	private addMonths(timestamp: number, months: number): number {
 
