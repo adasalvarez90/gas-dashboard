@@ -435,9 +435,8 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 		this.commissionPaymentFacade.markPaidByCutDate(cutDate, Date.now());
 	}
 
-	markAdvisorAsPaid(advisorUid: string) {
-		if (!this.selectedTrancheUid) return;
-		this.commissionPaymentFacade.markPaidByTrancheAndAdvisor(this.selectedTrancheUid, advisorUid, Date.now());
+	markPaymentAsPaid(payment: CommissionPayment) {
+		this.commissionPaymentFacade.markPaidByUid(payment.uid);
 	}
 
 }

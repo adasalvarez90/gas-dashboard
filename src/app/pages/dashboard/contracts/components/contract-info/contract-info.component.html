@@ -253,12 +253,6 @@
 													<span class="amount-label">Pagado:</span>
 													<span class="amount-value success">${{ g.paidAmount | number:'1.0-0' }}</span>
 												</div>
-												@if (g.pendingAmount > 0) {
-													<ion-button size="small" fill="clear" shape="round"
-														(click)="markAdvisorAsPaid(g.advisorUid)">
-														Pagar a este asesor
-													</ion-button>
-												}
 											</div>
 										</div>
 										@if (isGroupExpanded(g.key) && g.payments.length) {
@@ -269,6 +263,7 @@
 													<span>Corte</span>
 													<span>Monto</span>
 													<span>Estado</span>
+													<span>Acción</span>
 												</div>
 												@for (p of g.payments; track p.uid) {
 													<div class="detail-row" [class.paid]="!!p.paidAt || p.paid">
@@ -278,6 +273,15 @@
 														<span class="detail-value detail-amount">${{ p.amount | number:'1.0-0' }}</span>
 														<span class="pill" [class.paid]="!!p.paidAt || p.paid">
 															{{ (p.paidAt || p.paid) ? 'Pagado' : 'Por pagar' }}
+														</span>
+														<span class="detail-value">
+															@if (!p.paid && !p.paidAt && !p.cancelled) {
+																<ion-button size="small" fill="clear" shape="round" (click)="markPaymentAsPaid(p); $event.stopPropagation()">
+																	Pagar
+																</ion-button>
+															} @else {
+																—
+															}
 														</span>
 													</div>
 												}

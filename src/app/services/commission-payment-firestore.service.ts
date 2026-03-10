@@ -94,6 +94,12 @@ export class CommissionPaymentFirestoreService {
 		return snap.size;
 	}
 
+	// ===== MARK PAID BY UID (single payment) =====
+	async markCommissionPaymentPaidByUid(uid: string, paidAt: number = Date.now()): Promise<void> {
+		const ref = doc(this.firestore, this.collectionName, uid);
+		await updateDoc(ref, { paid: true, paidAt, _update: paidAt });
+	}
+
 	// ===== CANCEL FUTURE UNPAID BY CONTRACT =====
 	async cancelFutureUnpaidByContract(contractUid: string, cancelledAt: number = Date.now()): Promise<number> {
 		const ref = collection(this.firestore, this.collectionName);

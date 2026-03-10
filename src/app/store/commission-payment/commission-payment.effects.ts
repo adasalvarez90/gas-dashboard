@@ -188,6 +188,45 @@ export class CommissionPaymentEffects {
 		),
 	);
 
+	// ✅ Mark single payment as paid by uid
+	markCommissionPaymentPaidByUid$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.markCommissionPaymentPaidByUid),
+			exhaustMap(async ({ uid, paidAt }) => {
+				const resolvedPaidAt = paidAt ?? Date.now();
+				const loading = await this.loadingCtrl.create({
+					cssClass: 'my-custom-class',
+					message: 'Marcando pago como pagado…'
+				});
+				await loading.present();
+				return this.commissionPaymentFS.markCommissionPaymentPaidByUid(uid, resolvedPaidAt).then(
+					async () => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'primary',
+							message: 'Pago marcado como pagado.',
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentPaidByUidSuccess({ uid, paidAt: resolvedPaidAt });
+					},
+					async (err) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'danger',
+							message: `Error: ${err.message}`,
+							duration: 3000,
+							position: 'middle'
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentPaidByUidFailure({ error: err.message });
+					},
+				);
+			}),
+		),
+	);
+
 	// ➕ Create adjustment commissionPayment
 	createAdjustmentCommissionPayment$ = createEffect(() =>
 		this.actions$.pipe(

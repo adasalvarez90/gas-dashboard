@@ -56,6 +56,12 @@ export const commissionPaymentReducer = createReducer(
 	}),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisorFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
+	// Mark paid by uid (single payment)
+	on(CommissionPaymentsActions.markCommissionPaymentPaidByUid, (state) => ({ ...state, loading: true, error: null })),
+	on(CommissionPaymentsActions.markCommissionPaymentPaidByUidSuccess, (state, { uid, paidAt }) =>
+		adapter.updateOne({ id: uid, changes: { paid: true, paidAt } }, { ...state, loading: false })),
+	on(CommissionPaymentsActions.markCommissionPaymentPaidByUidFailure, (state, { error }) => ({ ...state, loading: false, error })),
+
 	// Search actions
 	on(CommissionPaymentsActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),
 

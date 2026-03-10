@@ -44,6 +44,10 @@ export class CommissionPaymentFacade {
 		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentsPaidByTrancheAndAdvisor({ trancheUid, advisorUid, paidAt }));
 	}
 
+	markPaidByUid(uid: string, paidAt?: number) {
+		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentPaidByUid({ uid, paidAt }));
+	}
+
 	createAdjustment(adjustment: Parameters<typeof CommissionPaymentActions.createAdjustmentCommissionPayment>[0]['adjustment']) {
 		this.store.dispatch(CommissionPaymentActions.createAdjustmentCommissionPayment({ adjustment }));
 	}
