@@ -222,18 +222,31 @@ export class CommissionEngineService {
 	// =========================
 
 	/**
-	 * For Scheme A: initial tranche = 12 months; annex = months from fundedAt to contract.endDate.
+	 * For Scheme A:
+	 * - Tranche 1 (inicial): siempre 12 recurrentes (abril → marzo siguiente).
+	 * - Anexos (sequence > 1): recurrentes desde el mes siguiente a fundedAt hasta el mes de fin de contrato (inclusive).
+	 *   Ej.: fondeado 15 jun 2026, contrato termina mar 2027 → 1 inmediato (jun) + 9 recurrentes (jul, ago, …, mar 2027).
 	 */
 	private getRecurringMonths(contract: Contract, tranche: Tranche): number {
 		if (tranche.sequence === 1) return 12;
 		const endDate = contract.endDate;
 		const startDate = tranche.fundedAt!;
-		if (endDate == null || startDate >= endDate) return 12;
+		if (endDate == null) return 12;
+
+		const endYear = new Date(endDate).getFullYear();
+		const endMonth = new Date(endDate).getMonth();
+
 		let count = 0;
 		for (let i = 1; i <= 12; i++) {
 			const due = this.addMonths(startDate, i);
-			if (due <= endDate) count++;
-			else break;
+			const dueYear = new Date(due).getFullYear();
+			const dueMonth = new Date(due).getMonth();
+			// Incluir si el mes natural del pago es <= mes de fin de contrato (vigencia hasta ese mes inclusive).
+			if (dueYear < endYear || (dueYear === endYear && dueMonth <= endMonth)) {
+				count++;
+			} else {
+				break;
+			}
 		}
 		return count > 0 ? count : 12;
 	}
