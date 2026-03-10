@@ -22,8 +22,8 @@ export class TrancheFacade {
 		this.store.dispatch(TrancheActions.selectTranche({ tranche }));
 	}
 
-	createTranche(contractUid: string, amount: number) {
-		this.store.dispatch(TrancheActions.createTranche({ contractUid, amount }));
+	createTranche(contractUid: string, amount: number, registeredAt?: number) {
+		this.store.dispatch(TrancheActions.createTranche({ contractUid, amount, registeredAt }));
 	}
 
 	updateTranche(tranche: Tranche) {

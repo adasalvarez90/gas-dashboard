@@ -27,7 +27,7 @@ export class TrancheFirestoreService {
 	}
 
 	// ➕ Create tranche
-	async createTranche(contractUid: string, amount: number): Promise<Tranche> {
+	async createTranche(contractUid: string, amount: number, registeredAt?: number): Promise<Tranche> {
 		// 1️⃣ Obtener tranches existentes
 		const q = query(
 			collection(this.firestore, this.collectionName),
@@ -54,6 +54,7 @@ export class TrancheFirestoreService {
 			contractUid,
 			sequence: newSequence,
 			amount,
+			registeredAt: registeredAt ?? Date.now(),
 			totalDeposited: 0,
 			lastDepositAt: undefined,
 			funded: false,

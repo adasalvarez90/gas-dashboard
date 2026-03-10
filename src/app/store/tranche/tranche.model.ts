@@ -7,6 +7,12 @@ export interface Tranche extends Metadata {
 
 	amount: number;
 
+	/**
+	 * Fecha de registro de negocio (no necesariamente igual a _create).
+	 * Se captura desde UI o se autogenera al crear el tranche.
+	 */
+	registeredAt?: number;
+
 	totalDeposited: number;
 
 	/**

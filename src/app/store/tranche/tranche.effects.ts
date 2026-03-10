@@ -40,7 +40,7 @@ export class TrancheEffects {
 		this.actions$.pipe(
 			ofType(TrancheActions.createTranche),
 			exhaustMap(
-				async ({ contractUid, amount }) => {
+				async ({ contractUid, amount, registeredAt }) => {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
@@ -57,7 +57,7 @@ export class TrancheEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.trancheService.createTranche(contractUid, amount).then(
+					return this.trancheService.createTranche(contractUid, amount, registeredAt).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();

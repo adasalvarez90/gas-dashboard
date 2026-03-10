@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
+import { FormsModule } from '@angular/forms';
 
 import { Observable, combineLatest, map, BehaviorSubject } from 'rxjs';
 
@@ -21,6 +22,7 @@ import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 	styleUrls: ['./contract-info.component.scss'],
 	imports: [
 		CommonModule,
+		FormsModule,
 		IonicModule
 	],
 })
@@ -40,6 +42,21 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 	selectedTrancheUid: string | null = null;
 
 	readonly selectedTrancheUid$ = new BehaviorSubject<string | null>(null);
+
+	isCreateTrancheModalOpen = false;
+	createTrancheAmount: number | null = null;
+	createTrancheDate: string | null = null; // yyyy-mm-dd
+	get isCreateTrancheAmountValid(): boolean {
+		return typeof this.createTrancheAmount === 'number' && isFinite(this.createTrancheAmount) && this.createTrancheAmount > 0;
+	}
+
+	isCreateDepositModalOpen = false;
+	depositTargetTranche: Tranche | null = null;
+	createDepositAmount: number | null = null;
+	createDepositDate: string | null = null; // yyyy-mm-dd
+	get isCreateDepositAmountValid(): boolean {
+		return typeof this.createDepositAmount === 'number' && isFinite(this.createDepositAmount) && this.createDepositAmount > 0;
+	}
 
 	private paymentsForSelectedTranche$ = combineLatest([
 		this.commissionPayments$,
@@ -339,8 +356,26 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 		this.loadData(trancheUid);
 	}
 
-	createTranche() {
-		this.trancheFacade.createTranche(this.contract.uid, 100000);
+	openCreateTrancheModal() {
+		this.createTrancheAmount = null;
+		this.createTrancheDate = null;
+		this.isCreateTrancheModalOpen = true;
+	}
+
+	closeCreateTrancheModal() {
+		this.isCreateTrancheModalOpen = false;
+	}
+
+	confirmCreateTranche() {
+		if (!this.contract?.uid) return;
+		if (!this.isCreateTrancheAmountValid) return;
+
+		const registeredAt = this.createTrancheDate
+			? new Date(this.createTrancheDate).getTime()
+			: undefined;
+
+		this.trancheFacade.createTranche(this.contract.uid, this.createTrancheAmount!, registeredAt);
+		this.closeCreateTrancheModal();
 	}
 
 	deposit(tranche) {
@@ -357,6 +392,43 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 
 		// Call the service to create the deposit
 		this.depositFacade.createDeposit(newDeposit);
+	}
+
+	openCreateDepositModal(tranche: Tranche) {
+		this.depositTargetTranche = tranche;
+		this.createDepositAmount = null;
+		this.createDepositDate = null;
+		this.isCreateDepositModalOpen = true;
+	}
+
+	closeCreateDepositModal() {
+		this.isCreateDepositModalOpen = false;
+		this.depositTargetTranche = null;
+		this.createDepositAmount = null;
+		this.createDepositDate = null;
+	}
+
+	confirmCreateDeposit() {
+		if (!this.contract?.uid) return;
+		if (!this.depositTargetTranche?.uid) return;
+		if (!this.isCreateDepositAmountValid) return;
+
+		const depositedAt = this.createDepositDate
+			? new Date(this.createDepositDate).getTime()
+			: Date.now();
+
+		this.selectTranche(this.depositTargetTranche.uid);
+
+		const newDeposit: Deposit = {
+			contractUid: this.contract.uid,
+			trancheUid: this.depositTargetTranche.uid,
+			amount: this.createDepositAmount!,
+			depositedAt,
+			uid: '',
+		};
+
+		this.depositFacade.createDeposit(newDeposit);
+		this.closeCreateDepositModal();
 	}
 
 	markCutAsPaid(cutDate: number) {
