@@ -238,7 +238,6 @@
 													{{ roleLabel(g.role) }}
 													· 
 													@if (g.splitLabel !== null) { %{{ g.splitLabel }} } @else { var. }
-													@if (g.nextDueDate) { · Vence {{ g.nextDueDate | date:'d MMM y' }} }
 												</div>
 												<span class="detail-toggle">
 													{{ isGroupExpanded(g.key) ? 'Ocultar detalle' : 'Ver detalle' }}
@@ -268,7 +267,6 @@
 													<span>Cuota</span>
 													<span>Tipo</span>
 													<span>Corte</span>
-													<span>Vence pago</span>
 													<span>Monto</span>
 													<span>Estado</span>
 												</div>
@@ -277,7 +275,6 @@
 														<span class="detail-value">{{ p.installment }}</span>
 														<span class="detail-value">{{ paymentTypeLabel(p.paymentType) }}</span>
 														<span class="detail-value">{{ p.cutDate | date:'d MMM y' }}</span>
-														<span class="detail-value">{{ p.dueDate | date:'d MMM y' }}</span>
 														<span class="detail-value detail-amount">${{ p.amount | number:'1.0-0' }}</span>
 														<span class="pill" [class.paid]="!!p.paidAt || p.paid">
 															{{ (p.paidAt || p.paid) ? 'Pagado' : 'Por pagar' }}
