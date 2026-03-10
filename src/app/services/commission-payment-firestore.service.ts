@@ -139,9 +139,11 @@ export class CommissionPaymentFirestoreService {
 				_create: Date.now(),
 				_on: true
 			};
-			createdPayments.push(newPayment);
+			// Firestore does not support explicit `undefined` values.
+			const cleanedPayment = _.omitBy(newPayment, _.isUndefined) as unknown as CommissionPayment;
+			createdPayments.push(cleanedPayment);
 			
-			await setDoc(ref, newPayment);
+			await setDoc(ref, cleanedPayment as any);
 		}
 
 		return createdPayments;
@@ -191,9 +193,11 @@ export class CommissionPaymentFirestoreService {
 		};
 
 		const ref = doc(this.firestore, this.collectionName, uid);
-		await setDoc(ref, newPayment);
+		// Firestore does not support explicit `undefined` values.
+		const cleanedPayment = _.omitBy(newPayment, _.isUndefined) as unknown as CommissionPayment;
+		await setDoc(ref, cleanedPayment as any);
 
-		return newPayment;
+		return cleanedPayment;
 	}
 
 	private getCutDateForDueDate(dueDate: number): number {
