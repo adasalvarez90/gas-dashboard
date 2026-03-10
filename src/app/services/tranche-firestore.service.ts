@@ -56,27 +56,29 @@ export class TrancheFirestoreService {
 			amount,
 			registeredAt: registeredAt ?? Date.now(),
 			totalDeposited: 0,
-			lastDepositAt: undefined,
 			funded: false,
 			amountAmendments: [],
 			_create: Date.now(),
 			_on: true
 		};
 
+		// Firestore no acepta campos con valor undefined.
+		const docData = _.omitBy(newTranche, _.isUndefined) as Record<string, unknown>;
 		const ref = doc(this.firestore, this.collectionName, uid);
-		await setDoc(ref, newTranche);
+		await setDoc(ref, docData);
 
 		return newTranche;
 	}
 
 	// ✏️ Update tranche
 	async updateTranche(tranche: Tranche): Promise<Tranche> {
-		let updateTranche = _.cloneDeep(tranche);
-
+		const updateTranche = _.cloneDeep(tranche);
 		updateTranche._update = Date.now();
 
+		// Firestore no acepta campos con valor undefined.
+		const docData = _.omitBy(updateTranche, _.isUndefined) as Record<string, unknown>;
 		const ref = doc(this.firestore, this.collectionName, tranche.uid);
-		await updateDoc(ref, { ...updateTranche });
+		await updateDoc(ref, docData);
 
 		return updateTranche;
 	}
