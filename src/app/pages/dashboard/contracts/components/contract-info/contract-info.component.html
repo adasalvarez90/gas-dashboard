@@ -2,341 +2,345 @@
 	[class.mode-commissions]="activeTab === 'commissions'">
 
 	@if (activeTab === 'info') {
-		@if ((advisorsDic$ | async); as advisorsDic) {
-			<div class="card card-main">
-				<div class="card-title">Datos del contrato</div>
-				<div class="card-fields">
-					<div class="field">
-						<span class="field-label">Estatus</span>
-						<span class="field-value">{{ contractStatusLabel(contract.contractStatus) }}</span>
-					</div>
-					<div class="field field-wide">
-						<span class="field-label">Inversionista</span>
-						<span class="field-value">{{ contract.investor }}</span>
-					</div>
-					<div class="field field-wide">
-						<span class="field-label">Correo</span>
-						<span class="field-value">{{ contract.email }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Cuenta cliente</span>
-						<span class="field-value">{{ contract.clientAccount }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Inicio vigencia</span>
-						<span class="field-value">{{ contract.startDate | date:'d MMM y' }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Fin vigencia</span>
-						<span class="field-value">{{ contract.endDate | date:'d MMM y' }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Rendimiento</span>
-						<span class="field-value">{{ contract.yieldPercent }}%</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Plazo</span>
-						<span class="field-value">{{ contract.term }} meses</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Liquidez</span>
-						<span class="field-value">{{ contract.liquidity }}%</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Periodicidad</span>
-						<span class="field-value">{{ contract.yieldFrequency }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Pagos</span>
-						<span class="field-value">{{ contract.payments }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Fecha firma</span>
-						<span class="field-value">{{ contract.signatureDate | date:'d MMM y' }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Documentación</span>
-						<span class="field-value" [class.ok]="contract.docs" [class.no]="!contract.docs">
-							{{ contract.docs ? 'Completa' : 'Incompleta' }}
-						</span>
-					</div>
-				</div>
-				@if (contract.docsComments) {
-					<div class="note">{{ contract.docsComments }}</div>
-				}
+	@if ((advisorsDic$ | async); as advisorsDic) {
+	<div class="card card-main">
+		<div class="card-title">Datos del contrato</div>
+		<div class="card-fields">
+			<div class="field">
+				<span class="field-label">Estatus</span>
+				<span class="field-value">{{ contractStatusLabel(contract.contractStatus) }}</span>
 			</div>
-
-			<div class="card card-main">
-				<div class="card-title">Equipo (asesores)</div>
-				<div class="card-fields">
-					<div class="field">
-						<span class="field-label">Consultor(a)</span>
-						<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.consultant) }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Gerente</span>
-						<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.manager) }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">KAM</span>
-						<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.kam) }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Dir. Ventas</span>
-						<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.salesDirector) }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Operaciones</span>
-						<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.operations) }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">CEO</span>
-						<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.ceo) }}</span>
-					</div>
-				</div>
+			<div class="field field-wide">
+				<span class="field-label">Inversionista</span>
+				<span class="field-value">{{ contract.investor }}</span>
 			</div>
-
-			@if (contract.beneficiaries) {
-				<div class="card">
-					<div class="card-title">Beneficiarios</div>
-					<div class="text">{{ contract.beneficiaries }}</div>
-				</div>
-			}
+			<div class="field field-wide">
+				<span class="field-label">Correo</span>
+				<span class="field-value">{{ contract.email }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Cuenta cliente</span>
+				<span class="field-value">{{ contract.clientAccount }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Inicio vigencia</span>
+				<span class="field-value">{{ contract.startDate | date:'d MMM y' }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Fin vigencia</span>
+				<span class="field-value">{{ contract.endDate | date:'d MMM y' }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Rendimiento</span>
+				<span class="field-value">{{ contract.yieldPercent }}%</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Plazo</span>
+				<span class="field-value">{{ contract.term }} meses</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Liquidez</span>
+				<span class="field-value">{{ contract.liquidity }}%</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Periodicidad</span>
+				<span class="field-value">{{ contract.yieldFrequency }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Pagos</span>
+				<span class="field-value">{{ contract.payments }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Fecha firma</span>
+				<span class="field-value">{{ contract.signatureDate | date:'d MMM y' }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Documentación</span>
+				<span class="field-value" [class.ok]="contract.docs" [class.no]="!contract.docs">
+					{{ contract.docs ? 'Completa' : 'Incompleta' }}
+				</span>
+			</div>
+		</div>
+		@if (contract.docsComments) {
+		<div class="note">{{ contract.docsComments }}</div>
 		}
+	</div>
+
+	<div class="card card-main">
+		<div class="card-title">Equipo (asesores)</div>
+		<div class="card-fields">
+			<div class="field">
+				<span class="field-label">Consultor(a)</span>
+				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.consultant) }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Gerente</span>
+				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.manager) }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">KAM</span>
+				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.kam) }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Dir. Ventas</span>
+				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.salesDirector) }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">Operaciones</span>
+				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.operations) }}</span>
+			</div>
+			<div class="field">
+				<span class="field-label">CEO</span>
+				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.ceo) }}</span>
+			</div>
+		</div>
+	</div>
+
+	@if (contract.beneficiaries) {
+	<div class="card">
+		<div class="card-title">Beneficiarios</div>
+		<div class="text">{{ contract.beneficiaries }}</div>
+	</div>
+	}
+	}
 	}
 
 	@if (activeTab === 'deposits') {
-		@for (tranche of (tranches$ | async); track tranche.uid) {
-			<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid">
-				<div class="card-title">Anexo {{ tranche.sequence }}</div>
-				<div class="card-fields">
-					<div class="field">
-						<span class="field-label">Monto</span>
+	@for (tranche of (tranches$ | async); track tranche.uid) {
+	<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid"
+		(click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
+		<div class="tranche-header tranche-header--deposits">
+			<div class="tranche-header-top">
+				<div class="tranche-header-main">
+					<div class="card-title">Anexo {{ tranche.sequence }}</div>
+					<div class="tranche-meta-line">
+						<span class="field-label">Monto:</span>
 						<span class="field-value">${{ tranche.amount | number:'1.0-0' }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Depositado</span>
+						<span class="meta-separator">·</span>
+						<span class="field-label">Depositado:</span>
 						<span class="field-value">${{ tranche.totalDeposited | number:'1.0-0' }}</span>
-					</div>
-					<div class="field">
-						<span class="field-label">Fondeado</span>
+						<span class="meta-separator">·</span>
+						<span class="field-label">Fondeado:</span>
 						<span class="field-value" [class.ok]="tranche.funded">{{ tranche.funded ? 'Sí' : 'No' }}</span>
-					</div>
-					@if (tranche.fundedAt) {
-						<div class="field">
-							<span class="field-label">Fondeado el</span>
-							<span class="field-value">{{ tranche.fundedAt | date:'d MMM y' }}</span>
-						</div>
-					}
-				</div>
-
-				@if (selectedTrancheUid === tranche.uid) {
-					<ion-button fill="clear" size="small" (click)="selectTranche(null); $event.stopPropagation()" class="tranche-toggle">
-						Ocultar depósitos
-					</ion-button>
-					<div class="section-divider"></div>
-					<div class="section-title">Depósitos</div>
-					@if ((deposits$ | async); as deposits) {
-						@if (deposits.length === 0) {
-							<div class="empty-inline">Sin depósitos todavía.</div>
-						} @else {
-							<div class="sublist deposits-sublist">
-								@for (deposit of deposits; track deposit.uid) {
-									<div class="subitem deposit-row">
-										<span class="field-label">Monto:</span>
-										<span class="field-value">${{ deposit.amount | number:'1.0-0' }}</span>
-										<span class="field-label">Fecha:</span>
-										<span class="field-value">{{ deposit.depositedAt | date:'d MMM y' }}</span>
-									</div>
-								}
-							</div>
+						@if (tranche.fundedAt) {
+						<span class="meta-separator">·</span>
+						<span class="field-label">Fondeado el:</span>
+						<span class="field-value">{{ tranche.fundedAt | date:'d MMM y' }}</span>
 						}
-					}
-					@if (!tranche.funded) {
-						<ion-button (click)="openCreateDepositModal(tranche); $event.stopPropagation()" expand="block" fill="clear" shape="round">
-							Registrar depósito
-						</ion-button>
-					}
-				} @else {
-					<ion-button fill="clear" size="small" (click)="selectTranche(tranche.uid)" class="tranche-toggle">
-						Ver depósitos
-					</ion-button>
-				}
+					</div>
+				</div>
+				<ion-icon class="tranche-chevron"
+					[name]="selectedTrancheUid === tranche.uid ? 'chevron-up' : 'chevron-down'"></ion-icon>
 			</div>
-		}
-
-		<div class="actions actions-bottom">
-			<ion-button (click)="openCreateTrancheModal()" expand="block" shape="round">
-				Crear anexo
-			</ion-button>
 		</div>
+
+		@if (selectedTrancheUid === tranche.uid) {
+		<ion-button fill="clear" size="small" (click)="selectTranche(null); $event.stopPropagation()"
+			class="tranche-toggle">
+			Ocultar depósitos
+		</ion-button>
+		<div class="section-divider"></div>
+		<div class="section-title">Depósitos</div>
+		@if ((deposits$ | async); as deposits) {
+		@if (deposits.length === 0) {
+		<div class="empty-inline">Sin depósitos todavía.</div>
+		} @else {
+		<div class="sublist deposits-sublist">
+			@for (deposit of deposits; track deposit.uid) {
+			<div class="subitem deposit-row">
+				<span class="field-label">Monto:</span>
+				<span class="field-value">${{ deposit.amount | number:'1.0-0' }}</span>
+				<span class="field-label">Fecha:</span>
+				<span class="field-value">{{ deposit.depositedAt | date:'d MMM y' }}</span>
+			</div>
+			}
+		</div>
+		}
+		}
+		@if (!tranche.funded) {
+		<ion-button (click)="openCreateDepositModal(tranche); $event.stopPropagation()" expand="block" fill="clear"
+			shape="round">
+			Registrar depósito
+		</ion-button>
+		}
+		} @else {
+		<ion-button fill="clear" size="small" (click)="selectTranche(tranche.uid); $event.stopPropagation()"
+			class="tranche-toggle">
+			Ver depósitos
+		</ion-button>
+		}
+	</div>
+	}
+
+	<div class="actions actions-bottom">
+		<ion-button (click)="openCreateTrancheModal()" expand="block" shape="round">
+			Crear anexo
+		</ion-button>
+	</div>
 	}
 
 	@if (activeTab === 'commissions') {
-		<div class="commissions-list">
+	<div class="commissions-list">
 		@for (tranche of (tranches$ | async); track tranche.uid) {
-			<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid">
+		<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid"
+		(click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
 
-				<div class="tranche-header"
-					(click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
-					<div class="tranche-header-top">
-						<div class="tranche-header-main">
-							<div class="card-title">Anexo {{ tranche.sequence }}</div>
-							<div class="card-fields">
-								<div class="field">
-									<span class="field-label">Monto anexo</span>
-									<span class="field-value">${{ tranche.amount | number:'1.0-0' }}</span>
-								</div>
+			<div class="tranche-header">
+				<div class="tranche-header-top">
+					<div class="tranche-header-main">
+						<div class="card-title">Anexo {{ tranche.sequence }}</div>
+						<div class="card-fields">
+							<div class="field">
+								<span class="field-label">Monto anexo</span>
+								<span class="field-value">${{ tranche.amount | number:'1.0-0' }}</span>
 							</div>
-							<div class="section-title tranche-header-section">Comisiones</div>
 						</div>
-						<ion-icon class="tranche-chevron"
-							[name]="selectedTrancheUid === tranche.uid ? 'chevron-up' : 'chevron-down'"></ion-icon>
+						<div class="section-title tranche-header-section">Comisiones</div>
 					</div>
-					@if (getTrancheSummary$(tranche.uid) | async; as summary) {
-						<div class="summary-grid summary-in-header">
-							<div class="summary-card warning">
-								<div class="summary-label">Por pagar</div>
-								<div class="summary-value">${{ summary.pendingAmount | number:'1.0-0' }}</div>
-								<div class="summary-meta">{{ summary.pendingCount }} pagos</div>
-							</div>
-							<div class="summary-card success">
-								<div class="summary-label">Pagado</div>
-								<div class="summary-value">${{ summary.paidAmount | number:'1.0-0' }}</div>
-								<div class="summary-meta">{{ summary.paidCount }} pagos</div>
-							</div>
-							<div class="summary-card neutral">
-								<div class="summary-label">Total</div>
-								<div class="summary-value">${{ summary.totalAmount | number:'1.0-0' }}</div>
-								<div class="summary-meta">{{ summary.totalCount }} pagos</div>
-							</div>
-						</div>
-					}
+					<ion-icon class="tranche-chevron"
+						[name]="selectedTrancheUid === tranche.uid ? 'chevron-up' : 'chevron-down'"></ion-icon>
 				</div>
-
-				@if (selectedTrancheUid === tranche.uid) {
-					<div class="tranche-body">
-						<div class="section-divider"></div>
-						<div class="section-title">Se debe a</div>
-
-						@if ((commissionGroups$ | async); as groups) {
-							@if (groups.length === 0) {
-								<div class="empty-inline">Sin comisiones generadas aún.</div>
-							} @else {
-								<div class="sublist">
-									@for (g of groups; track g.key) {
-										<div class="subitem group-item" (click)="toggleGroupDetail(g.key)" role="button"
-											tabindex="0">
-											<div class="subitem-left">
-												<div class="subitem-title">
-													{{ g.name }}
-													<span class="pill" [class.paid]="g.pendingAmount === 0">
-														{{ g.pendingAmount === 0 ? 'Pagado' : 'Por pagar' }}
-													</span>
-												</div>
-												<div class="subitem-meta">
-													{{ roleLabel(g.role) }}
-													· 
-													@if (g.splitLabel !== null) { %{{ g.splitLabel }} } @else { var. }
-												</div>
-												<span class="detail-toggle">
-													{{ isGroupExpanded(g.key) ? 'Ocultar detalle' : 'Ver detalle' }}
-													<ion-icon
-														[name]="isGroupExpanded(g.key) ? 'chevron-up' : 'chevron-down'"></ion-icon>
-												</span>
-											</div>
-											<div class="subitem-right" (click)="$event.stopPropagation()">
-												<div class="amounts-line">
-													<span class="amount-label">Por pagar:</span>
-													<span class="amount-value warning">${{ g.pendingAmount | number:'1.0-0' }}</span>
-													<span class="amount-separator">·</span>
-													<span class="amount-label">Pagado:</span>
-													<span class="amount-value success">${{ g.paidAmount | number:'1.0-0' }}</span>
-												</div>
-											</div>
-										</div>
-										@if (isGroupExpanded(g.key) && g.payments.length) {
-											<div class="detail-list" (click)="$event.stopPropagation()">
-												<div class="detail-list-header">
-													<span>Cuota</span>
-													<span>Tipo</span>
-													<span>Corte</span>
-													<span>Monto</span>
-													<span>Estado</span>
-													<span>Acción</span>
-												</div>
-												@for (p of g.payments; track p.uid) {
-													<div class="detail-row" [class.paid]="!!p.paidAt || p.paid">
-														<span class="detail-value">{{ p.installment }}</span>
-														<span class="detail-value">{{ paymentTypeLabel(p.paymentType) }}</span>
-														<span class="detail-value">{{ p.cutDate | date:'d MMM y' }}</span>
-														<span class="detail-value detail-amount">${{ p.amount | number:'1.0-0' }}</span>
-														<span class="pill" [class.paid]="!!p.paidAt || p.paid">
-															{{ (p.paidAt || p.paid) ? 'Pagado' : 'Por pagar' }}
-														</span>
-														<span class="detail-value">
-															@if (!p.paid && !p.paidAt && !p.cancelled) {
-																<ion-button size="small" fill="clear" shape="round" (click)="markPaymentAsPaid(p); $event.stopPropagation()">
-																	Pagar
-																</ion-button>
-															} @else {
-																—
-															}
-														</span>
-													</div>
-												}
-											</div>
-										}
-									}
-								</div>
-							}
-						}
-
-						<div class="section-divider"></div>
-						<div class="section-title">Cortes</div>
-
-						@if ((commissionCuts$ | async); as cuts) {
-							@if (cuts.length === 0) {
-								<div class="empty-inline">Sin cortes todavía.</div>
-							} @else {
-								<div class="sublist">
-									@for (c of cuts; track c.cutDate) {
-										<div class="subitem">
-											<div class="subitem-left">
-												<div class="subitem-title">
-													Corte {{ c.cutDate | date:'d MMM y' }}
-												</div>
-												<div class="subitem-meta">
-													{{ c.pendingCount }} por pagar · {{ c.paidCount }} pagados
-												</div>
-											</div>
-											<div class="subitem-right">
-												<div class="subitem-amount warning">${{ c.pendingAmount | number:'1.0-0' }}</div>
-												<div class="subitem-meta">Por pagar</div>
-												@if (c.pendingCount > 0) {
-													<ion-button size="small" fill="clear" shape="round"
-														(click)="markCutAsPaid(c.cutDate); $event.stopPropagation()">
-														Marcar pagado
-													</ion-button>
-												}
-											</div>
-										</div>
-									}
-								</div>
-							}
-						}
+				@if (getTrancheSummary$(tranche.uid) | async; as summary) {
+				<div class="summary-grid summary-in-header">
+					<div class="summary-card warning">
+						<div class="summary-label">Por pagar</div>
+						<div class="summary-value">${{ summary.pendingAmount | number:'1.0-0' }}</div>
+						<div class="summary-meta">{{ summary.pendingCount }} pagos</div>
 					</div>
+					<div class="summary-card success">
+						<div class="summary-label">Pagado</div>
+						<div class="summary-value">${{ summary.paidAmount | number:'1.0-0' }}</div>
+						<div class="summary-meta">{{ summary.paidCount }} pagos</div>
+					</div>
+					<div class="summary-card neutral">
+						<div class="summary-label">Total</div>
+						<div class="summary-value">${{ summary.totalAmount | number:'1.0-0' }}</div>
+						<div class="summary-meta">{{ summary.totalCount }} pagos</div>
+					</div>
+				</div>
 				}
 			</div>
-		}
-		<div class="commissions-bottom-spacer"></div>
+
+			@if (selectedTrancheUid === tranche.uid) {
+			<div class="tranche-body">
+				<div class="section-divider"></div>
+				<div class="section-title">Se debe a</div>
+
+				@if ((commissionGroups$ | async); as groups) {
+				@if (groups.length === 0) {
+				<div class="empty-inline">Sin comisiones generadas aún.</div>
+				} @else {
+				<div class="sublist">
+					@for (g of groups; track g.key) {
+					<div class="subitem group-item" (click)="toggleGroupDetail(g.key)" role="button" tabindex="0">
+						<div class="subitem-left">
+							<div class="subitem-title">
+								{{ g.name }}
+								<span class="pill" [class.paid]="g.pendingAmount === 0">
+									{{ g.pendingAmount === 0 ? 'Pagado' : 'Por pagar' }}
+								</span>
+							</div>
+							<div class="subitem-meta">
+								{{ roleLabel(g.role) }}
+								·
+								@if (g.splitLabel !== null) { %{{ g.splitLabel }} } @else { var. }
+							</div>
+							<span class="detail-toggle">
+								{{ isGroupExpanded(g.key) ? 'Ocultar detalle' : 'Ver detalle' }}
+								<ion-icon [name]="isGroupExpanded(g.key) ? 'chevron-up' : 'chevron-down'"></ion-icon>
+							</span>
+						</div>
+						<div class="subitem-right" (click)="$event.stopPropagation()">
+							<div class="amounts-line">
+								<span class="amount-label">Por pagar:</span>
+								<span class="amount-value warning">${{ g.pendingAmount | number:'1.0-0' }}</span>
+								<span class="amount-separator">·</span>
+								<span class="amount-label">Pagado:</span>
+								<span class="amount-value success">${{ g.paidAmount | number:'1.0-0' }}</span>
+							</div>
+						</div>
+					</div>
+					@if (isGroupExpanded(g.key) && g.payments.length) {
+					<div class="detail-list" (click)="$event.stopPropagation()">
+						<div class="detail-list-header">
+							<span>Cuota</span>
+							<span>Tipo</span>
+							<span>Corte</span>
+							<span>Monto</span>
+							<span>Estado</span>
+							<span>Acción</span>
+						</div>
+						@for (p of g.payments; track p.uid) {
+						<div class="detail-row" [class.paid]="!!p.paidAt || p.paid">
+							<span class="detail-value">{{ p.installment }}</span>
+							<span class="detail-value">{{ paymentTypeLabel(p.paymentType) }}</span>
+							<span class="detail-value">{{ p.cutDate | date:'d MMM y' }}</span>
+							<span class="detail-value detail-amount">${{ p.amount | number:'1.0-0' }}</span>
+							<span class="pill" [class.paid]="!!p.paidAt || p.paid">
+								{{ (p.paidAt || p.paid) ? 'Pagado' : 'Por pagar' }}
+							</span>
+							<span class="detail-value">
+								@if (!p.paid && !p.paidAt && !p.cancelled) {
+								<ion-button size="small" fill="clear" shape="round"
+									(click)="markPaymentAsPaid(p); $event.stopPropagation()">
+									Pagar
+								</ion-button>
+								} @else {
+								—
+								}
+							</span>
+						</div>
+						}
+					</div>
+					}
+					}
+				</div>
+				}
+				}
+
+				<div class="section-divider"></div>
+				<div class="section-title">Cortes</div>
+
+				@if ((commissionCuts$ | async); as cuts) {
+				@if (cuts.length === 0) {
+				<div class="empty-inline">Sin cortes todavía.</div>
+				} @else {
+				<div class="sublist">
+					@for (c of cuts; track c.cutDate) {
+					<div class="subitem">
+						<div class="subitem-left">
+							<div class="subitem-title">
+								Corte {{ c.cutDate | date:'d MMM y' }}
+							</div>
+							<div class="subitem-meta">
+								{{ c.pendingCount }} por pagar · {{ c.paidCount }} pagados
+							</div>
+						</div>
+						<div class="subitem-right">
+							<div class="subitem-amount warning">${{ c.pendingAmount | number:'1.0-0' }}</div>
+							<div class="subitem-meta">Por pagar</div>
+							@if (c.pendingCount > 0) {
+							<ion-button size="small" fill="clear" shape="round"
+								(click)="markCutAsPaid(c.cutDate); $event.stopPropagation()">
+								Marcar pagado
+							</ion-button>
+							}
+						</div>
+					</div>
+					}
+				</div>
+				}
+				}
+			</div>
+			}
 		</div>
+		<div class="commissions-bottom-spacer"></div>
+		}
+	</div>
 	}
 </div>
 
-<ion-modal
-	[isOpen]="isCreateTrancheModalOpen"
-	(didDismiss)="closeCreateTrancheModal()">
+<ion-modal [isOpen]="isCreateTrancheModalOpen" (didDismiss)="closeCreateTrancheModal()">
 	<ng-template>
 		<ion-header>
 			<ion-toolbar>
@@ -350,30 +354,25 @@
 		<ion-content class="ion-padding">
 			<ion-item lines="full">
 				<ion-label position="stacked">Monto del anexo</ion-label>
-				<ion-input
-					type="number"
-					inputmode="decimal"
-					placeholder="Ej. 100000"
-					[(ngModel)]="createTrancheAmount">
+				<ion-input type="number" inputmode="decimal" placeholder="Ej. 100000" [(ngModel)]="createTrancheAmount">
 				</ion-input>
 			</ion-item>
 
 			<ion-item lines="full" style="margin-top: 8px;">
 				<ion-label position="stacked">Fecha de registro (opcional)</ion-label>
-				<ion-input
-					type="date"
-					[(ngModel)]="createTrancheDate">
+				<ion-input type="date" [(ngModel)]="createTrancheDate">
 				</ion-input>
 			</ion-item>
 
 			@if (!isCreateTrancheAmountValid && createTrancheAmount !== null) {
-				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
-					Ingresa un monto válido (mayor a 0).
-				</div>
+			<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+				Ingresa un monto válido (mayor a 0).
+			</div>
 			}
 
 			<div style="margin-top: 16px;">
-				<ion-button expand="block" shape="round" (click)="confirmCreateTranche()" [disabled]="!isCreateTrancheAmountValid">
+				<ion-button expand="block" shape="round" (click)="confirmCreateTranche()"
+					[disabled]="!isCreateTrancheAmountValid">
 					Crear anexo
 				</ion-button>
 				<ion-button expand="block" fill="clear" (click)="closeCreateTrancheModal()">
@@ -384,9 +383,7 @@
 	</ng-template>
 </ion-modal>
 
-<ion-modal
-	[isOpen]="isCreateDepositModalOpen"
-	(didDismiss)="closeCreateDepositModal()">
+<ion-modal [isOpen]="isCreateDepositModalOpen" (didDismiss)="closeCreateDepositModal()">
 	<ng-template>
 		<ion-header>
 			<ion-toolbar>
@@ -399,37 +396,32 @@
 
 		<ion-content class="ion-padding">
 			@if (depositTargetTranche) {
-				<div style="margin-bottom: 12px; opacity: 0.8;">
-					Anexo {{ depositTargetTranche.sequence }} · Monto: ${{ depositTargetTranche.amount | number:'1.0-0' }}
-				</div>
+			<div style="margin-bottom: 12px; opacity: 0.8;">
+				Anexo {{ depositTargetTranche.sequence }} · Monto: ${{ depositTargetTranche.amount | number:'1.0-0' }}
+			</div>
 			}
 
 			<ion-item lines="full">
 				<ion-label position="stacked">Monto del depósito</ion-label>
-				<ion-input
-					type="number"
-					inputmode="decimal"
-					placeholder="Ej. 50000"
-					[(ngModel)]="createDepositAmount">
+				<ion-input type="number" inputmode="decimal" placeholder="Ej. 50000" [(ngModel)]="createDepositAmount">
 				</ion-input>
 			</ion-item>
 
 			<ion-item lines="full" style="margin-top: 8px;">
 				<ion-label position="stacked">Fecha (opcional)</ion-label>
-				<ion-input
-					type="date"
-					[(ngModel)]="createDepositDate">
+				<ion-input type="date" [(ngModel)]="createDepositDate">
 				</ion-input>
 			</ion-item>
 
 			@if (!isCreateDepositAmountValid && createDepositAmount !== null) {
-				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
-					Ingresa un monto válido (mayor a 0).
-				</div>
+			<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+				Ingresa un monto válido (mayor a 0).
+			</div>
 			}
 
 			<div style="margin-top: 16px;">
-				<ion-button expand="block" shape="round" (click)="confirmCreateDeposit()" [disabled]="!isCreateDepositAmountValid">
+				<ion-button expand="block" shape="round" (click)="confirmCreateDeposit()"
+					[disabled]="!isCreateDepositAmountValid">
 					Registrar depósito
 				</ion-button>
 				<ion-button expand="block" fill="clear" (click)="closeCreateDepositModal()">
