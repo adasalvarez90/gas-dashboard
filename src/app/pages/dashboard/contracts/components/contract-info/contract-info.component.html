@@ -182,10 +182,10 @@
 	@if (activeTab === 'commissions') {
 	<div class="commissions-list">
 		@for (tranche of (tranches$ | async); track tranche.uid) {
-		<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid"
-		(click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
+		<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid">
 
-			<div class="tranche-header">
+			<div class="tranche-header"
+				(click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
 				<div class="tranche-header-top">
 					<div class="tranche-header-main">
 						<div class="card-title">Anexo {{ tranche.sequence }}</div>
