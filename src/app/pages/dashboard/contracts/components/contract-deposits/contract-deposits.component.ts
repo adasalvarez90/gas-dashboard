@@ -122,4 +122,9 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 		this.depositFacade.createDeposit(newDeposit);
 		this.closeCreateDepositModal();
 	}
+
+	/** Fecha de registro o creación del tranche para mostrar en la UI. */
+	getTrancheDisplayDate(tranche: Tranche): number | null {
+		return tranche.registeredAt ?? (tranche as unknown as { _create?: number })._create ?? null;
+	}
 }

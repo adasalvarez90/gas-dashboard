@@ -1,75 +1,98 @@
-<div class="deposits-grid">
+<div class="deposits-page">
 	@for (tranche of (tranches$ | async); track tranche.uid) {
-		<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid">
-			<div class="tranche-header tranche-header--deposits" (click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
-				<div class="tranche-header-top">
-					<div class="tranche-header-main">
-						<div class="card-title">Anexo {{ tranche.sequence }}</div>
-						<div class="tranche-meta-line">
-							<span class="field-label">Monto:</span>
-							<span class="field-value">${{ tranche.amount | number:'1.0-0' }}</span>
-							<span class="meta-separator">·</span>
-							<span class="field-label">Depositado:</span>
-							<span class="field-value">${{ tranche.totalDeposited | number:'1.0-0' }}</span>
-							<span class="meta-separator">·</span>
-							<span class="field-label">Fondeado:</span>
-							<span class="field-value" [class.ok]="tranche.funded">{{ tranche.funded ? 'Sí' : 'No' }}</span>
-							@if (tranche.fundedAt) {
-								<span class="meta-separator">·</span>
-								<span class="field-label">Fondeado el:</span>
-								<span class="field-value">{{ tranche.fundedAt | date:'d MMM y' }}</span>
-							}
-						</div>
-					</div>
-					<ion-icon class="tranche-chevron"
-						[name]="selectedTrancheUid === tranche.uid ? 'chevron-up' : 'chevron-down'"></ion-icon>
+	<div class="tranche-card" [class.selected]="selectedTrancheUid === tranche.uid">
+		<!-- HEADER: clickeable para expandir/colapsar -->
+		<div class="tranche-header" (click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
+			<div class="tranche-header-top">
+				<div class="tranche-header-left">
+					<div class="tranche-badge">Anexo {{ tranche.sequence }}</div>
+					<span class="tranche-status-pill" [class.funded]="tranche.funded">{{ tranche.funded ? 'Fondeado' :
+						'En progreso' }}</span>
 				</div>
+				<ion-icon class="tranche-chevron"
+					[name]="selectedTrancheUid === tranche.uid ? 'chevron-up' : 'chevron-down'"></ion-icon>
 			</div>
 
-			@if (selectedTrancheUid === tranche.uid) {
-				<!-- <ion-button fill="clear" size="small" (click)="selectTranche(null); $event.stopPropagation()"
-					class="tranche-toggle">
-					Ocultar depósitos
-				</ion-button> -->
-				<div class="section-divider"></div>
-				<div class="section-title">Depósitos</div>
+			<!-- HERO KPIs: jerarquía visual clara -->
+			<div class="tranche-hero">
+				<div class="tranche-hero-card tranche-hero-card--primary">
+					<div class="tranche-hero-label">Monto</div>
+					<div class="tranche-hero-value">${{ tranche.amount | number:'1.0-0' }}</div>
+				</div>
+				<div class="tranche-hero-card">
+					<div class="tranche-hero-label">Depositado</div>
+					<div class="tranche-hero-value">${{ tranche.totalDeposited | number:'1.0-0' }}</div>
+				</div>
+				@if (getTrancheDisplayDate(tranche); as dateTs) {
+				<div class="tranche-hero-card">
+					<div class="tranche-hero-label">{{ tranche.registeredAt ? 'Registrado' : 'Creado' }}</div>
+					<div class="tranche-hero-value tranche-hero-value--small">{{ dateTs | date:'d MMM y' }}</div>
+				</div>
+				}
+				<div class="tranche-hero-card" [class.tranche-hero-card--success]="tranche.funded"
+					[class.tranche-hero-card--muted]="!tranche.funded">
+					<div class="tranche-hero-label">Fondeado</div>
+					<div class="tranche-hero-value">{{ tranche.funded ? 'Sí' : 'No' }}</div>
+				</div>
+				@if (tranche.fundedAt) {
+				<div class="tranche-hero-card">
+					<div class="tranche-hero-label">Fondeado el</div>
+					<div class="tranche-hero-value tranche-hero-value--small">{{ tranche.fundedAt | date:'d MMM y' }}
+					</div>
+				</div>
+				}
+			</div>
+		</div>
+
+		<!-- CUERPO expandido: lista de depósitos -->
+		@if (selectedTrancheUid === tranche.uid) {
+		<div class="tranche-body">
+			<div class="section-divider"></div>
+			<div class="deposits-section">
+				<div class="deposits-section-header">
+					<div class="section-title">Depositos</div>
+				</div>
+
 				@if ((deposits$ | async); as deposits) {
-					@if (deposits.length === 0) {
-						<div class="empty-inline">Sin depósitos todavía.</div>
-					} @else {
-						<div class="sublist deposits-sublist">
-							@for (deposit of deposits; track deposit.uid) {
-								<div class="subitem deposit-row">
-									<span class="field-label">Monto:</span>
-									<span class="field-value">${{ deposit.amount | number:'1.0-0' }}</span>
-									<span class="field-label">Fecha:</span>
-									<span class="field-value">{{ deposit.depositedAt | date:'d MMM y' }}</span>
-								</div>
-							}
+				@if (deposits.length === 0) {
+				<div class="deposits-list">
+					<div class="deposit-card">
+						<div class="deposit-number">Sin depósitos todavía.</div>
+					</div>
+				</div>
+				} @else {
+				<div class="deposits-list">
+						@for (deposit of deposits; track deposit.uid; let i = $index) {
+						<div class="deposit-card">
+							<div class="deposit-amount">${{ deposit.amount | number:'1.0-0' }}</div>
+							<div class="deposit-date">{{ deposit.depositedAt | date:'d MMM y' }}</div>
 						</div>
+						}
+					</div>
 					}
 				}
+
 				@if (!tranche.funded) {
-					<ion-button (click)="openCreateDepositModal(tranche); $event.stopPropagation()" expand="block" fill="clear"
-						shape="round">
-						Registrar depósito
-					</ion-button>
+				<ion-button (click)="openCreateDepositModal(tranche); $event.stopPropagation()" expand="block"
+					fill="solid" shape="round" class="deposit-cta">
+					<ion-icon name="add-circle-outline"></ion-icon>
+					Registrar depósito
+				</ion-button>
 				}
-			} @else {
-				<!-- <ion-button fill="clear" size="small" (click)="selectTranche(tranche.uid); $event.stopPropagation()"
-					class="tranche-toggle">
-					Ver depósitos
-				</ion-button> -->
-			}
+			</div>
 		</div>
+		}
+	</div>
 	}
 
 	@if ((tranches$ | async)?.length) {
-		<div class="actions actions-bottom">
-			<ion-button (click)="openCreateTrancheModal()" expand="block" shape="round">
-				Crear anexo
-			</ion-button>
-		</div>
+	<div class="create-anexo-wrapper">
+		<ion-button (click)="openCreateTrancheModal()" expand="block" shape="round" fill="outline"
+			class="create-anexo-btn">
+			<ion-icon name="add-outline"></ion-icon>
+			Crear anexo
+		</ion-button>
+	</div>
 	}
 </div>
 
@@ -94,9 +117,9 @@
 				<ion-input type="date" [(ngModel)]="createTrancheDate"></ion-input>
 			</ion-item>
 			@if (!isCreateTrancheAmountValid && createTrancheAmount !== null) {
-				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
-					Ingresa un monto válido (mayor a 0).
-				</div>
+			<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+				Ingresa un monto válido (mayor a 0).
+			</div>
 			}
 			<div style="margin-top: 16px;">
 				<ion-button expand="block" shape="round" (click)="confirmCreateTranche()"
@@ -121,9 +144,9 @@
 		</ion-header>
 		<ion-content class="ion-padding">
 			@if (depositTargetTranche) {
-				<div style="margin-bottom: 12px; opacity: 0.8;">
-					Anexo {{ depositTargetTranche.sequence }} · Monto: ${{ depositTargetTranche.amount | number:'1.0-0' }}
-				</div>
+			<div style="margin-bottom: 12px; opacity: 0.8;">
+				Anexo {{ depositTargetTranche.sequence }} · Monto: ${{ depositTargetTranche.amount | number:'1.0-0' }}
+			</div>
 			}
 			<ion-item lines="full">
 				<ion-label position="stacked">Monto del depósito</ion-label>
@@ -135,9 +158,9 @@
 				<ion-input type="date" [(ngModel)]="createDepositDate"></ion-input>
 			</ion-item>
 			@if (!isCreateDepositAmountValid && createDepositAmount !== null) {
-				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
-					Ingresa un monto válido (mayor a 0).
-				</div>
+			<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+				Ingresa un monto válido (mayor a 0).
+			</div>
 			}
 			<div style="margin-top: 16px;">
 				<ion-button expand="block" shape="round" (click)="confirmCreateDeposit()"
