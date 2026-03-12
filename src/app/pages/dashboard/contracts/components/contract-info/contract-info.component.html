@@ -3,126 +3,150 @@
 
 	@if (activeTab === 'info') {
 	@if ((advisorsDic$ | async); as advisorsDic) {
-	<div class="card card-main">
-		<div class="card-title">Datos del contrato</div>
-		<div class="card-fields">
-			<div class="field">
-				<span class="field-label">Estatus</span>
-				<span class="field-value">{{ contractStatusLabel(contract.contractStatus) }}</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Inversionista</span>
-				<span class="field-value">{{ contract.investor }}</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Correo</span>
-				<span class="field-value">{{ contract.email }}</span>
-			</div>
-			<div class="field field-wide">
-				<span class="field-label">Cuenta cliente</span>
-				<span class="field-value">{{ contract.clientAccount }}</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Inicio vigencia</span>
-				<span class="field-value">{{ contract.startDate | date:'d MMM y' }}</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Fin vigencia</span>
-				<span class="field-value">{{ contract.endDate | date:'d MMM y' }}</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Rendimiento</span>
-				<span class="field-value">{{ contract.yieldPercent }}%</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Plazo</span>
-				<span class="field-value">{{ contract.term }} meses</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Liquidez</span>
-				<span class="field-value">{{ contract.liquidity }}%</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Periodicidad</span>
-				<span class="field-value">{{ contract.yieldFrequency }}</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Pagos</span>
-				<span class="field-value">{{ contract.payments }}</span>
-			</div>
-			<div class="field">
-				<span class="field-label">Estado de cuenta</span>
-				<span class="field-value">{{ contract.accountStatus }}</span>
-			</div>
-			@if (contract.signed && contract.signatureDate) {
-			<div class="field">
-				<span class="field-label">Fecha firma</span>
-				<span class="field-value">{{ contract.signatureDate | date:'d MMM y' }}</span>
-			</div>
-			}
-			@if (contract.initialCapital != null && contract.initialCapital > 0) {
-			<div class="field">
-				<span class="field-label">Capital inicial</span>
-				<span class="field-value">${{ contract.initialCapital | number:'1.0-0' }}</span>
-			</div>
-			}
-			<div class="field">
-				<span class="field-label">Documentación</span>
-				<span class="field-value" [class.ok]="contract.docs" [class.no]="!contract.docs">
-					{{ contract.docs ? 'Completa' : 'Incompleta' }}
-				</span>
+
+	<!-- HERO KPIs: capital, rendimiento, plazo, vigencia -->
+	<div class="contract-hero">
+		@if (contract.initialCapital != null && contract.initialCapital > 0) {
+		<div class="hero-card hero-card--primary">
+			<div class="hero-label">Capital inicial</div>
+			<div class="hero-value">${{ contract.initialCapital | number:'1.0-0' }}</div>
+		</div>
+		}
+		<div class="hero-card hero-card--accent">
+			<div class="hero-label">Rendimiento</div>
+			<div class="hero-value">{{ contract.yieldPercent }}%</div>
+		</div>
+		<div class="hero-card">
+			<div class="hero-label">Plazo</div>
+			<div class="hero-value">{{ contract.term }} meses</div>
+		</div>
+		<div class="hero-card">
+			<div class="hero-label">Vigencia</div>
+			<div class="hero-value hero-value--small">
+				{{ contract.startDate ? (contract.startDate | date:'d MMM y') : '—' }}
+				<span class="hero-sep">→</span>
+				{{ contract.endDate ? (contract.endDate | date:'d MMM y') : '—' }}
 			</div>
 		</div>
-		@if (contract.docsComments) {
-		<div class="note">{{ contract.docsComments }}</div>
-		}
-
-		@if (!contract.signed) {
-			<div class="card sign-cta">
-				<div class="card-title">Contrato sin firmar</div>
-				<p class="sign-cta-text">Para crear el primer anexo y registrar depósitos, marca el contrato como firmado. La fecha se indica aquí; el capital inicial se define al crear o editar el contrato.</p>
-				<ion-button (click)="openSignContractModal()" expand="block" shape="round">
-					<ion-icon name="document-text-outline"></ion-icon>
-					Firmar contrato
-				</ion-button>
-			</div>
-		}
+		<div class="hero-card" [class.hero-card--success]="contract.contractStatus === 'ACTIVE'" [class.hero-card--warning]="contract.contractStatus === 'PENDING'">
+			<div class="hero-label">Estatus</div>
+			<div class="hero-value hero-value--small">{{ contractStatusLabel(contract.contractStatus) }}</div>
+		</div>
 	</div>
 
-	<div class="card card-main">
-		<div class="card-title">Equipo (asesores)</div>
-		<div class="card-fields">
-			<div class="field">
-				<span class="field-label">Consultor(a)</span>
-				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.consultant) }}</span>
+	<!-- SECCIONES AGRUPADAS -->
+	<div class="contract-sections">
+		<div class="contract-section">
+			<div class="section-label">Datos del inversor</div>
+			<div class="data-rows">
+				<div class="data-row">
+					<span class="data-label">Inversionista</span>
+					<span class="data-value">{{ contract.investor }}</span>
+				</div>
+				<div class="data-row">
+					<span class="data-label">Correo</span>
+					<span class="data-value">{{ contract.email }}</span>
+				</div>
+				<div class="data-row">
+					<span class="data-label">Cuenta cliente</span>
+					<span class="data-value mono">{{ contract.clientAccount }}</span>
+				</div>
 			</div>
-			<div class="field">
-				<span class="field-label">Gerente</span>
-				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.manager) }}</span>
+		</div>
+
+		<div class="contract-section">
+			<div class="section-label">Condiciones</div>
+			<div class="data-rows">
+				<div class="data-row">
+					<span class="data-label">Liquidez</span>
+					<span class="data-value">{{ contract.liquidity }}%</span>
+				</div>
+				<div class="data-row">
+					<span class="data-label">Periodicidad</span>
+					<span class="data-value">{{ contract.yieldFrequency }}</span>
+				</div>
+				<div class="data-row">
+					<span class="data-label">Pagos</span>
+					<span class="data-value">{{ contract.payments }}</span>
+				</div>
+				<div class="data-row">
+					<span class="data-label">Estado de cuenta</span>
+					<span class="data-value">{{ contract.accountStatus }}</span>
+				</div>
 			</div>
-			<div class="field">
-				<span class="field-label">KAM</span>
-				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.kam) }}</span>
+		</div>
+
+		<div class="contract-section">
+			<div class="section-label">Administrativo</div>
+			<div class="data-rows">
+				@if (contract.signed && contract.signatureDate) {
+				<div class="data-row">
+					<span class="data-label">Fecha firma</span>
+					<span class="data-value">{{ contract.signatureDate | date:'d MMM y' }}</span>
+				</div>
+				}
+				<div class="data-row">
+					<span class="data-label">Documentación</span>
+					<span class="data-value" [class.ok]="contract.docs" [class.no]="!contract.docs">
+						{{ contract.docs ? 'Completa' : 'Incompleta' }}
+					</span>
+				</div>
 			</div>
-			<div class="field">
-				<span class="field-label">Dir. Ventas</span>
-				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.salesDirector) }}</span>
+		</div>
+	</div>
+
+	@if (contract.docsComments) {
+	<div class="note-inline">{{ contract.docsComments }}</div>
+	}
+
+	@if (!contract.signed) {
+		<div class="card sign-cta">
+			<div class="sign-cta-icon">
+				<ion-icon name="document-text-outline"></ion-icon>
 			</div>
-			<div class="field">
-				<span class="field-label">Operaciones</span>
-				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.operations) }}</span>
+			<div class="sign-cta-title">Contrato sin firmar</div>
+			<p class="sign-cta-text">Para crear el primer anexo y registrar depósitos, marca el contrato como firmado. La fecha se indica aquí.</p>
+			<ion-button (click)="openSignContractModal()" expand="block" shape="round" size="default">
+				<ion-icon name="create-outline"></ion-icon>
+				Firmar contrato
+			</ion-button>
+		</div>
+	}
+
+	<div class="card card-team">
+		<div class="section-label">Equipo (asesores)</div>
+		<div class="team-grid">
+			<div class="team-item">
+				<span class="team-role">Consultor(a) </span>
+				<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.consultant) }}</span>
 			</div>
-			<div class="field">
-				<span class="field-label">CEO</span>
-				<span class="field-value">{{ getAdvisorName(advisorsDic, contract.roles?.ceo) }}</span>
+			<div class="team-item">
+				<span class="team-role">Gerente </span>
+				<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.manager) }}</span>
+			</div>
+			<div class="team-item">
+				<span class="team-role">KAM </span>
+				<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.kam) }}</span>
+			</div>
+			<div class="team-item">
+				<span class="team-role">Dir. Ventas </span>
+				<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.salesDirector) }}</span>
+			</div>
+			<div class="team-item">
+				<span class="team-role">Operaciones </span>
+				<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.operations) }}</span>
+			</div>
+			<div class="team-item">
+				<span class="team-role">CEO </span>
+				<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.ceo) }}</span>
 			</div>
 		</div>
 	</div>
 
 	@if (contract.beneficiaries) {
-	<div class="card">
-		<div class="card-title">Beneficiarios</div>
-		<div class="text">{{ contract.beneficiaries }}</div>
+	<div class="card card-beneficiaries">
+		<div class="section-label">Beneficiarios</div>
+		<div class="beneficiaries-text">{{ contract.beneficiaries }}</div>
 	</div>
 	}
 	}
