@@ -82,7 +82,15 @@
 	<!-- CONTENT -->
 	<div class="panel-content fade-slide">
 		<div class="content-fixed">
-			<app-contract-info [contract]="contract" [activeTab]="activeTab"></app-contract-info>
+			@if (activeTab === 'info') {
+				<app-contract-info [contract]="contract"></app-contract-info>
+			}
+			@if (activeTab === 'deposits') {
+				<app-contract-deposits [contract]="contract"></app-contract-deposits>
+			}
+			@if (activeTab === 'commissions') {
+				<app-contract-commissions [contract]="contract"></app-contract-commissions>
+			}
 		</div>
 	</div>
 

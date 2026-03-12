@@ -1,0 +1,147 @@
+.deposits-grid {
+	display: grid;
+	gap: 18px;
+	margin-bottom: 32px;
+}
+
+.actions-bottom {
+	margin-top: 16px;
+}
+
+.card {
+	background: rgba(255, 255, 255, .03);
+	border: 1px solid rgba(255, 255, 255, .05);
+	border-radius: 14px;
+	padding: 16px;
+}
+
+.tranche-card {
+	cursor: pointer;
+	transition: .2s ease;
+}
+
+.tranche-card:hover {
+	background: rgba(255, 255, 255, .04);
+}
+
+.tranche-card.selected {
+	border-color: rgba(var(--ion-color-primary-rgb), .35);
+	background: rgba(var(--ion-color-primary-rgb), .08);
+}
+
+.tranche-header-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.tranche-header-main {
+	min-width: 0;
+}
+
+.tranche-meta-line {
+	margin-top: 6px;
+	font-size: 13px;
+	opacity: .9;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+}
+
+.meta-separator {
+	opacity: .6;
+}
+
+.tranche-chevron {
+	font-size: 20px;
+	opacity: .8;
+	margin-top: 4px;
+	transition: transform .2s ease;
+}
+
+.tranche-card.selected .tranche-chevron {
+	transform: rotate(180deg);
+}
+
+.card-title {
+	font-size: 13px;
+	text-transform: uppercase;
+	opacity: .7;
+	margin-bottom: 12px;
+	letter-spacing: .5px;
+}
+
+.field-label {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: .3px;
+	opacity: .7;
+}
+
+.field-value {
+	font-size: 15px;
+	font-weight: 500;
+}
+
+.section-divider {
+	height: 1px;
+	background: rgba(255, 255, 255, .06);
+	margin: 12px 0;
+}
+
+.section-title {
+	font-size: 14px;
+	text-transform: uppercase;
+	letter-spacing: .5px;
+	opacity: .75;
+	margin-bottom: 10px;
+}
+
+.empty-inline {
+	font-size: 15px;
+	opacity: .75;
+	margin-top: 10px;
+}
+
+.sublist {
+	display: grid;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.subitem {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, .03);
+	border: 1px solid rgba(255, 255, 255, .05);
+	font-size: 15px;
+}
+
+.deposits-sublist .deposit-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 16px;
+}
+
+.deposit-row .field-label {
+	font-size: 13px;
+}
+
+.deposit-row .field-value {
+	font-size: 15px;
+}
+
+.tranche-toggle {
+	margin-top: 4px;
+	font-size: 14px;
+}
+
+.ok {
+	color: var(--ion-color-success);
+}

@@ -1,0 +1,151 @@
+<div class="deposits-grid">
+	@for (tranche of (tranches$ | async); track tranche.uid) {
+		<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid">
+			<div class="tranche-header tranche-header--deposits" (click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
+				<div class="tranche-header-top">
+					<div class="tranche-header-main">
+						<div class="card-title">Anexo {{ tranche.sequence }}</div>
+						<div class="tranche-meta-line">
+							<span class="field-label">Monto:</span>
+							<span class="field-value">${{ tranche.amount | number:'1.0-0' }}</span>
+							<span class="meta-separator">·</span>
+							<span class="field-label">Depositado:</span>
+							<span class="field-value">${{ tranche.totalDeposited | number:'1.0-0' }}</span>
+							<span class="meta-separator">·</span>
+							<span class="field-label">Fondeado:</span>
+							<span class="field-value" [class.ok]="tranche.funded">{{ tranche.funded ? 'Sí' : 'No' }}</span>
+							@if (tranche.fundedAt) {
+								<span class="meta-separator">·</span>
+								<span class="field-label">Fondeado el:</span>
+								<span class="field-value">{{ tranche.fundedAt | date:'d MMM y' }}</span>
+							}
+						</div>
+					</div>
+					<ion-icon class="tranche-chevron"
+						[name]="selectedTrancheUid === tranche.uid ? 'chevron-up' : 'chevron-down'"></ion-icon>
+				</div>
+			</div>
+
+			@if (selectedTrancheUid === tranche.uid) {
+				<!-- <ion-button fill="clear" size="small" (click)="selectTranche(null); $event.stopPropagation()"
+					class="tranche-toggle">
+					Ocultar depósitos
+				</ion-button> -->
+				<div class="section-divider"></div>
+				<div class="section-title">Depósitos</div>
+				@if ((deposits$ | async); as deposits) {
+					@if (deposits.length === 0) {
+						<div class="empty-inline">Sin depósitos todavía.</div>
+					} @else {
+						<div class="sublist deposits-sublist">
+							@for (deposit of deposits; track deposit.uid) {
+								<div class="subitem deposit-row">
+									<span class="field-label">Monto:</span>
+									<span class="field-value">${{ deposit.amount | number:'1.0-0' }}</span>
+									<span class="field-label">Fecha:</span>
+									<span class="field-value">{{ deposit.depositedAt | date:'d MMM y' }}</span>
+								</div>
+							}
+						</div>
+					}
+				}
+				@if (!tranche.funded) {
+					<ion-button (click)="openCreateDepositModal(tranche); $event.stopPropagation()" expand="block" fill="clear"
+						shape="round">
+						Registrar depósito
+					</ion-button>
+				}
+			} @else {
+				<!-- <ion-button fill="clear" size="small" (click)="selectTranche(tranche.uid); $event.stopPropagation()"
+					class="tranche-toggle">
+					Ver depósitos
+				</ion-button> -->
+			}
+		</div>
+	}
+
+	@if ((tranches$ | async)?.length) {
+		<div class="actions actions-bottom">
+			<ion-button (click)="openCreateTrancheModal()" expand="block" shape="round">
+				Crear anexo
+			</ion-button>
+		</div>
+	}
+</div>
+
+<ion-modal [isOpen]="isCreateTrancheModalOpen" (didDismiss)="closeCreateTrancheModal()">
+	<ng-template>
+		<ion-header>
+			<ion-toolbar>
+				<ion-title>Nuevo anexo</ion-title>
+				<ion-buttons slot="end">
+					<ion-button (click)="closeCreateTrancheModal()">Cerrar</ion-button>
+				</ion-buttons>
+			</ion-toolbar>
+		</ion-header>
+		<ion-content class="ion-padding">
+			<ion-item lines="full">
+				<ion-label position="stacked">Monto del anexo</ion-label>
+				<ion-input type="number" inputmode="decimal" placeholder="Ej. 100000" [(ngModel)]="createTrancheAmount">
+				</ion-input>
+			</ion-item>
+			<ion-item lines="full" style="margin-top: 8px;">
+				<ion-label position="stacked">Fecha de registro (opcional)</ion-label>
+				<ion-input type="date" [(ngModel)]="createTrancheDate"></ion-input>
+			</ion-item>
+			@if (!isCreateTrancheAmountValid && createTrancheAmount !== null) {
+				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+					Ingresa un monto válido (mayor a 0).
+				</div>
+			}
+			<div style="margin-top: 16px;">
+				<ion-button expand="block" shape="round" (click)="confirmCreateTranche()"
+					[disabled]="!isCreateTrancheAmountValid">
+					Crear anexo
+				</ion-button>
+				<ion-button expand="block" fill="clear" (click)="closeCreateTrancheModal()">Cancelar</ion-button>
+			</div>
+		</ion-content>
+	</ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isCreateDepositModalOpen" (didDismiss)="closeCreateDepositModal()">
+	<ng-template>
+		<ion-header>
+			<ion-toolbar>
+				<ion-title>Registrar depósito</ion-title>
+				<ion-buttons slot="end">
+					<ion-button (click)="closeCreateDepositModal()">Cerrar</ion-button>
+				</ion-buttons>
+			</ion-toolbar>
+		</ion-header>
+		<ion-content class="ion-padding">
+			@if (depositTargetTranche) {
+				<div style="margin-bottom: 12px; opacity: 0.8;">
+					Anexo {{ depositTargetTranche.sequence }} · Monto: ${{ depositTargetTranche.amount | number:'1.0-0' }}
+				</div>
+			}
+			<ion-item lines="full">
+				<ion-label position="stacked">Monto del depósito</ion-label>
+				<ion-input type="number" inputmode="decimal" placeholder="Ej. 50000" [(ngModel)]="createDepositAmount">
+				</ion-input>
+			</ion-item>
+			<ion-item lines="full" style="margin-top: 8px;">
+				<ion-label position="stacked">Fecha (opcional)</ion-label>
+				<ion-input type="date" [(ngModel)]="createDepositDate"></ion-input>
+			</ion-item>
+			@if (!isCreateDepositAmountValid && createDepositAmount !== null) {
+				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+					Ingresa un monto válido (mayor a 0).
+				</div>
+			}
+			<div style="margin-top: 16px;">
+				<ion-button expand="block" shape="round" (click)="confirmCreateDeposit()"
+					[disabled]="!isCreateDepositAmountValid">
+					Registrar depósito
+				</ion-button>
+				<ion-button expand="block" fill="clear" (click)="closeCreateDepositModal()">Cancelar</ion-button>
+			</div>
+		</ion-content>
+	</ng-template>
+</ion-modal>

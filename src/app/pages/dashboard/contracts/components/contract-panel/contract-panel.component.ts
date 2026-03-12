@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { Contract } from 'src/app/store/contract/contract.model';
 import { ContractInfoComponent } from '../contract-info/contract-info.component';
+import { ContractDepositsComponent } from '../contract-deposits/contract-deposits.component';
+import { ContractCommissionsComponent } from '../contract-commissions/contract-commissions.component';
 
 @Component({
 	selector: 'app-contract-panel',
@@ -12,7 +14,9 @@ import { ContractInfoComponent } from '../contract-info/contract-info.component'
 	imports: [
 		CommonModule,
 		IonicModule,
-		ContractInfoComponent
+		ContractInfoComponent,
+		ContractDepositsComponent,
+		ContractCommissionsComponent,
 	],
 })
 export class ContractPanelComponent implements OnChanges {

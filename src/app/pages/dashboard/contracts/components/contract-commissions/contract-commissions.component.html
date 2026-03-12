@@ -1,0 +1,153 @@
+<div class="commissions-list">
+	@for (tranche of (tranches$ | async); track tranche.uid) {
+		<div class="card tranche-card" [class.selected]="selectedTrancheUid === tranche.uid">
+			<div class="tranche-header" (click)="selectTranche(selectedTrancheUid === tranche.uid ? null : tranche.uid)">
+				<div class="tranche-header-top">
+					<div class="tranche-header-main">
+						<div class="card-title">Anexo {{ tranche.sequence }}</div>
+						<div class="card-fields">
+							<div class="field">
+								<span class="field-label">Monto anexo</span>
+								<span class="field-value">${{ tranche.amount | number:'1.0-0' }}</span>
+							</div>
+						</div>
+						<div class="section-title tranche-header-section">Comisiones</div>
+					</div>
+					<ion-icon class="tranche-chevron"
+						[name]="selectedTrancheUid === tranche.uid ? 'chevron-up' : 'chevron-down'"></ion-icon>
+				</div>
+				@if (getTrancheSummary$(tranche.uid) | async; as summary) {
+					<div class="summary-grid summary-in-header">
+						<div class="summary-card warning">
+							<div class="summary-label">Por pagar</div>
+							<div class="summary-value">${{ summary.pendingAmount | number:'1.0-0' }}</div>
+							<div class="summary-meta">{{ summary.pendingCount }} pagos</div>
+						</div>
+						<div class="summary-card success">
+							<div class="summary-label">Pagado</div>
+							<div class="summary-value">${{ summary.paidAmount | number:'1.0-0' }}</div>
+							<div class="summary-meta">{{ summary.paidCount }} pagos</div>
+						</div>
+						<div class="summary-card neutral">
+							<div class="summary-label">Total</div>
+							<div class="summary-value">${{ summary.totalAmount | number:'1.0-0' }}</div>
+							<div class="summary-meta">{{ summary.totalCount }} pagos</div>
+						</div>
+					</div>
+				}
+			</div>
+
+			@if (selectedTrancheUid === tranche.uid) {
+				<div class="tranche-body">
+					<div class="section-divider"></div>
+					<div class="section-title">Se debe a</div>
+
+					@if ((commissionGroups$ | async); as groups) {
+						@if (groups.length === 0) {
+							<div class="empty-inline">Sin comisiones generadas aún.</div>
+						} @else {
+							<div class="sublist">
+								@for (g of groups; track g.key) {
+									<div class="subitem group-item" (click)="toggleGroupDetail(g.key)" role="button" tabindex="0">
+										<div class="subitem-left">
+											<div class="subitem-title">
+												{{ g.name }}
+												<span class="pill" [class.paid]="g.pendingAmount === 0">
+													{{ g.pendingAmount === 0 ? 'Pagado' : 'Por pagar' }}
+												</span>
+											</div>
+											<div class="subitem-meta">
+												{{ roleLabel(g.role) }}
+												·
+												@if (g.splitLabel !== null) { %{{ g.splitLabel }} } @else { var. }
+											</div>
+											<span class="detail-toggle">
+												{{ isGroupExpanded(g.key) ? 'Ocultar detalle' : 'Ver detalle' }}
+												<ion-icon [name]="isGroupExpanded(g.key) ? 'chevron-up' : 'chevron-down'"></ion-icon>
+											</span>
+										</div>
+										<div class="subitem-right" (click)="$event.stopPropagation()">
+											<div class="amounts-line">
+												<span class="amount-label">Por pagar:</span>
+												<span class="amount-value warning">${{ g.pendingAmount | number:'1.0-0' }}</span>
+												<span class="amount-separator">·</span>
+												<span class="amount-label">Pagado:</span>
+												<span class="amount-value success">${{ g.paidAmount | number:'1.0-0' }}</span>
+											</div>
+										</div>
+									</div>
+									@if (isGroupExpanded(g.key) && g.payments.length) {
+										<div class="detail-list" (click)="$event.stopPropagation()">
+											<div class="detail-list-header">
+												<span>Cuota</span>
+												<span>Tipo</span>
+												<span>Corte</span>
+												<span>Monto</span>
+												<span>Estado</span>
+												<span>Acción</span>
+											</div>
+											@for (p of g.payments; track p.uid) {
+												<div class="detail-row" [class.paid]="!!p.paidAt || p.paid">
+													<span class="detail-value">{{ p.installment }}</span>
+													<span class="detail-value">{{ paymentTypeLabel(p.paymentType) }}</span>
+													<span class="detail-value">{{ p.cutDate | date:'d MMM y' }}</span>
+													<span class="detail-value detail-amount">${{ p.amount | number:'1.0-0' }}</span>
+													<span class="pill" [class.paid]="!!p.paidAt || p.paid">
+														{{ (p.paidAt || p.paid) ? 'Pagado' : 'Por pagar' }}
+													</span>
+													<span class="detail-value">
+														@if (!p.paid && !p.paidAt && !p.cancelled) {
+															<ion-button size="small" fill="clear" shape="round"
+																(click)="markPaymentAsPaid(p); $event.stopPropagation()">
+																Pagar
+															</ion-button>
+														} @else {
+															—
+														}
+													</span>
+												</div>
+											}
+										</div>
+									}
+								}
+							</div>
+						}
+					}
+
+					<div class="section-divider"></div>
+					<div class="section-title">Cortes</div>
+
+					@if ((commissionCuts$ | async); as cuts) {
+						@if (cuts.length === 0) {
+							<div class="empty-inline">Sin cortes todavía.</div>
+						} @else {
+							<div class="sublist">
+								@for (c of cuts; track c.cutDate) {
+									<div class="subitem">
+										<div class="subitem-left">
+											<div class="subitem-title">Corte {{ c.cutDate | date:'d MMM y' }}</div>
+											<div class="subitem-meta">
+												{{ c.pendingCount }} por pagar · {{ c.paidCount }} pagados
+											</div>
+										</div>
+										<div class="subitem-right">
+											<div class="subitem-amount warning">${{ c.pendingAmount | number:'1.0-0' }}</div>
+											<div class="subitem-meta">Por pagar</div>
+											@if (c.pendingCount > 0) {
+												<ion-button size="small" fill="clear" shape="round"
+													(click)="markCutAsPaid(c.cutDate); $event.stopPropagation()">
+													Marcar pagado
+												</ion-button>
+											}
+										</div>
+									</div>
+								}
+							</div>
+						}
+					}
+				</div>
+			}
+		</div>
+		<div class="commissions-bottom-spacer"></div>
+	}
+</div>
