@@ -118,6 +118,24 @@
 	}
 }
 
+.sign-cta {
+	margin-top: 16px;
+	padding-top: 16px;
+	border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+.sign-cta-text {
+	margin: 8px 0 14px;
+	font-size: 14px;
+	opacity: .85;
+	line-height: 1.45;
+}
+
+.sign-cta ion-button ion-icon {
+	margin-right: 8px;
+	vertical-align: middle;
+}
+
 .section-divider {
 	height: 1px;
 	background: rgba(255, 255, 255, .06);

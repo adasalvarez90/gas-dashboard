@@ -88,7 +88,7 @@ export class ManagePage implements OnInit {
 			referral: ['']
 		}),
 
-		initialCapital: [null, [Validators.required, Validators.min(1)]],
+		initialCapital: [null],
 	});
 
 	previewSplits$ = combineLatest([
@@ -201,6 +201,17 @@ export class ManagePage implements OnInit {
 
 		if (this.contract) {
 			this.form.patchValue(this.contract);
+			// Aplicar validadores según firma al cargar
+			const signed = this.contract.signed;
+			if (signed) {
+				this.form.get('signatureDate')?.setValidators(Validators.required);
+				this.form.get('initialCapital')?.setValidators([Validators.required, Validators.min(1)]);
+			} else {
+				this.form.get('signatureDate')?.clearValidators();
+				this.form.get('initialCapital')?.clearValidators();
+			}
+			this.form.get('signatureDate')?.updateValueAndValidity();
+			this.form.get('initialCapital')?.updateValueAndValidity();
 		}
 
 		this.form.get('source')?.valueChanges.subscribe(source => {
@@ -209,17 +220,18 @@ export class ManagePage implements OnInit {
 			}
 		});
 
-		// Valuechanges to signed
+		// Validadores condicionales: firma y capital inicial
 		this.form.get('signed')?.valueChanges.subscribe(signed => {
 			if (!signed) {
 				this.form.get('signatureDate')?.setValue(null);
-				// Remove validators
 				this.form.get('signatureDate')?.clearValidators();
+				this.form.get('initialCapital')?.clearValidators();
 			} else {
-				// Add validators
 				this.form.get('signatureDate')?.setValidators(Validators.required);
+				this.form.get('initialCapital')?.setValidators([Validators.required, Validators.min(1)]);
 			}
 			this.form.get('signatureDate')?.updateValueAndValidity();
+			this.form.get('initialCapital')?.updateValueAndValidity();
 		});
 
 		this.ref.detectChanges();
@@ -230,37 +242,34 @@ export class ManagePage implements OnInit {
 	}
 
 	async create() {
-		// Get the form value
 		const contract = this.form.value;
+		const { initialCapital, ...rest } = contract;
+		const contractData = { ...rest };
 
-		const { initialCapital, ...contractData } = contract;
-		// Create new user
-		this.contractFacade.createContractWithInitialTranche(contractData, initialCapital);
-		// Exit
+		if (contract.signed === true && contract.signatureDate != null && initialCapital != null && initialCapital >= 1) {
+			this.contractFacade.createContractWithInitialTranche(contractData, initialCapital);
+		} else {
+			this.contractFacade.createContract(contractData);
+		}
 		this.exit();
 	}
 
 	async update() {
-		// Get the form value
 		const contract = this.form.value;
-		// Create the update alert
 		const prompt = await this.alertCtrl.create({
-			header: `Editar contrato`,
-			message: `¿Desea editar el contrato para ${contract.investor}?`,
+			header: 'Editar contrato',
+			message: `¿Desea guardar los cambios del contrato de ${contract.investor}?`,
 			buttons: [{
 				text: 'No',
 				role: 'cancel'
 			}, {
 				text: 'Sí',
 				handler: () => {
-					// Create new user
 					this.contractFacade.updateContract(contract);
-					// Exit
 					this.exit();
 				}
 			}]
 		});
-		// Present the prompt
 		await prompt.present();
 	}
 

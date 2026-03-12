@@ -69,13 +69,24 @@
 	opacity: .55;
 }
 
+.header-actions {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .meta {
-    margin-top: 6px;
     font-size: 13px;
     opacity: .7;
-    display: flex;
-    gap: 6px;
-    align-items: center;
+}
+
+.edit-btn {
+    margin: 0;
+    font-size: 13px;
+    --padding-start: 10px;
+    --padding-end: 10px;
 }
 
 .meta .signed {

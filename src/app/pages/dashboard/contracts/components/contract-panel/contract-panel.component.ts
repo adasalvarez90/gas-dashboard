@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { Contract } from 'src/app/store/contract/contract.model';
@@ -15,16 +15,28 @@ import { ContractInfoComponent } from '../contract-info/contract-info.component'
 		ContractInfoComponent
 	],
 })
-export class ContractPanelComponent {
+export class ContractPanelComponent implements OnChanges {
 
 	@Input() contract: Contract | null = null;
 	@Output() back = new EventEmitter<void>();
+	@Output() editRequested = new EventEmitter<Contract>();
 
 	activeTab: 'info' | 'deposits' | 'commissions' = 'info';
 
 	isMobile = window.innerWidth < 992;
 
+	ngOnChanges(changes: SimpleChanges) {
+		const c = changes['contract'];
+		if (c?.currentValue && !c.currentValue.signed && (this.activeTab === 'deposits' || this.activeTab === 'commissions')) {
+			this.activeTab = 'info';
+		}
+	}
+
 	goBack() {
 		this.back.emit();
+	}
+
+	editContract() {
+		if (this.contract) this.editRequested.emit(this.contract);
 	}
 }

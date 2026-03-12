@@ -29,9 +29,12 @@ export interface Contract extends Metadata {
 
 	source: InvestmentSource;
 
-	signatureDate: number;
-	startDate?: number, // se define cuando primer tranche fondea
-	endDate?: number,   // startDate + 12 meses
+	/** Fecha de firma del contrato; solo tiene valor cuando signed === true. */
+	signatureDate?: number;
+	/** Capital del primer tranche; requerido cuando signed === true (para crear tranche 1). */
+	initialCapital?: number;
+	startDate?: number; // se define cuando primer tranche fondea
+	endDate?: number;   // startDate + 12 meses
 
 	accountStatus: string;
 	signed: boolean;

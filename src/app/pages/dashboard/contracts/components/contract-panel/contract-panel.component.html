@@ -41,10 +41,16 @@
 			</ion-chip>
 		</div>
 
-		<div class="meta">
-			<span [class.signed]="contract.signed">
-				{{ contract.signed ? 'Firmado' : 'Sin firma' }}
-			</span>
+		<div class="header-actions">
+			<div class="meta">
+				<span [class.signed]="contract.signed">
+					{{ contract.signed ? 'Firmado' : 'Sin firma' }}
+				</span>
+			</div>
+			<ion-button fill="clear" size="small" (click)="editContract()" class="edit-btn">
+				<ion-icon name="create-outline"></ion-icon>
+				Editar
+			</ion-button>
 		</div>
 	</div>
 
@@ -57,6 +63,7 @@
 			<ion-label>Info</ion-label>
 		</ion-chip>
 
+		@if (contract.signed) {
 		<ion-chip mode="ios" outline="true" class="tab-chip" [class.active]="activeTab === 'deposits'"
 			(click)="activeTab = 'deposits'">
 			<ion-icon name="wallet-outline"></ion-icon>
@@ -68,6 +75,7 @@
 			<ion-icon name="people-outline"></ion-icon>
 			<ion-label>Comisiones</ion-label>
 		</ion-chip>
+		}
 
 	</div>
 

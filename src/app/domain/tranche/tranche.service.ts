@@ -8,7 +8,7 @@ export class TrancheService {
 		private trancheFS: TrancheFirestoreService
 	) {}
 
-	async createTranche(contractUid: string, amount: number, registeredAt?: number) {
+	async createTranche(contractUid: string, amount: number, registeredAt?: number, signedAt?: number) {
 
 		if (amount <= 0) {
 			throw new Error('El monto del tramo debe ser mayor a 0');
@@ -28,6 +28,6 @@ export class TrancheService {
 			}
 		}
 
-		return this.trancheFS.createTranche(contractUid, amount, registeredAt);
+		return this.trancheFS.createTranche(contractUid, amount, registeredAt, signedAt);
 	}
 }

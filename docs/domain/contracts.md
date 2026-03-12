@@ -6,6 +6,17 @@ Contracts manage the lifecycle of the investment and the commissions generated b
 
 ---
 
+# Contract Signing and First Tranche
+
+A contract can be created **with or without** being signed.
+
+- **Created as signed**: the user marks "Firmado" and sets the signature date. The system creates the contract and **automatically creates the first tranche (sequence 1)** with the initial capital and the signature date as the tranche’s `signedAt`.
+- **Created as not signed**: the user leaves "Firmado" off. The system creates **only the contract** (no tranches). The investor can review clauses and details. When the user later marks the contract as signed and enters the signature date (and initial capital), the system **automatically creates the first tranche (sequence 1)** at that moment.
+
+The first tranche is therefore created only when the contract is signed and has a signature date (and, when applicable, initial capital). Annex tranches (sequence 2+) are created manually by the user when the previous tranche is funded.
+
+---
+
 # Contract Lifecycle
 
 A contract does not start when it is signed.

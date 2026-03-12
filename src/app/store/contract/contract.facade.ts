@@ -30,6 +30,10 @@ export class ContractFacade {
 		this.store.dispatch(ContractActions.createContractWithInitialTranche({ contract, initialCapital }));
 	}
 
+	createContract(contract: Contract) {
+		this.store.dispatch(ContractActions.createContract({ contract }));
+	}
+
 	updateContract(contract: Contract) {
 		this.store.dispatch(ContractActions.updateContract({ contract }));
 	}

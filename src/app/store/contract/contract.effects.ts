@@ -41,47 +41,73 @@ export class ContractEffects {
 		),
 	);
 
-	// ➕ Create contract
-	createContract$ = createEffect(() =>
+	// ➕ Create contract (with optional first tranche when signed)
+	createContractWithInitialTranche$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(ContractActions.createContractWithInitialTranche),
 			exhaustMap(
 				async ({ contract, initialCapital }) => {
-					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
 						message: 'Creando contrato. Espere, por favor.'
 					});
-					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
 						message: `El contrato de "${contract.investor}" fue creado con éxito.`,
 						duration: 3000,
 						position: 'middle'
 					});
-
-					// Present the loading
 					await loading.present();
 
 					return this.contractFS.createContractWithInitialTranche(contract, initialCapital).then(
 						async (response) => {
-							// Hide the loading
 							await loading.dismiss();
-							// Show the toast
 							await toast.present();
-
-							return ContractActions.createContractSuccess({ contract: response })
+							return ContractActions.createContractSuccess({ contract: response });
 						},
 						async (err) => {
 							await loading.dismiss();
-							// Change the toast message and show it
 							toast.message = `Error al crear el contrato de "${contract.investor}": ${err.message}`;
-							// Present the toast
 							toast.present();
-
-							return ContractActions.createContractFailure({ error: err.message })
+							return ContractActions.createContractFailure({ error: err.message });
 						},
-					)
+					);
+				},
+			),
+		),
+	);
+
+	// ➕ Create contract only (no tranche; when not signed)
+	createContract$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(ContractActions.createContract),
+			exhaustMap(
+				async ({ contract }) => {
+					const loading = await this.loadingCtrl.create({
+						cssClass: 'my-custom-class',
+						message: 'Creando contrato. Espere, por favor.'
+					});
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: `El contrato de "${contract.investor}" fue creado con éxito.`,
+						duration: 3000,
+						position: 'middle'
+					});
+					await loading.present();
+
+					return this.contractFS.createContract(contract).then(
+						async (response) => {
+							await loading.dismiss();
+							await toast.present();
+							return ContractActions.createContractSuccess({ contract: response });
+						},
+						async (err) => {
+							await loading.dismiss();
+							toast.message = `Error al crear el contrato de "${contract.investor}": ${err.message}`;
+							toast.present();
+							return ContractActions.createContractFailure({ error: err.message });
+						},
+					);
 				},
 			),
 		),
@@ -109,7 +135,7 @@ export class ContractEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.contractFS.updateContract(contract).then(
+					return this.contractFS.updateContractAndCreateFirstTrancheIfNeeded(contract).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();

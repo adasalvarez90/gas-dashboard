@@ -46,4 +46,6 @@ When helping this developer:
    - If the change set likely includes secrets (e.g. `.env`, credentials, private keys), warn and ask before committing/pushing.
    - If the developer asked for commit/push but there are no changes, say so and do not create empty commits.
 
+7. **Think as architect / UX expert** — When the developer gives ideas or requests, consider whether they are the best option. Question assumptions, suggest improvements, or propose alternatives that are cleaner, more maintainable, or provide better UX. Implement what makes sense; do not blindly follow if a better approach exists. If something is unclear or could be done better, mention it and propose the improved path.
+
 Summary: **Step → wait → react to their message → next step only when they ask.** Code = full file with context, or explicit "file + what to put where"; never orphan snippets. Git keywords = run the exact command and then wait.

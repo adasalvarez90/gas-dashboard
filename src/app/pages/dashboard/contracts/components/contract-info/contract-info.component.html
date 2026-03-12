@@ -10,15 +10,15 @@
 				<span class="field-label">Estatus</span>
 				<span class="field-value">{{ contractStatusLabel(contract.contractStatus) }}</span>
 			</div>
-			<div class="field field-wide">
+			<div class="field">
 				<span class="field-label">Inversionista</span>
 				<span class="field-value">{{ contract.investor }}</span>
 			</div>
-			<div class="field field-wide">
+			<div class="field">
 				<span class="field-label">Correo</span>
 				<span class="field-value">{{ contract.email }}</span>
 			</div>
-			<div class="field">
+			<div class="field field-wide">
 				<span class="field-label">Cuenta cliente</span>
 				<span class="field-value">{{ contract.clientAccount }}</span>
 			</div>
@@ -51,9 +51,21 @@
 				<span class="field-value">{{ contract.payments }}</span>
 			</div>
 			<div class="field">
+				<span class="field-label">Estado de cuenta</span>
+				<span class="field-value">{{ contract.accountStatus }}</span>
+			</div>
+			@if (contract.signed && contract.signatureDate) {
+			<div class="field">
 				<span class="field-label">Fecha firma</span>
 				<span class="field-value">{{ contract.signatureDate | date:'d MMM y' }}</span>
 			</div>
+			}
+			@if (contract.initialCapital != null && contract.initialCapital > 0) {
+			<div class="field">
+				<span class="field-label">Capital inicial</span>
+				<span class="field-value">${{ contract.initialCapital | number:'1.0-0' }}</span>
+			</div>
+			}
 			<div class="field">
 				<span class="field-label">Documentación</span>
 				<span class="field-value" [class.ok]="contract.docs" [class.no]="!contract.docs">
@@ -63,6 +75,17 @@
 		</div>
 		@if (contract.docsComments) {
 		<div class="note">{{ contract.docsComments }}</div>
+		}
+
+		@if (!contract.signed) {
+			<div class="card sign-cta">
+				<div class="card-title">Contrato sin firmar</div>
+				<p class="sign-cta-text">Para crear el primer anexo y registrar depósitos, marca el contrato como firmado. La fecha se indica aquí; el capital inicial se define al crear o editar el contrato.</p>
+				<ion-button (click)="openSignContractModal()" expand="block" shape="round">
+					<ion-icon name="document-text-outline"></ion-icon>
+					Firmar contrato
+				</ion-button>
+			</div>
 		}
 	</div>
 
@@ -172,11 +195,13 @@
 	</div>
 	}
 
-	<div class="actions actions-bottom">
-		<ion-button (click)="openCreateTrancheModal()" expand="block" shape="round">
-			Crear anexo
-		</ion-button>
-	</div>
+	@if ((tranches$ | async)?.length) {
+		<div class="actions actions-bottom">
+			<ion-button (click)="openCreateTrancheModal()" expand="block" shape="round">
+				Crear anexo
+			</ion-button>
+		</div>
+	}
 	}
 
 	@if (activeTab === 'commissions') {
@@ -376,6 +401,44 @@
 					Crear anexo
 				</ion-button>
 				<ion-button expand="block" fill="clear" (click)="closeCreateTrancheModal()">
+					Cancelar
+				</ion-button>
+			</div>
+		</ion-content>
+	</ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isSignContractModalOpen" (didDismiss)="closeSignContractModal()">
+	<ng-template>
+		<ion-header>
+			<ion-toolbar>
+				<ion-title>Firmar contrato</ion-title>
+				<ion-buttons slot="end">
+					<ion-button (click)="closeSignContractModal()">Cerrar</ion-button>
+				</ion-buttons>
+			</ion-toolbar>
+		</ion-header>
+
+		<ion-content class="ion-padding">
+			<p style="margin-bottom: 16px; opacity: 0.9;">Indica la fecha de firma. El capital inicial se define al crear o editar el contrato. Si ya está definido, se creará el primer anexo automáticamente.</p>
+
+			<ion-item lines="full">
+				<ion-label position="stacked">Fecha de firma</ion-label>
+				<ion-input type="date" [(ngModel)]="signContractDate"></ion-input>
+			</ion-item>
+
+			@if (!isSignContractValid && signContractDate) {
+				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+					Ingresa una fecha válida.
+				</div>
+			}
+
+			<div style="margin-top: 16px;">
+				<ion-button expand="block" shape="round" (click)="confirmSignContract()"
+					[disabled]="!isSignContractValid">
+					Firmar contrato
+				</ion-button>
+				<ion-button expand="block" fill="clear" (click)="closeSignContractModal()">
 					Cancelar
 				</ion-button>
 			</div>

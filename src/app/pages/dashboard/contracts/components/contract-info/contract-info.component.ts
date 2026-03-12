@@ -10,6 +10,7 @@ import { Deposit } from 'src/app/store/deposit/deposit.model';
 import { Tranche } from 'src/app/store/tranche/tranche.model';
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 
+import { ContractFacade } from 'src/app/store/contract/contract.facade';
 import { DepositFacade } from 'src/app/store/deposit/deposit.facade';
 import { TrancheFacade } from 'src/app/store/tranche/tranche.facade';
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
@@ -48,6 +49,12 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 	createTrancheDate: string | null = null; // yyyy-mm-dd
 	get isCreateTrancheAmountValid(): boolean {
 		return typeof this.createTrancheAmount === 'number' && isFinite(this.createTrancheAmount) && this.createTrancheAmount > 0;
+	}
+
+	isSignContractModalOpen = false;
+	signContractDate: string | null = null; // yyyy-mm-dd
+	get isSignContractValid(): boolean {
+		return !!this.signContractDate;
 	}
 
 	isCreateDepositModalOpen = false;
@@ -313,6 +320,7 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 	}
 
 	constructor(
+		private contractFacade: ContractFacade,
 		private depositFacade: DepositFacade,
 		private trancheFacade: TrancheFacade,
 		private advisorFacade: AdvisorFacade,
@@ -370,11 +378,11 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 		if (!this.contract?.uid) return;
 		if (!this.isCreateTrancheAmountValid) return;
 
-		const registeredAt = this.createTrancheDate
+		const dateMs = this.createTrancheDate
 			? new Date(this.createTrancheDate).getTime()
 			: undefined;
 
-		this.trancheFacade.createTranche(this.contract.uid, this.createTrancheAmount!, registeredAt);
+		this.trancheFacade.createTranche(this.contract.uid, this.createTrancheAmount!, dateMs, dateMs);
 		this.closeCreateTrancheModal();
 	}
 
@@ -406,6 +414,32 @@ export class ContractInfoComponent implements OnInit, OnChanges {
 		this.depositTargetTranche = null;
 		this.createDepositAmount = null;
 		this.createDepositDate = null;
+	}
+
+	openSignContractModal() {
+		this.signContractDate = new Date().toISOString().slice(0, 10);
+		this.isSignContractModalOpen = true;
+	}
+
+	closeSignContractModal() {
+		this.isSignContractModalOpen = false;
+		this.signContractDate = null;
+	}
+
+	confirmSignContract() {
+		if (!this.contract) return;
+		if (!this.isSignContractValid) return;
+
+		const signatureDate = this.signContractDate ? new Date(this.signContractDate).getTime() : undefined;
+		if (!signatureDate) return;
+
+		this.contractFacade.updateContract({
+			...this.contract,
+			signed: true,
+			signatureDate,
+			initialCapital: this.contract.initialCapital ?? undefined,
+		});
+		this.closeSignContractModal();
 	}
 
 	confirmCreateDeposit() {

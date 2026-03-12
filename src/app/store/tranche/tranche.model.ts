@@ -8,8 +8,12 @@ export interface Tranche extends Metadata {
 	amount: number;
 
 	/**
-	 * Fecha de registro de negocio (no necesariamente igual a _create).
-	 * Se captura desde UI o se autogenera al crear el tranche.
+	 * Fecha de firma del tranche/anexo (contrato o anexo firmado).
+	 * Tranche 1: suele ser la fecha de firma del contrato. Anexos: fecha en que se firma el anexo.
+	 */
+	signedAt?: number;
+	/**
+	 * Fecha de registro de negocio (opcional; no necesariamente igual a _create).
 	 */
 	registeredAt?: number;
 

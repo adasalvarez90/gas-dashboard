@@ -10,8 +10,9 @@ export const loadContractsFailure = createAction('[Contracts] Load Failure', pro
 // Select
 export const selectContract = createAction('[Contracts] Select', props<{ contract: Contract }>());
 
-// Create
-export const createContractWithInitialTranche = createAction('[Contracts] Create', props<{ contract: Contract, initialCapital: number }>());
+// Create (with optional first tranche when signed)
+export const createContractWithInitialTranche = createAction('[Contracts] Create With Initial Tranche', props<{ contract: Contract; initialCapital: number }>());
+export const createContract = createAction('[Contracts] Create Only', props<{ contract: Contract }>());
 export const createContractSuccess = createAction('[Contracts] Create Success', props<{ contract: Contract }>());
 export const createContractFailure = createAction('[Contracts] Create Failure', props<{ error: string }>());
 

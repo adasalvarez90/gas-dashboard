@@ -27,7 +27,7 @@ export class TrancheFirestoreService {
 	}
 
 	// ➕ Create tranche
-	async createTranche(contractUid: string, amount: number, registeredAt?: number): Promise<Tranche> {
+	async createTranche(contractUid: string, amount: number, registeredAt?: number, signedAt?: number): Promise<Tranche> {
 		// 1️⃣ Obtener tranches existentes
 		const q = query(
 			collection(this.firestore, this.collectionName),
@@ -46,7 +46,7 @@ export class TrancheFirestoreService {
 
 		const newSequence = maxSequence + 1;
 
-		// 3️⃣ Crear nuevo tranche
+		// 3️⃣ Crear nuevo tranche (signedAt = fecha firma; registeredAt = opcional)
 		const uid = uuidv4();
 
 		const newTranche: Tranche = {
@@ -54,7 +54,8 @@ export class TrancheFirestoreService {
 			contractUid,
 			sequence: newSequence,
 			amount,
-			registeredAt: registeredAt ?? Date.now(),
+			...(signedAt != null && { signedAt }),
+			...(registeredAt != null && { registeredAt }),
 			totalDeposited: 0,
 			funded: false,
 			amountAmendments: [],
@@ -64,10 +65,10 @@ export class TrancheFirestoreService {
 
 		// Firestore no acepta campos con valor undefined.
 		const docData = _.omitBy(newTranche, _.isUndefined) as Record<string, unknown>;
-		const ref = doc(this.firestore, this.collectionName, uid);
-		await setDoc(ref, docData);
+		const docRef = doc(this.firestore, this.collectionName, uid);
+		await setDoc(docRef, docData);
 
-		return newTranche;
+		return newTranche as Tranche;
 	}
 
 	// ✏️ Update tranche

@@ -23,7 +23,7 @@
 
 		<!-- PANEL -->
 		<app-contract-panel class="right-panel" [contract]="selectedContract$ | async"
-			(back)="clearSelection()"></app-contract-panel>
+			(back)="clearSelection()" (editRequested)="addOrEdit($event)"></app-contract-panel>
 
 	</div>
 </ion-content>
