@@ -3,235 +3,183 @@
 		<ion-buttons slot="start">
 			<ion-back-button defaultHref="dashboard/contracts"></ion-back-button>
 		</ion-buttons>
-
-		<ion-title>
-			{{ contract ? 'Editar contrato' : 'Nuevo contrato' }}
-		</ion-title>
-
+		<ion-title>{{ contract ? 'Editar contrato' : 'Nuevo contrato' }}</ion-title>
 		<ion-buttons slot="end">
-			<ion-button class="save-btn" color="success" [disabled]="!form?.valid"
-				(click)="contract ? update() : create()">
+			<ion-button class="save-btn" color="success" [disabled]="!form?.valid" (click)="contract ? update() : create()">
 				<ion-icon slot="start" name="save"></ion-icon>
 				Guardar
 			</ion-button>
-
+			@if (contract && contract.contractStatus !== 'CANCELLED') {
+				<ion-button fill="clear" color="warning" (click)="cancelContract()">
+					<ion-icon slot="icon-only" name="ban-outline"></ion-icon>
+				</ion-button>
+			}
 			@if (contract) {
-			<ion-button fill="clear" color="danger" (click)="remove()">
-				<ion-icon slot="icon-only" name="trash"></ion-icon>
-			</ion-button>
+				<ion-button fill="clear" color="danger" (click)="remove()">
+					<ion-icon slot="icon-only" name="trash"></ion-icon>
+				</ion-button>
 			}
 		</ion-buttons>
 	</ion-toolbar>
 </ion-header>
 
-
 <ion-content class="contract-manage">
 	<ion-grid fixed>
 		<ion-row>
 			<ion-col size="12">
-
 				<form [formGroup]="form">
-
-					<!-- ================= HERO ================= -->
 					@if (advisorsDic$ | async; as advisorsDic) {
-					<div class="contract-hero">
-						<div class="avatar">
-							{{ (advisorsDic[form.get('roles.consultant')?.value]?.name || '?')[0] }}
-						</div>
-
-						<div class="hero-info">
-							<div class="title">
-								{{ advisorsDic[form.get('roles.consultant')?.value]?.name || 'Selecciona consultora' }}
+						<div class="contract-hero">
+							<div class="avatar">
+								{{ (advisorsDic[form.get('roles.consultant')?.value]?.name || '?')[0] }}
 							</div>
-							<div class="subtitle">
-								{{ form.get('investor')?.value || 'Inversionista' }}
+							<div class="hero-info">
+								<div class="title">{{ advisorsDic[form.get('roles.consultant')?.value]?.name || 'Selecciona consultora' }}</div>
+								<div class="subtitle">{{ form.get('investor')?.value || 'Inversionista' }}</div>
 							</div>
 						</div>
-					</div>
 					}
 
-					<!-- ================= ROLES ================= -->
 					<div class="section roles-section" formGroupName="roles">
 						<div class="section-title">Participantes del contrato</div>
-
 						<div class="roles-grid">
-
-							<!-- CONSULTORA -->
 							<div class="role-card">
 								<div class="role-label">{{ roleLabels.CONSULTANT }}</div>
 								<ion-select formControlName="consultant">
 									@for (advisor of advisors$ | async; track advisor.uid) {
-									<ion-select-option [value]="advisor.uid">
-										{{ advisor.name }}
-									</ion-select-option>
+										<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
 									}
 								</ion-select>
 							</div>
-
-							<!-- KAM -->
 							<div class="role-card">
 								<div class="role-label kam">{{ roleLabels.KAM }}</div>
 								<ion-select formControlName="kam">
 									@for (advisor of advisorsKam$ | async; track advisor.uid) {
-									<ion-select-option [value]="advisor.uid">
-										{{ advisor.name }}
-									</ion-select-option>
+										<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
 									}
 								</ion-select>
 							</div>
-
-							<!-- GERENTE -->
 							<div class="role-card">
 								<div class="role-label manager">{{ roleLabels.MANAGER }}</div>
 								<ion-select formControlName="manager">
 									@for (advisor of advisorsManager$ | async; track advisor.uid) {
-									<ion-select-option [value]="advisor.uid">
-										{{ advisor.name }}
-									</ion-select-option>
+										<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
 									}
 								</ion-select>
 							</div>
-
-							<!-- DIRECCIÓN VENTAS -->
 							<div class="role-card">
 								<div class="role-label sales">{{ roleLabels.SALES_DIRECTION }}</div>
 								<ion-select formControlName="salesDirector">
 									@for (advisor of advisorsSales$ | async; track advisor.uid) {
-									<ion-select-option [value]="advisor.uid">
-										{{ advisor.name }}
-									</ion-select-option>
+										<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
 									}
 								</ion-select>
 							</div>
-
-							<!-- OPERACIONES -->
 							<div class="role-card">
 								<div class="role-label ops">{{ roleLabels.OPERATIONS }}</div>
 								<ion-select formControlName="operations">
 									@for (advisor of advisorsOps$ | async; track advisor.uid) {
-									<ion-select-option [value]="advisor.uid">
-										{{ advisor.name }}
-									</ion-select-option>
+										<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
 									}
 								</ion-select>
 							</div>
-
-							<!-- CEO -->
 							<div class="role-card ceo">
 								<div class="role-label ceo">{{ roleLabels.CEO }}</div>
 								<ion-select formControlName="ceo">
 									@for (advisor of advisorsCEO$ | async; track advisor.uid) {
-									<ion-select-option [value]="advisor.uid">
-										{{ advisor.name }}
-									</ion-select-option>
+										<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
 									}
 								</ion-select>
 							</div>
-
-							<!-- REFERIDORA -->
-							@if(form.get('source')?.value === 'REFERIDORA') {
-							<div class="role-card referral">
-								<div class="role-label referral">{{ roleLabels.REFERRAL }}</div>
-								<ion-select formControlName="referral">
-									@for (advisor of advisors$ | async; track advisor.uid) {
-									<ion-select-option [value]="advisor.uid">
-										{{ advisor.name }}
-									</ion-select-option>
-									}
-								</ion-select>
-							</div>
+							@if (form.get('source')?.value === 'REFERIDORA') {
+								<div class="role-card referral">
+									<div class="role-label referral">{{ roleLabels.REFERRAL }}</div>
+									<ion-select formControlName="referral">
+										@for (advisor of advisors$ | async; track advisor.uid) {
+											<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
+										}
+									</ion-select>
+								</div>
 							}
-
 						</div>
 					</div>
 
-
-					<!-- ================= INFO GENERAL ================= -->
 					<div class="section">
 						<div class="section-title">Información general</div>
-
 						<div class="grid-2">
 							<ion-item lines="none">
 								<ion-label position="stacked">Inversionista</ion-label>
 								<ion-input formControlName="investor"></ion-input>
 							</ion-item>
-
 							<ion-item lines="none">
 								<ion-label position="stacked">Correo</ion-label>
 								<ion-input type="email" formControlName="email"></ion-input>
 							</ion-item>
-
 							<ion-item lines="none">
-								<ion-label position="stacked">Cuenta cliente</ion-label>
-								<ion-input formControlName="clientAccount"></ion-input>
+								<ion-label position="stacked">RFC</ion-label>
+								<ion-input formControlName="investorRfc" placeholder="RFC inversionista" class="ion-text-uppercase"></ion-input>
+							</ion-item>
+							<ion-item lines="none" class="full-width">
+								<ion-label position="stacked">Domicilio</ion-label>
+								<ion-textarea formControlName="domicilio" rows="2" autoGrow="true"></ion-textarea>
+							</ion-item>
+							<ion-item lines="none">
+								<ion-label position="stacked">Cuenta fondeo (depósitos)</ion-label>
+								<ion-input formControlName="fundingAccount" placeholder="CLABE / cuenta"></ion-input>
+							</ion-item>
+							<ion-item lines="none">
+								<ion-label position="stacked">Banco (cuenta fondeo)</ion-label>
+								<ion-input formControlName="fundingBankInstitution" placeholder="Institución bancaria"></ion-input>
+							</ion-item>
+							<ion-item lines="none">
+								<ion-label position="stacked">Cuenta rendimientos / devoluciones</ion-label>
+								<ion-input formControlName="returnsAccount" placeholder="CLABE / cuenta"></ion-input>
+							</ion-item>
+							<ion-item lines="none">
+								<ion-label position="stacked">Banco (cuenta rendimientos)</ion-label>
+								<ion-input formControlName="returnsBankInstitution" placeholder="Institución bancaria"></ion-input>
 							</ion-item>
 						</div>
-
-						<!-- SOURCE -->
 						<div class="source-wrapper">
 							<div class="source-title">Origen de inversión</div>
 							<div class="source-grid">
 								@for (s of sources; track s.value) {
-								<div class="source-option" [class.active]="form.get('source')?.value === s.value"
-									(click)="form.patchValue({ source: s.value })">
-									{{ s.label }}
-								</div>
+									<div class="source-option" [class.active]="form.get('source')?.value === s.value"
+										(click)="form.patchValue({ source: s.value })">{{ s.label }}</div>
 								}
 							</div>
 						</div>
 					</div>
 
-
-					<!-- ================= FINANCIERO ================= -->
 					<div class="section primary">
 						<div class="section-title">Datos financieros</div>
-
 						<div class="grid-4">
-
 							<ion-item lines="none">
 								<ion-label position="stacked">Capital inicial (MXN)</ion-label>
 								<ion-input type="number" formControlName="initialCapital"></ion-input>
 							</ion-item>
-
 							<ion-item lines="none">
 								<ion-label position="stacked">Rendimiento %</ion-label>
 								<ion-input type="number" formControlName="yieldPercent"></ion-input>
 							</ion-item>
-
 							<ion-item lines="none">
 								<ion-label position="stacked">Liquidez</ion-label>
 								<ion-input type="number" formControlName="liquidity"></ion-input>
 							</ion-item>
-
 							<ion-item lines="none">
 								<ion-label position="stacked">Plazo (meses)</ion-label>
 								<ion-input type="number" formControlName="term"></ion-input>
 							</ion-item>
-
 						</div>
 					</div>
 
-
-					<!-- ================= CONDICIONES ================= -->
 					<div class="section">
 						<div class="section-title">Condiciones</div>
-
 						<div class="grid-2">
 							<ion-item lines="none">
 								<ion-label position="stacked">Periodicidad</ion-label>
 								<ion-input formControlName="yieldFrequency"></ion-input>
 							</ion-item>
-
-							<ion-item lines="none">
-								<ion-label position="stacked">Pagos</ion-label>
-								<ion-input formControlName="payments"></ion-input>
-							</ion-item>
-
-							<ion-item lines="none">
-								<ion-label position="stacked">Estado de cuenta</ion-label>
-								<ion-input formControlName="accountStatus"></ion-input>
-							</ion-item>
-
 							<ion-item lines="none">
 								<ion-label position="stacked">Esquema</ion-label>
 								<ion-select formControlName="scheme">
@@ -240,62 +188,89 @@
 								</ion-select>
 							</ion-item>
 						</div>
+						@if (contract) {
+							@if (!contract.payments && !contract.accountStatus) {
+								<p class="hint-readonly">
+									<strong>Pagos</strong> y <strong>estado de cuenta</strong> aparecen cuando el anexo 1 quede fondeado (según la fecha de fondeo en México).
+								</p>
+							}
+							@if (contract.payments) {
+								<ion-item lines="none">
+									<ion-label position="stacked">Pagos (sistema)</ion-label>
+									<ion-text>{{ contract.payments }}</ion-text>
+								</ion-item>
+							}
+							@if (contract.accountStatus) {
+								<ion-item lines="none">
+									<ion-label position="stacked">Estado de cuenta (sistema)</ion-label>
+									<ion-text>{{ contract.accountStatus }}</ion-text>
+								</ion-item>
+							}
+						}
 					</div>
 
-
-					<!-- ================= FIRMA ================= -->
 					<div class="section success">
 						<div class="section-title">Información de firma</div>
-
 						<div class="grid-2">
 							<ion-item lines="none">
-								<ion-toggle color="success" formControlName="signed">
-									Firmado
-								</ion-toggle>
+								<ion-toggle color="success" formControlName="signed">Firmado</ion-toggle>
 							</ion-item>
-							@if(form.get('signed')?.value) {
-							<ion-item lines="none">
-								<!-- Datepickers as buttons -->
-								<ion-label position="stacked">Fecha firma</ion-label>
-								<br>
-								<ion-datetime-button datetime="datetime"></ion-datetime-button>
-
-								<ion-modal [keepContentsMounted]="true">
-									<ng-template>
-										<ion-datetime id="datetime" formControlName="signatureDate" presentation="date"
-											[showDefaultButtons]="true"></ion-datetime>
-									</ng-template>
-								</ion-modal>
-							</ion-item>
+							@if (form.get('signed')?.value) {
+								<ion-item lines="none">
+									<ion-label position="stacked">Fecha firma</ion-label>
+									<br>
+									<ion-datetime-button datetime="datetime"></ion-datetime-button>
+									<ion-modal [keepContentsMounted]="true">
+										<ng-template>
+											<ion-datetime id="datetime" formControlName="signatureDate" presentation="date" [showDefaultButtons]="true"></ion-datetime>
+										</ng-template>
+									</ion-modal>
+								</ion-item>
 							}
 						</div>
 					</div>
 
-
-					<!-- ================= DOCUMENTOS ================= -->
 					<div class="section">
 						<div class="section-title">Documentación</div>
-
 						<ion-item lines="none">
 							<ion-checkbox slot="start" formControlName="docs"></ion-checkbox>
 							<ion-label>Documentación completa</ion-label>
 						</ion-item>
-
 						<ion-item lines="none">
 							<ion-label position="stacked">Comentarios</ion-label>
 							<ion-textarea formControlName="docsComments"></ion-textarea>
 						</ion-item>
 					</div>
 
-
-					<!-- ================= BENEFICIARIOS ================= -->
-					<div class="section warning">
+					<div class="section warning" formArrayName="beneficiaries">
 						<div class="section-title">Beneficiarios</div>
-						<ion-textarea formControlName="beneficiaries"></ion-textarea>
+						<p class="hint-small">Opcional. Si agregas uno o más: cada uno ≥18 años (México) y los porcentajes deben sumar 100%.</p>
+						@for (b of beneficiariesArray.controls; track $index; let i = $index) {
+							<div class="beneficiary-row" [formGroupName]="i">
+								<ion-item lines="none">
+									<ion-label position="stacked">Nombre</ion-label>
+									<ion-input formControlName="nombre"></ion-input>
+								</ion-item>
+								<ion-item lines="none">
+									<ion-label position="stacked">Fecha nacimiento</ion-label>
+									<ion-input type="date" formControlName="fechaNacimiento"></ion-input>
+								</ion-item>
+								<ion-item lines="none">
+									<ion-label position="stacked">% </ion-label>
+									<ion-input type="number" formControlName="porcentaje"></ion-input>
+								</ion-item>
+								<ion-button fill="clear" color="danger" size="small" (click)="removeBeneficiary(i)">Quitar</ion-button>
+							</div>
+						}
+						<ion-button fill="outline" size="small" (click)="addBeneficiary()">+ Agregar beneficiario</ion-button>
+						@if (form.get('beneficiaries')?.errors?.['sumaPorcentajes']) {
+							<p class="error-text">La suma de porcentajes debe ser 100%.</p>
+						}
+						@if (form.get('beneficiaries')?.errors?.['menorDeEdad']) {
+							<p class="error-text">Cada beneficiario debe tener al menos 18 años.</p>
+						}
 					</div>
-
 				</form>
-
 			</ion-col>
 		</ion-row>
 	</ion-grid>

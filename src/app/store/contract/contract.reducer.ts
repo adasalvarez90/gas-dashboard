@@ -20,6 +20,12 @@ export const contractReducer = createReducer(
 
 	on(ContractsActions.deleteContractSuccess, (state, { uid }) => adapter.removeOne(uid, { ...state, selected: state.selected?.uid === uid ? null : state.selected, loading: false, })),
 
+	on(ContractsActions.cancelContractSuccess, (state, { contract }) =>
+		adapter.updateOne(
+			{ id: contract.uid, changes: contract },
+			{ ...state, selected: state.selected?.uid === contract.uid ? contract : state.selected, loading: false },
+		)),
+
 	// Search actions
 	on(ContractsActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),
 

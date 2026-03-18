@@ -29,12 +29,15 @@ const contract: Contract = {
 	accountStatus: 'ACTIVE',
 
 	email: '',
-	clientAccount: '',
+	investorRfc: 'XAXX010101000',
+	domicilio: 'CDMX',
+	fundingAccount: '012345678901234567',
+	fundingBankInstitution: 'BBVA',
+	returnsAccount: '012345678901234567',
+	returnsBankInstitution: 'BBVA',
 
 	docs: false,
 	docsComments: '',
-
-	beneficiaries: '',
 
 	signed: true,
 

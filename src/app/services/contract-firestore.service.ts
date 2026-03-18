@@ -1,9 +1,14 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where, writeBatch } from '@angular/fire/firestore';
+import { deleteField } from 'firebase/firestore';
 
 import * as _ from 'lodash';
 
-import { Contract } from 'src/app/store/contract/contract.model';
+import { Contract, ContractBeneficiary, ContractStatus } from 'src/app/store/contract/contract.model';
+import {
+	normalizeContractAccounts,
+	resolvePaymentsAndAccountStatus,
+} from 'src/app/domain/contract/contract-derived-fields.util';
 import { Tranche } from 'src/app/store/tranche/tranche.model';
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { TrancheFirestoreService } from './tranche-firestore.service';
@@ -29,7 +34,30 @@ export class ContractFirestoreService {
 
 		const snap = await getDocs(q);
 
-		return snap.docs.map(d => d.data() as Contract);
+		return snap.docs.map((d) => this.normalizeFromDoc(d.data() as Record<string, unknown>));
+	}
+
+	private normalizeFromDoc(raw: Record<string, unknown>): Contract {
+		const c = raw as unknown as Contract;
+		let beneficiaries: ContractBeneficiary[] | undefined;
+		const b = raw['beneficiaries'];
+		if (Array.isArray(b)) {
+			beneficiaries = b as ContractBeneficiary[];
+		}
+		const withAccounts = normalizeContractAccounts({
+			...c,
+			beneficiaries,
+		});
+		const status = (c.contractStatus || 'PENDING') as ContractStatus;
+		const { payments, accountStatus } = resolvePaymentsAndAccountStatus({
+			contractStatus: status,
+			startDate: typeof c.startDate === 'number' ? c.startDate : undefined,
+		});
+		return {
+			...withAccounts,
+			payments,
+			accountStatus,
+		};
 	}
 
 	// ➕ Create contract only (no tranche); use when contract is not signed yet.
@@ -42,8 +70,10 @@ export class ContractFirestoreService {
 			contractStatus: 'PENDING',
 			startDate: undefined,
 			endDate: undefined,
+			payments: '',
+			accountStatus: '',
 			_create: now,
-			_on: true
+			_on: true,
 		};
 		const docData = _.omitBy(contract, _.isUndefined) as Record<string, unknown>;
 		await setDoc(doc(this.firestore, this.contractsCollection, contractUid), docData);
@@ -64,8 +94,10 @@ export class ContractFirestoreService {
 			startDate: undefined,
 			endDate: undefined,
 			initialCapital: initialCapital,
+			payments: '',
+			accountStatus: '',
 			_create: now,
-			_on: true
+			_on: true,
 		};
 		const contractDocData = _.omitBy(contract, _.isUndefined) as Record<string, unknown>;
 		await setDoc(doc(this.firestore, this.contractsCollection, contractUid), contractDocData);
@@ -93,6 +125,7 @@ export class ContractFirestoreService {
 		const updateContract = _.cloneDeep(contract);
 		updateContract._update = Date.now();
 		const docData = _.omitBy(updateContract, _.isUndefined) as Record<string, unknown>;
+		docData['clientAccount'] = deleteField();
 		const ref = doc(this.firestore, this.contractsCollection, contract.uid);
 		await updateDoc(ref, docData);
 		return updateContract;
@@ -137,9 +170,10 @@ export class ContractFirestoreService {
 			doc(this.firestore, 'contracts', contract.uid),
 			{
 				contractStatus: 'CANCELLED',
-				accountStatus: 'CANCELLED',
+				payments: '',
+				accountStatus: '',
 				cancelledAt: now,
-				_update: now
+				_update: now,
 			}
 		);
 

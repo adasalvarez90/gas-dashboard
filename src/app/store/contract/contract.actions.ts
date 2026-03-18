@@ -26,6 +26,11 @@ export const deleteContract = createAction('[Contracts] Delete', props<{ uid: st
 export const deleteContractSuccess = createAction('[Contracts] Delete Success', props<{ uid: string }>());
 export const deleteContractFailure = createAction('[Contracts] Delete Failure', props<{ error: string }>());
 
+// Cancel (activo → cancelado + comisiones futuras)
+export const cancelContract = createAction('[Contracts] Cancel', props<{ contract: Contract }>());
+export const cancelContractSuccess = createAction('[Contracts] Cancel Success', props<{ contract: Contract }>());
+export const cancelContractFailure = createAction('[Contracts] Cancel Failure', props<{ error: string }>());
+
 // Search
 export const setSearchTerm = createAction('[Contracts] Set Search Term', props<{ searchTerm: string }>());
 

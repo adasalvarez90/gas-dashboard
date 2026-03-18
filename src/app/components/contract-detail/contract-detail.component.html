@@ -31,9 +31,9 @@
 		</div>
 
 		<div class="meta-line">
-			<span class="status" [class.active]="contract.accountStatus === 'active'"
-				[class.pending]="contract.accountStatus !== 'active'">
-				{{ contract.accountStatus | titlecase }}
+			<span class="status" [class.active]="contract.contractStatus === 'ACTIVE'"
+				[class.pending]="contract.contractStatus === 'PENDING'">
+				{{ contractStatusLabel(contract.contractStatus) }}
 			</span>
 
 			<span class="tag scheme">{{ contract.scheme }}</span>
@@ -175,10 +175,18 @@
 				<strong>{{ contract.yieldFrequency }}</strong>
 			</div>
 
-			<div>
-				<span class="label">Pagos</span>
-				<strong>{{ contract.payments }}</strong>
-			</div>
+			@if (contract.payments) {
+				<div>
+					<span class="label">Pagos</span>
+					<strong>{{ contract.payments }}</strong>
+				</div>
+			}
+			@if (contract.accountStatus) {
+				<div>
+					<span class="label">Estado de cuenta</span>
+					<strong>{{ contract.accountStatus }}</strong>
+				</div>
+			}
 		</div>
 	</div>
 
@@ -192,8 +200,28 @@
 		</div>
 
 		<div class="info-row">
-			<span class="label">Cuenta cliente</span>
-			<span class="value">{{ contract.clientAccount }}</span>
+			<span class="label">RFC</span>
+			<span class="value">{{ contract.investorRfc || '—' }}</span>
+		</div>
+		<div class="info-row">
+			<span class="label">Domicilio</span>
+			<span class="value">{{ contract.domicilio || '—' }}</span>
+		</div>
+		<div class="info-row">
+			<span class="label">Cuenta fondeo</span>
+			<span class="value">{{ contract.fundingAccount }}</span>
+		</div>
+		<div class="info-row">
+			<span class="label">Banco fondeo</span>
+			<span class="value">{{ contract.fundingBankInstitution || '—' }}</span>
+		</div>
+		<div class="info-row">
+			<span class="label">Cuenta rendimientos</span>
+			<span class="value">{{ contract.returnsAccount || contract.fundingAccount }}</span>
+		</div>
+		<div class="info-row">
+			<span class="label">Banco rendimientos</span>
+			<span class="value">{{ contract.returnsBankInstitution || '—' }}</span>
 		</div>
 	</div>
 
@@ -216,12 +244,15 @@
 	</div>
 
 	<!-- BENEFICIARIOS -->
-	@if (contract.beneficiaries) {
+	@if (contract.beneficiaries?.length) {
 	<div class="card">
 		<div class="card-title">Beneficiarios</div>
-		<p class="text-block">
-			{{ contract.beneficiaries }}
-		</p>
+		@for (b of contract.beneficiaries; track $index) {
+			<div class="info-row">
+				<span class="label">{{ b.nombre }}</span>
+				<span class="value">{{ b.fechaNacimiento }} · {{ b.porcentaje }}%</span>
+			</div>
+		}
 	</div>
 	}
 

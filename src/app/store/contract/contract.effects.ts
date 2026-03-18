@@ -204,4 +204,47 @@ export class ContractEffects {
 			),
 		),
 	);
+
+	cancelContract$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(ContractActions.cancelContract),
+			exhaustMap(async ({ contract }) => {
+				const loading = await this.loadingCtrl.create({
+					message: 'Cancelando contrato…',
+				});
+				await loading.present();
+				try {
+					await this.contractFS.cancelContract(contract);
+					await loading.dismiss();
+					const toast = await this.toastCtrl.create({
+						color: 'primary',
+						message: 'Contrato cancelado.',
+						duration: 3000,
+						position: 'middle',
+					});
+					await toast.present();
+					const now = Date.now();
+					return ContractActions.cancelContractSuccess({
+						contract: {
+							...contract,
+							contractStatus: 'CANCELLED',
+							payments: '',
+							accountStatus: '',
+							cancelledAt: now,
+						},
+					});
+				} catch (err: any) {
+					await loading.dismiss();
+					const toast = await this.toastCtrl.create({
+						color: 'danger',
+						message: err?.message || 'Error al cancelar',
+						duration: 4000,
+						position: 'middle',
+					});
+					await toast.present();
+					return ContractActions.cancelContractFailure({ error: err?.message });
+				}
+			}),
+		),
+	);
 }

@@ -11,6 +11,10 @@ import { CommissionConfigFirestoreService } from 'src/app/services/commission-co
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
 import { CommissionPolicyFirestoreService } from 'src/app/services/commission-policy-firestore.service';
 import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
+import {
+	computeAccountStatusAfterTranche1Funded,
+	computePaymentsAfterTranche1Funded,
+} from '../contract/contract-derived-fields.util';
 
 /**
  * Application service: coordinates persistence and domain.
@@ -38,7 +42,7 @@ export class TrancheDepositService {
 		const contracts = await this.contractFS.getContracts();
 		const contract = contracts.find(c => c.uid === deposit.contractUid);
 		if (!contract) throw new Error('Contrato no encontrado');
-		if (contract.accountStatus === 'CANCELLED') {
+		if (contract.contractStatus === 'CANCELLED') {
 			throw new Error('No se pueden registrar depósitos en un contrato cancelado');
 		}
 
@@ -100,7 +104,7 @@ export class TrancheDepositService {
 		const contracts = await this.contractFS.getContracts();
 		const contract = contracts.find(c => c.uid === contractUid);
 		if (!contract) throw new Error('Contrato no encontrado');
-		if (contract.accountStatus === 'CANCELLED') {
+		if (contract.contractStatus === 'CANCELLED') {
 			throw new Error('No se puede modificar un tramo en un contrato cancelado');
 		}
 
@@ -187,7 +191,9 @@ export class TrancheDepositService {
 			...contract,
 			startDate,
 			endDate,
-			contractStatus: 'ACTIVE'
+			contractStatus: 'ACTIVE',
+			payments: computePaymentsAfterTranche1Funded(fundedAt),
+			accountStatus: computeAccountStatusAfterTranche1Funded(fundedAt),
 		});
 	}
 

@@ -36,49 +36,22 @@ Example:
 
 # Fields Not User-Editable (payments, accountStatus)
 
-The fields **payments** and **accountStatus** must **not** be filled when creating or editing a contract. They are computed and set by the system when the first tranche (sequence 1) is funded.
+Until tranche **sequence 1** is fully funded, **payments** and **accountStatus** stay **empty** (no copy in UI).
+
+When tranche 1 is funded, the system sets both from the funding timestamp in **Mexico** timezone:
+
+| Funding day (CDMX) | `payments`     | `accountStatus`   |
+|--------------------|----------------|-------------------|
+| 1–15               | `15 del mes`   | `1 o 2 del mes`   |
+| 16–31              | `Final de mes` | `16 o 17 del mes` |
+
+On contract **cancellation**, both fields are cleared again.
 
 ---
 
-# Yield Payment Schedule
+# Yield / periodicity note
 
-When tranche sequence 1 (the first tranche of a contract) is funded, the system determines the yield payment dates based on the funding date and the contract's periodicity (`yieldFrequency`).
-
-## Date ranges based on funding day
-
-The system identifies two ranges based on the day of the month when tranche 1 is funded:
-
-| Funding day range | Yield payment day |
-|-------------------|-------------------|
-| 1–15              | 15th              |
-| 16–30 (or 16–28 / 16–29 in February) | 30th (or 28th/29th in February) |
-
-- If tranche 1 is funded between days **1–15** → yield payments occur on the **15th**.
-- If tranche 1 is funded between days **16–30** (or 28/29 in February) → yield payments occur on the **30th** (or 28th/29th in February).
-
-Example:
-
-- Tranche 1 funded on January 8 (range 1–15) → yield payments on the 15th
-- Tranche 1 funded on January 22 (range 16–30) → yield payments on the 30th
-- Tranche 1 funded on February 25 (range 16–28/29) → yield payments on the 28th or 29th
-
-## Periodicity (yieldFrequency)
-
-The contract's `yieldFrequency` defines how often yields are paid. Possible values:
-
-- **mensual**
-- **trimestral**
-- **semestral**
-- **anual**
-
-The payment day (15 or 30/28/29) repeats according to this frequency:
-
-- **Mensual**: every month on the determined day
-- **Trimestral**: every quarter on the determined day
-- **Semestral**: every 6 months on the determined day
-- **Anual**: every 12 months on the determined day
-
-The `payments` field is set by the system based on this logic and must not be entered manually when creating or editing a contract.
+`yieldFrequency` (mensual, trimestral, etc.) remains on the contract for product rules; the displayed **payments** label is only the shorthand above after tranche 1 is funded.
 
 ---
 
@@ -100,16 +73,23 @@ Fields **payments** and **accountStatus** are system-computed (see above) and mu
 
 ---
 
-# Client Accounts
+# Investor identity and address
 
-A contract has **two** client account references:
+- **investorRfc** — RFC del inversionista  
+- **domicilio** — Domicilio del inversionista  
 
-| Account                      | Purpose                                                                 |
-|-----------------------------|-------------------------------------------------------------------------|
-| **Funding account**         | Account from which deposits (fondeo) are made                          |
-| **Returns account**         | Account where yields are paid and principal is returned                 |
+# Client accounts (two)
 
-Both accounts can be **the same** when funding, yield payments, and principal return all use a single account.
+| Field | Purpose |
+|-------|---------|
+| **fundingAccount** | Cuenta para depósitos / fondeo |
+| **fundingBankInstitution** | Institución bancaria de la cuenta de fondeo |
+| **returnsAccount** | Cuenta para rendimientos y devoluciones |
+| **returnsBankInstitution** | Institución bancaria de la cuenta de rendimientos |
+
+Both account pairs can point to the same bank and same numbers when a single account is used for everything.
+
+Legacy Firestore field **clientAccount** is migrated into **fundingAccount** on read and removed on update.
 
 ---
 

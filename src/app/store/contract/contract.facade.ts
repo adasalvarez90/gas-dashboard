@@ -42,6 +42,10 @@ export class ContractFacade {
 		this.store.dispatch(ContractActions.deleteContract({ uid }));
 	}
 
+	cancelContract(contract: Contract) {
+		this.store.dispatch(ContractActions.cancelContract({ contract }));
+	}
+
 	searchText(searchTerm: string) {
 		this.store.dispatch(ContractActions.setSearchTerm({ searchTerm }));
 	}

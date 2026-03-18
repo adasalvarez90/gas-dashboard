@@ -6,7 +6,7 @@ import * as _ from 'lodash';
 // Models
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
-import { Contract } from '../../store/contract/contract.model';
+import { Contract, ContractStatus } from '../../store/contract/contract.model';
 
 @Component({
 	selector: 'app-contract-detail',
@@ -40,6 +40,16 @@ export class ContractDetailComponent {
 		this.close();
 		// navigate to manage page
 		this.navCtrl.navigateForward(['dashboard', 'contracts', 'manage']);
+	}
+
+	contractStatusLabel(s: ContractStatus): string {
+		const m: Record<ContractStatus, string> = {
+			PENDING: 'Pendiente',
+			ACTIVE: 'Activo',
+			FINISHED: 'Finalizado',
+			CANCELLED: 'Cancelado',
+		};
+		return m[s] ?? s;
 	}
 
 	toggleSign(contract: Contract) {

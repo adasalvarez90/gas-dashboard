@@ -258,6 +258,18 @@
 }
 
 /* ===== BENEFICIARIOS ===== */
+.beneficiaries-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.beneficiary-line {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	font-size: 14px;
+	opacity: 0.95;
+}
 .beneficiaries-text,
 .beneficiaries-block {
 	font-size: 16px;

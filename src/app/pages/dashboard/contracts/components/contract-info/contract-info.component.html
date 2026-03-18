@@ -44,8 +44,20 @@
 						<span class="data-value">{{ contract.email }}</span>
 					</div>
 					<div class="data-row">
-						<span class="data-label">Cuenta cliente</span>
-						<span class="data-value mono">{{ contract.clientAccount }}</span>
+						<span class="data-label">RFC</span>
+						<span class="data-value mono">{{ contract.investorRfc || '—' }}</span>
+					</div>
+					<div class="data-row">
+						<span class="data-label">Domicilio</span>
+						<span class="data-value">{{ contract.domicilio || '—' }}</span>
+					</div>
+					<div class="data-row">
+						<span class="data-label">Cuenta fondeo</span>
+						<span class="data-value mono">{{ contract.fundingBankInstitution || '—' }} - {{ contract.fundingAccount || '—' }}</span>
+					</div>
+					<div class="data-row">
+						<span class="data-label">Cuenta rendimientos</span>
+						<span class="data-value mono">{{ contract.returnsBankInstitution || '—' }} - {{ contract.returnsAccount || contract.fundingAccount || '—' }}</span>
 					</div>
 				</div>
 			</div>
@@ -62,12 +74,12 @@
 						<span class="data-value">{{ contract.yieldFrequency }}</span>
 					</div>
 					<div class="data-row">
-						<span class="data-label">Pagos</span>
-						<span class="data-value">{{ contract.payments }}</span>
+						<span class="data-label">Pago de rendimientos</span>
+						<span class="data-value">{{ contract.payments? contract.payments : '—' }}</span>
 					</div>
 					<div class="data-row">
-						<span class="data-label">Estado de cuenta</span>
-						<span class="data-value">{{ contract.accountStatus }}</span>
+						<span class="data-label">Envío de estado de cuenta</span>
+						<span class="data-value">{{ contract.accountStatus? contract.accountStatus : '—' }}</span>
 					</div>
 				</div>
 			</div>
@@ -139,10 +151,18 @@
 			</div>
 		</div>
 
-		@if (contract.beneficiaries) {
+		@if (contract.beneficiaries?.length) {
 			<div class="card card-beneficiaries">
 				<div class="section-label">Beneficiarios</div>
-				<div class="beneficiaries-text">{{ contract.beneficiaries }}</div>
+				<div class="beneficiaries-list">
+					@for (b of contract.beneficiaries; track $index) {
+						<div class="beneficiary-line">
+							<strong>{{ b.nombre }}</strong>
+							<span>{{ b.fechaNacimiento }}</span>
+							<span>{{ b.porcentaje }}%</span>
+						</div>
+					}
+				</div>
 			</div>
 		}
 	}
