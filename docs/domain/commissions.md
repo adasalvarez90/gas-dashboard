@@ -71,6 +71,267 @@ Annex rule:
 
 ---
 
+# Commission View in Contract — Informative Only
+
+The commission screen within a contract must be **purely informative**.
+
+The following actions must be **removed**:
+
+- Pay each commission individually
+- Pay the general cut (corte general)
+
+The user can only view the commission information. Payment actions take place elsewhere (see Commission Cuts page).
+
+---
+
+# Commission View in Contract (Informative Only)
+
+The commission screen within a contract must be **purely informative**.
+
+- Remove the ability to pay each commission individually.
+- Remove the ability to pay the general cut.
+- The user can only view commission data; no payment actions are available.
+- Payment actions are managed in a separate Commission Cuts page (see `commission-cuts.md`).
+
+---
+
+# Commission View in Contract (Informative Only)
+
+The commission screen within a contract must be **purely informative**. The system must remove all payment actions:
+
+- No "pay single commission" action
+- No "pay cut" (pay general cut) action
+
+Users consult commission status in the contract, but payment management is done elsewhere (see Commission Cuts page).
+
+---
+
+# Commission View in Contract — Informative Only
+
+The commission screen within a contract must be **purely informative**. The system must remove all actions related to paying commissions:
+
+- No action to pay each commission individually.
+- No action to pay the general cut (corte general).
+
+The user can only view commission data in that screen. Payment actions are handled elsewhere (see Commission Cuts).
+
+---
+
+# Contract Commission Screen (Informative Only)
+
+The commission view **within a contract** is **purely informative**.
+
+- Remove the ability to pay each commission individually.
+- Remove the ability to pay the general cut (corte general).
+
+The user may only view commission information. Payment actions occur in a separate commission cuts page (see `commission-cuts.md`).
+
+---
+
+# Commission View in Contract — Informative Only
+
+The commission screen within a contract must be **purely informative**. The following actions must be **removed**:
+
+- Pay individual commission
+- Pay general cut (corte general)
+
+The user may only view commission data. Payment actions are handled elsewhere (see Commission Cuts).
+
+---
+
+# Contract Commission Screen: Informative Only
+
+The commission view within a contract is **purely informative**.
+
+- **Remove** the ability to pay each commission individually.
+- **Remove** the ability to pay the general cut.
+- The screen only displays commission information; no payment actions are available.
+
+Payment and cut management is handled on the separate [Commission Cuts](commission-cuts.md) page.
+
+---
+
+# Contract Commission Screen: Informative Only
+
+The commission view within a contract must be **purely informative**. No payment actions.
+
+- Remove the action to pay each commission individually.
+- Remove the action to pay the general cut.
+- Read-only. See `commission-cuts.md` for the dedicated payment/summary page.
+
+---
+
+# Contract Commissions Screen — Informative Only
+
+The commission view within a contract is **purely informative**.
+
+- **Remove** the ability to pay each commission individually.
+- **Remove** the ability to pay the general cut.
+- The user may **only consult** commissions; no payment actions are available in this view.
+
+Payment of commissions is handled elsewhere (see Commission Cuts page).
+
+---
+
+# Contract Commission Screen — Informative Only
+
+The commission view within a contract (contract detail / commissions tab) must be **purely informative**.
+
+**Remove** all payment actions:
+
+- ~~Pay each commission~~
+- ~~Pay general cut~~
+
+The user only views commission data; no payment actions are performed from that screen. Payment/processing is handled elsewhere (see Commission Cuts).
+
+---
+
+# Contract Commission Screen — Informative Only
+
+The commission screen within a contract (contract-commissions) is **purely informative**.
+
+- **Remove** the ability to pay each commission individually.
+- **Remove** the ability to pay the general cut.
+
+The user only views commission data. Payment actions and cut management are handled in a separate Commission Cuts page (see `commission-cuts.md`).
+
+---
+
+# Contract Commission View (Informative Only)
+
+The commission screen within a contract must be **purely informative**. The following actions must be removed:
+
+- Pay each individual commission
+- Pay the general cut
+
+The user only consults commission information at the contract level. Actual payment flows are handled via the **Commission Cuts** summary page (see `commission-cuts.md`).
+
+---
+
+# Contract Commissions View: Informative Only
+
+The commission screen **within a contract** is **purely informative**.
+
+- Remove the actions: "Pagar comisión individual" and "Pagar corte general".
+- No payment actions are performed from this view. The user only consults commissions per contract.
+
+---
+
+# Contract Commissions View — Informative Only
+
+The commission screen within a contract (contract-commissions component) is **purely informative**.
+
+- **Remove** the action to pay each commission individually.
+- **Remove** the action to pay the general cut.
+
+The user only views commission data. Payment and cut management are handled in the dedicated Commission Cuts / Summary page (see [commission-cuts.md](./commission-cuts.md)).
+
+---
+
+# Contract Commission Screen: Informative Only
+
+The commission view within a contract is **purely informative**. The following actions must not be available:
+
+- Pay each commission individually
+- Pay the general cut (corte general)
+
+The user can only consult commission information. Payment actions are performed in a separate commission cuts page.
+
+---
+
+# Contract Commissions Screen (Informative Only)
+
+The commission view within a contract must be **purely informative**.
+
+- Remove the ability to pay each commission individually.
+- Remove the ability to pay the general cut.
+
+That screen is read-only. Payment flows are handled in the Commission Cuts page (see `commission-cuts.md`).
+
+---
+
+# Contract Commissions View — Informative Only
+
+The commission screen within a contract must **not** allow:
+
+- Paying each commission individually
+- Paying the general cut (corte general)
+
+That view is **purely informative**. All payment actions must be removed.
+
+See [Commission Cuts](commission-cuts.md) for the separate page where summaries and PDFs are generated.
+
+---
+
+# Contract Commissions View: Informative Only
+
+The commission screen within a contract must be **purely informative**. The system must remove:
+
+- The action to pay each commission individually
+- The action to pay the general cut
+
+No payment actions are available in this view. See [Commission Cuts](commission-cuts.md) for the page where commission summaries and payments are managed.
+
+---
+
+# Contract Commission View: Informative Only
+
+The commission screen within a contract must **not** allow:
+
+- Paying each commission individually
+- Paying the general cut
+
+That view is **purely informative**. See [Commission Cuts](commission-cuts.md) for the page where cut summaries and PDF exports are handled.
+
+---
+
+# Contract Commission Screen — Informative Only
+
+The commission view within a contract **must be purely informative**. Remove the ability to:
+
+- Pay each commission individually
+- Pay the general cut (corte general)
+
+This screen only displays commission information. Payment actions are done elsewhere (see Commission Cuts page).
+
+---
+
+# Commission Screen Within Contract: Read-Only
+
+The commission view inside a contract is **purely informative**.
+
+- The system must **not** allow paying each commission individually.
+- The system must **not** allow paying the general cut.
+- No payment actions. The view is read-only.
+
+Payment actions are handled in the dedicated Commission Cuts page (see `commission-cuts.md`).
+
+---
+
+# Contract Commissions View: Informative Only
+
+The commission screen **inside a contract** is **purely informative**. The system must remove:
+
+- The action to pay each commission individually
+- The action to pay the general cut
+
+That view only displays commission data; no payment actions. Payment and cut management occur on the separate [Commission Cuts](commission-cuts.md) page.
+
+---
+
+# Contract Commissions View — Informative Only
+
+The commission screen within a contract must be **purely informative**.
+
+The system must remove:
+
+- The action to pay each commission individually
+- The action to pay the general cut (corte general)
+
+No payment actions are available in that view. Payment logic is handled in the [Commission Cuts](./commission-cuts.md) page.
+
+---
+
 # Commission Generation
 
 When a tranche becomes funded:
@@ -80,3 +341,82 @@ The system must generate all future commission payments immediately.
 This ensures financial consistency and auditability.
 
 These payments are stored as CommissionPayment records.
+
+---
+
+# Contract Commission Screen (Informative Only)
+
+The commission screen within a contract view is **purely informative**. It must **not** allow:
+
+- Paying each commission individually.
+- Paying the general cut.
+
+Pay actions are handled elsewhere. See [Commission Cuts](commission-cuts.md) for the commission summary and payment workflow.
+
+---
+
+# Contract Commission Screen: Informative Only
+
+The commission view inside a contract must be **purely informative**. Remove all payment actions:
+
+- Do **not** allow "pay single commission" (pagar comisión individual)
+- Do **not** allow "pay general cut" (pagar corte general)
+
+The contract commissions screen is read-only. Payment actions are managed elsewhere (see [Commission Cuts](commission-cuts.md)).
+
+---
+
+# Contract Commissions Screen — Informative Only
+
+The commission screen within a contract must be **purely informative**. The system must remove:
+
+- The action to pay each commission individually
+- The action to pay the general cut (corte general)
+
+The user can only view commissions; no payment actions are available in this screen.
+
+Payment and cut management is handled in a separate Commission Cuts page (see `commission-cuts.md`).
+
+---
+
+# Commission Screen in Contract (Informative Only)
+
+The commission view within a contract must be **purely informative**. The following actions must be **removed**:
+
+- Pay individual commission
+- Pay general cut (corte general)
+
+The user may only view commission data. Payment actions are handled elsewhere (see Commission Cuts page).
+
+---
+
+# Commission Screen in Contract (Informative Only)
+
+The commission view within a contract is **purely informative**. The user must **not** be able to:
+
+- Pay individual commissions
+- Pay the general cut (corte general)
+
+That screen only displays commission data. All payment actions are handled elsewhere (see Commission Cuts page).
+
+---
+
+# Commission View in Contract (Informative Only)
+
+The commission screen within a contract is **purely informative**. The following actions must be removed:
+
+- Pay individual commission
+- Pay general cut (corte general)
+
+The user can only view commission information. All payment actions are managed elsewhere (see Commission Cuts page).
+
+---
+
+# Contract Commission Screen (Informative Only)
+
+The commission view within a contract must be **purely informative**.
+
+- **Remove** the action to pay each commission individually.
+- **Remove** the action to pay the general cut (corte general).
+
+The user can only view commissions. Payment actions are handled elsewhere (see Commission Cuts page).

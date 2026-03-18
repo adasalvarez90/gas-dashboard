@@ -10,7 +10,7 @@ Contracts manage the lifecycle of the investment and the commissions generated b
 
 A contract can be created **with or without** being signed.
 
-- **Created as signed**: the user marks "Firmado" and sets the signature date. The system creates the contract and **automatically creates the first tranche (sequence 1)** with the initial capital and the signature date as the tranche’s `signedAt`.
+- **Created as signed**: the user marks "Firmado" and sets the signature date. The system creates the contract and **automatically creates the first tranche (sequence 1)** with the initial capital and the signature date as the tranche's `signedAt`.
 - **Created as not signed**: the user leaves "Firmado" off. The system creates **only the contract** (no tranches). The investor can review clauses and details. When the user later marks the contract as signed and enters the signature date (and initial capital), the system **automatically creates the first tranche (sequence 1)** at that moment.
 
 The first tranche is therefore created only when the contract is signed and has a signature date (and, when applicable, initial capital). Annex tranches (sequence 2+) are created manually by the user when the previous tranche is funded.
@@ -23,50 +23,99 @@ A contract does not start when it is signed.
 
 A contract starts only when the first tranche becomes fully funded.
 
-
 Contract start = fundedAt of first tranche
 
-
-Contract duration is always:
-
-
-12 months
-
+Contract duration is always: **12 months**
 
 Example:
 
+- Tranche funded: January 15
+- Contract end: January 15 next year
 
-Tranche funded: January 15
-Contract end: January 15 next year
+---
 
+# Fields Not User-Editable (payments, accountStatus)
+
+The fields **payments** and **accountStatus** must **not** be filled when creating or editing a contract. They are computed and set by the system when the first tranche (sequence 1) is funded.
+
+---
+
+# Yield Payment Schedule
+
+When tranche sequence 1 (the first tranche of a contract) is funded, the system determines the yield payment dates based on the funding date and the contract's periodicity (`yieldFrequency`).
+
+## Date ranges based on funding day
+
+The system identifies two ranges based on the day of the month when tranche 1 is funded:
+
+| Funding day range | Yield payment day |
+|-------------------|-------------------|
+| 1–15              | 15th              |
+| 16–30 (or 16–28 / 16–29 in February) | 30th (or 28th/29th in February) |
+
+- If tranche 1 is funded between days **1–15** → yield payments occur on the **15th**.
+- If tranche 1 is funded between days **16–30** (or 28/29 in February) → yield payments occur on the **30th** (or 28th/29th in February).
+
+Example:
+
+- Tranche 1 funded on January 8 (range 1–15) → yield payments on the 15th
+- Tranche 1 funded on January 22 (range 16–30) → yield payments on the 30th
+- Tranche 1 funded on February 25 (range 16–28/29) → yield payments on the 28th or 29th
+
+## Periodicity (yieldFrequency)
+
+The contract's `yieldFrequency` defines how often yields are paid. Possible values:
+
+- **mensual**
+- **trimestral**
+- **semestral**
+- **anual**
+
+The payment day (15 or 30/28/29) repeats according to this frequency:
+
+- **Mensual**: every month on the determined day
+- **Trimestral**: every quarter on the determined day
+- **Semestral**: every 6 months on the determined day
+- **Anual**: every 12 months on the determined day
+
+The `payments` field is set by the system based on this logic and must not be entered manually when creating or editing a contract.
 
 ---
 
 # Contract Fields
 
-Important fields:
+Important user-editable fields:
 
+- uid
+- investor
+- scheme
+- source
+- roles
+- yieldFrequency
+- startDate
+- endDate
+- contractStatus
 
-uid
-investor
-scheme
-source
-roles
-startDate
-endDate
-contractStatus
+Fields **payments** and **accountStatus** are system-computed (see above) and must not be set on create/edit.
 
+---
+
+# Client Accounts
+
+A contract has **two** client account references:
+
+| Account                      | Purpose                                                                 |
+|-----------------------------|-------------------------------------------------------------------------|
+| **Funding account**         | Account from which deposits (fondeo) are made                          |
+| **Returns account**         | Account where yields are paid and principal is returned                 |
+
+Both accounts can be **the same** when funding, yield payments, and principal return all use a single account.
 
 ---
 
 # Contract Schemes
 
-Two schemes exist:
-
-
-A
-B
-
+Two schemes exist: **A** and **B**
 
 These schemes define how commissions are distributed.
 
@@ -78,12 +127,10 @@ The origin of the investment determines commission distribution.
 
 Possible values:
 
-
-COMUNIDAD
-RED_CALIDA
-DINERO_PROPIO
-REFERIDORA
-
+- COMUNIDAD
+- RED_CALIDA
+- DINERO_PROPIO
+- REFERIDORA
 
 This value determines which commission matrix is used.
 
@@ -91,36 +138,47 @@ This value determines which commission matrix is used.
 
 # Contract Roles
 
-Each contract assigns advisors to specific roles.
+Each contract assigns advisors to specific roles. Roles determine how commissions are split.
 
-Roles determine how commissions are split.
-
-Example:
-
-
-consultant
-kam
-manager
-salesDirector
-operations
-ceo
-referral
-
+Example: consultant, kam, manager, salesDirector, operations, ceo, referral
 
 The referral role is optional and only exists when the source is REFERIDORA.
 
 ---
 
+# Beneficiaries
+
+The **beneficiaries** field is **not** a free-text or open field. It must be a **collection** (array) of beneficiary objects, each with:
+
+| Field               | Description                                              |
+|---------------------|----------------------------------------------------------|
+| `nombre`             | Full name of the beneficiary                             |
+| `fechaNacimiento`   | Date of birth                                            |
+| `porcentaje`         | Percentage allocation                                    |
+
+## Validation: Legal Age in Mexico
+
+Each beneficiary's `fechaNacimiento` must validate that the person is **18 years or older** (mayoría de edad en México) at the time of creating or editing the contract.
+
+If the calculated age is less than 18, the system must reject the beneficiary and show a validation error.
+
+## Validation: Total Percentage
+
+When there is more than one beneficiary, the sum of all `porcentaje` values must equal **100%**. The total cannot exceed 100%.
+
+The system must reject the form and show a validation error if the sum is different from 100% (whether under or over).
+
+---
+
 # Contract Cancellation
 
-Contracts may be cancelled.
+Contracts may be cancelled by the user.
 
-When this happens:
+**Before cancelling:** The system must check if the contract has **pending commissions** (not yet paid). If it does, the system must **warn the user** that there are commissions pending payment.
 
-Future unpaid commissions must be marked as:
+The user can proceed with cancellation after acknowledging the warning, but must be informed of the situation.
 
+When cancellation is confirmed:
 
-cancelled = true
-
-
-Already paid commissions remain unchanged.
+- Future unpaid commissions must be marked as: `cancelled = true`
+- Already paid commissions remain unchanged.
