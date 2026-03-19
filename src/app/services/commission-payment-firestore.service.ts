@@ -51,11 +51,6 @@ export class CommissionPaymentFirestoreService {
 
 	// ===== GET BY CUT DATE RANGE (for Commission Cuts page) =====
 	async getCommissionPaymentsByCutDateRange(startCutDate: number, endCutDate: number): Promise<CommissionPayment[]> {
-		// Debug: ver en consola qué rango se consulta y cuántos resultados
-		console.log('[CommissionPayments] Query cutDate range:', {
-			start: new Date(startCutDate).toISOString(),
-			end: new Date(endCutDate).toISOString(),
-		});
 		const ref = collection(this.firestore, this.collectionName);
 		const q = query(
 			ref,
@@ -63,14 +58,8 @@ export class CommissionPaymentFirestoreService {
 			where('cutDate', '<=', endCutDate),
 			where('_on', '==', true),
 		);
-
 		const snap = await getDocs(q);
-		const result = snap.docs.map(d => d.data() as CommissionPayment);
-		console.log('[CommissionPayments] Resultados:', result.length);
-		if (result.length === 0) {
-			console.warn('[CommissionPayments] No hay datos. Revisa: ¿tienen cutDate tus documentos? ¿El rango coincide?');
-		}
-		return result;
+		return snap.docs.map((d) => d.data() as CommissionPayment);
 	}
 
 	// ===== MARK PAID BY TRANCH + ADVISOR =====

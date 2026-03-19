@@ -113,12 +113,7 @@ export class InviteFirestoreService {
 		const ref = doc(this.firestore, 'invites', inviteUid);
 
 		const snap = await getDoc(ref);
-		console.log('🔥 DOC EXISTS?', snap.exists(), snap.id);
-
-		if (!snap.exists()) {
-			console.error('❌ DOCUMENT DOES NOT EXIST:', inviteUid);
-			return;
-		}
+		if (!snap.exists()) return;
 
 		await updateDoc(ref, { ...changes, _update: Date.now() });
 	}

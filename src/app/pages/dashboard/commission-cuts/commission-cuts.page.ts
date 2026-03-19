@@ -225,6 +225,15 @@ export class CommissionCutsPage implements OnInit {
 		});
 	}
 
+	/** Recarga estados y opcionalmente pagos del rango por defecto */
+	private refreshCutData(reloadPayments = false) {
+		const { startCutDate, endCutDate } = getDefaultCutDateRange();
+		if (reloadPayments) {
+			this.commissionPaymentFacade.loadCommissionPaymentsForCuts(startCutDate, endCutDate);
+		}
+		this.loadStates(startCutDate, endCutDate);
+	}
+
 	isBreakdownOverdue(cutDate: number): boolean {
 		const d = new Date(cutDate);
 		return Date.now() > d.getTime();
@@ -269,40 +278,27 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	markBreakdownSent(advisorUid: string, cutDate: number) {
-		this.stateService.markBreakdownSent(cutDate, advisorUid).then(() => {
-			const { startCutDate, endCutDate } = getDefaultCutDateRange();
-			this.loadStates(startCutDate, endCutDate);
-		});
+		this.stateService.markBreakdownSent(cutDate, advisorUid).then(() => this.refreshCutData());
 	}
 
 	async markInvoiceSent(advisorUid: string, cutDate: number, file?: File) {
-		let invoiceUrl: string | undefined;
-		if (file) {
-			invoiceUrl = await this.attachmentService.uploadAttachment(cutDate, advisorUid, 'invoice', file);
-		}
+		const invoiceUrl = file ? await this.attachmentService.uploadAttachment(cutDate, advisorUid, 'invoice', file) : undefined;
 		const state = await this.stateService.markInvoiceSent(cutDate, advisorUid, invoiceUrl);
 		const invoiceDeadline = state.breakdownSentAt ? getInvoiceDeadline(state.breakdownSentAt) : 0;
-		// Regla factura tardía: si factura se envió después del plazo, mover comisión al siguiente corte
-		if (state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadline)) {
+		const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadline));
+		if (invoiceWasLate) {
 			const nextCutDate = getNextCutDate(cutDate);
 			await this.paymentFirestore.movePaymentsToNextCut(cutDate, advisorUid, nextCutDate);
 			await this.stateService.moveStateToNextCut(cutDate, advisorUid);
-			const range = getDefaultCutDateRange();
-			this.commissionPaymentFacade.loadCommissionPaymentsForCuts(range.startCutDate, range.endCutDate);
 		}
-		const { startCutDate, endCutDate } = getDefaultCutDateRange();
-		this.loadStates(startCutDate, endCutDate);
+		this.refreshCutData(invoiceWasLate);
 	}
 
 	async markPaid(advisorUid: string, cutDate: number, file?: File) {
-		let receiptUrl: string | undefined;
-		if (file) {
-			receiptUrl = await this.attachmentService.uploadAttachment(cutDate, advisorUid, 'receipt', file);
-		}
+		const receiptUrl = file ? await this.attachmentService.uploadAttachment(cutDate, advisorUid, 'receipt', file) : undefined;
 		await this.stateService.markPaid(cutDate, advisorUid, receiptUrl);
 		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(cutDate, advisorUid, Date.now());
-		const { startCutDate, endCutDate } = getDefaultCutDateRange();
-		this.loadStates(startCutDate, endCutDate);
+		this.refreshCutData();
 	}
 
 	markAdvisorCutAsPaid(advisorUid: string, cutDate: number) {
