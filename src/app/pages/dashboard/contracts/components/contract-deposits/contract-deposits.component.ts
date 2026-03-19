@@ -7,7 +7,9 @@ import { Observable } from 'rxjs';
 
 import { Contract } from 'src/app/store/contract/contract.model';
 import { Tranche } from 'src/app/store/tranche/tranche.model';
-import { Deposit } from 'src/app/store/deposit/deposit.model';
+import { Deposit, SOURCE_ACCOUNT_NO_ESPECIFICADA, SourceAccountId } from 'src/app/store/deposit/deposit.model';
+
+import { getSourceAccountOptions, SourceAccountOption } from 'src/app/domain/contract/contract-derived-fields.util';
 
 import { DepositFacade } from 'src/app/store/deposit/deposit.facade';
 import { TrancheFacade } from 'src/app/store/tranche/tranche.facade';
@@ -38,8 +40,18 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 	depositTargetTranche: Tranche | null = null;
 	createDepositAmount: number | null = null;
 	createDepositDate: string | null = null;
-	get isCreateDepositAmountValid(): boolean {
+	createDepositSourceAccount: SourceAccountId = 'funding';
+	get isCreateDepositFormValid(): boolean {
 		return typeof this.createDepositAmount === 'number' && isFinite(this.createDepositAmount) && this.createDepositAmount > 0;
+	}
+
+	isEditDepositModalOpen = false;
+	editingDeposit: Deposit | null = null;
+	editDepositAmount: number | null = null;
+	editDepositDate: string | null = null;
+	editDepositSourceAccount: SourceAccountId = 'funding';
+	get isEditDepositFormValid(): boolean {
+		return typeof this.editDepositAmount === 'number' && isFinite(this.editDepositAmount) && this.editDepositAmount > 0;
 	}
 
 	constructor(
@@ -96,6 +108,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 		this.depositTargetTranche = tranche;
 		this.createDepositAmount = null;
 		this.createDepositDate = null;
+		this.createDepositSourceAccount = 'funding';
 		this.isCreateDepositModalOpen = true;
 	}
 
@@ -106,10 +119,55 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 		this.createDepositDate = null;
 	}
 
+	getSourceAccountOptions(contract: Contract): SourceAccountOption[] {
+		return getSourceAccountOptions(contract);
+	}
+
+	isDepositInvalid(deposit: Deposit): boolean {
+		return deposit.sourceAccount === SOURCE_ACCOUNT_NO_ESPECIFICADA ||
+			deposit.sourceAccount === undefined;
+	}
+
+	openEditDepositModal(deposit: Deposit, event: Event) {
+		event.stopPropagation();
+		this.editingDeposit = deposit;
+		this.editDepositAmount = deposit.amount;
+		this.editDepositDate = deposit.depositedAt ? new Date(deposit.depositedAt).toISOString().slice(0, 10) : null;
+		this.editDepositSourceAccount = deposit.sourceAccount ?? SOURCE_ACCOUNT_NO_ESPECIFICADA;
+		this.isEditDepositModalOpen = true;
+	}
+
+	closeEditDepositModal() {
+		this.isEditDepositModalOpen = false;
+		this.editingDeposit = null;
+		this.editDepositAmount = null;
+		this.editDepositDate = null;
+	}
+
+	confirmEditDeposit() {
+		if (!this.editingDeposit || !this.isEditDepositFormValid) return;
+		const depositedAt = this.editDepositDate ? new Date(this.editDepositDate).getTime() : this.editingDeposit.depositedAt;
+		const updated: Deposit = {
+			...this.editingDeposit,
+			amount: this.editDepositAmount!,
+			depositedAt,
+			sourceAccount: this.editDepositSourceAccount,
+		};
+		this.depositFacade.updateDeposit(updated);
+		this.closeEditDepositModal();
+	}
+
+	confirmDeleteDeposit(deposit: Deposit, event: Event) {
+		event.stopPropagation();
+		if (confirm(`¿Eliminar el depósito de $${deposit.amount?.toLocaleString()}?`)) {
+			this.depositFacade.deleteDeposit(deposit.uid);
+		}
+	}
+
 	confirmCreateDeposit() {
 		if (!this.contract?.uid) return;
 		if (!this.depositTargetTranche?.uid) return;
-		if (!this.isCreateDepositAmountValid) return;
+		if (!this.isCreateDepositFormValid) return;
 		const depositedAt = this.createDepositDate ? new Date(this.createDepositDate).getTime() : Date.now();
 		this.selectTranche(this.depositTargetTranche.uid);
 		const newDeposit: Deposit = {
@@ -117,6 +175,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 			trancheUid: this.depositTargetTranche.uid,
 			amount: this.createDepositAmount!,
 			depositedAt,
+			sourceAccount: this.createDepositSourceAccount,
 			uid: '',
 		};
 		this.depositFacade.createDeposit(newDeposit);

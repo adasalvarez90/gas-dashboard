@@ -63,9 +63,24 @@
 				} @else {
 				<div class="deposits-list">
 						@for (deposit of deposits; track deposit.uid; let i = $index) {
-						<div class="deposit-card">
-							<div class="deposit-amount">${{ deposit.amount | number:'1.0-0' }}</div>
-							<div class="deposit-date">{{ deposit.depositedAt | date:'d MMM y' }}</div>
+						<div class="deposit-card" [class.deposit-card--invalid]="isDepositInvalid(deposit)">
+							<div class="deposit-card-main">
+								<div class="deposit-amount">${{ deposit.amount | number:'1.0-0' }}</div>
+								<div class="deposit-date">{{ deposit.depositedAt | date:'d MMM y' }}</div>
+								@if (isDepositInvalid(deposit)) {
+								<span class="deposit-badge-invalid">No especificada</span>
+								}
+							</div>
+							@if (!tranche.funded) {
+							<div class="deposit-actions">
+								<ion-button fill="clear" size="small" (click)="openEditDepositModal(deposit, $event)">
+									<ion-icon name="pencil-outline"></ion-icon>
+								</ion-button>
+								<ion-button fill="clear" size="small" color="danger" (click)="confirmDeleteDeposit(deposit, $event)">
+									<ion-icon name="trash-outline"></ion-icon>
+								</ion-button>
+							</div>
+							}
 						</div>
 						}
 					</div>
@@ -154,21 +169,75 @@
 				</ion-input>
 			</ion-item>
 			<ion-item lines="full" style="margin-top: 8px;">
+				<ion-label position="stacked">Cuenta origen</ion-label>
+				<ion-select [(ngModel)]="createDepositSourceAccount" interface="popover">
+					@for (opt of getSourceAccountOptions(contract); track opt.value) {
+					<ion-select-option [value]="opt.value">{{ opt.label }}</ion-select-option>
+					}
+				</ion-select>
+			</ion-item>
+			<ion-item lines="full" style="margin-top: 8px;">
 				<ion-label position="stacked">Fecha (opcional)</ion-label>
 				<ion-input type="date" [(ngModel)]="createDepositDate"></ion-input>
 			</ion-item>
-			@if (!isCreateDepositAmountValid && createDepositAmount !== null) {
+			@if (!isCreateDepositFormValid && createDepositAmount !== null) {
 			<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
 				Ingresa un monto válido (mayor a 0).
 			</div>
 			}
 			<div style="margin-top: 16px;">
 				<ion-button expand="block" shape="round" (click)="confirmCreateDeposit()"
-					[disabled]="!isCreateDepositAmountValid">
+					[disabled]="!isCreateDepositFormValid">
 					Registrar depósito
 				</ion-button>
 				<ion-button expand="block" fill="clear" (click)="closeCreateDepositModal()">Cancelar</ion-button>
 			</div>
+		</ion-content>
+	</ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isEditDepositModalOpen" (didDismiss)="closeEditDepositModal()">
+	<ng-template>
+		<ion-header>
+			<ion-toolbar>
+				<ion-title>Editar depósito</ion-title>
+				<ion-buttons slot="end">
+					<ion-button (click)="closeEditDepositModal()">Cerrar</ion-button>
+				</ion-buttons>
+			</ion-toolbar>
+		</ion-header>
+		<ion-content class="ion-padding">
+			@if (editingDeposit) {
+			<ion-item lines="full">
+				<ion-label position="stacked">Monto del depósito</ion-label>
+				<ion-input type="number" inputmode="decimal" placeholder="Ej. 50000" [(ngModel)]="editDepositAmount">
+				</ion-input>
+			</ion-item>
+			<ion-item lines="full" style="margin-top: 8px;">
+				<ion-label position="stacked">Cuenta origen</ion-label>
+				<ion-select [(ngModel)]="editDepositSourceAccount" interface="popover">
+					@for (opt of getSourceAccountOptions(contract); track opt.value) {
+					<ion-select-option [value]="opt.value">{{ opt.label }}</ion-select-option>
+					}
+				</ion-select>
+			</ion-item>
+			<ion-item lines="full" style="margin-top: 8px;">
+				<ion-label position="stacked">Fecha</ion-label>
+				<ion-input type="date" [(ngModel)]="editDepositDate"></ion-input>
+			</ion-item>
+			@if (!isEditDepositFormValid && editDepositAmount !== null) {
+			<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+				Ingresa un monto válido (mayor a 0).
+			</div>
+			}
+			<div style="margin-top: 16px;">
+				<ion-button expand="block" shape="round" (click)="confirmEditDeposit()"
+					[disabled]="!isEditDepositFormValid">
+					Guardar cambios
+				</ion-button>
+				<ion-button expand="block" fill="clear" (click)="closeEditDepositModal()">Cancelar</ion-button>
+			</div>
+			}
 		</ion-content>
 	</ng-template>
 </ion-modal>

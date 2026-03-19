@@ -6,16 +6,6 @@
 	margin-bottom: 40px;
 }
 
-.deposits-grid {
-	display: grid;
-	gap: 20px;
-	margin-bottom: 32px;
-}
-
-.actions-bottom {
-	margin-top: 24px;
-}
-
 /* ===== TRANCHE CARD ===== */
 .tranche-card {
 	background: rgba(255, 255, 255, .03);
@@ -157,33 +147,6 @@
 }
 
 /* ===== DEPOSITS SECTION ===== */
-.deposits-block {
-	margin-top: 20px;
-	padding-top: 20px;
-	border-top: 1px solid rgba(255, 255, 255, .06);
-}
-
-.deposits-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	margin-bottom: 16px;
-}
-
-.deposits-title {
-	font-size: 12px;
-	text-transform: uppercase;
-	letter-spacing: .6px;
-	opacity: .65;
-}
-
-.deposits-count {
-	font-size: 13px;
-	font-weight: 600;
-	opacity: .8;
-}
-
 .deposits-list {
 	display: grid;
 	gap: 12px;
@@ -207,6 +170,34 @@
 	border-color: rgba(255, 255, 255, .08);
 }
 
+.deposit-card--invalid {
+	border-color: rgba(var(--ion-color-danger-rgb), .4);
+	background: rgba(var(--ion-color-danger-rgb), .08);
+}
+
+.deposit-card-main {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+}
+
+.deposit-badge-invalid {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: .3px;
+	color: var(--ion-color-danger);
+	font-weight: 600;
+	margin-top: 4px;
+}
+
+.deposit-actions {
+	display: flex;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
 .deposit-amount {
 	font-size: 20px;
 	font-weight: 800;
@@ -218,46 +209,6 @@
 	font-size: 14px;
 	opacity: .8;
 	font-weight: 500;
-}
-
-/* Empty state */
-.empty-state-deposits {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 32px 24px;
-	border-radius: 14px;
-	background: rgba(255, 255, 255, .02);
-	border: 1px dashed rgba(255, 255, 255, .08);
-	text-align: center;
-}
-
-.empty-state-deposits ion-icon {
-	font-size: 40px;
-	opacity: .4;
-	margin-bottom: 12px;
-}
-
-.empty-state-deposits p {
-	font-size: 15px;
-	opacity: .7;
-	margin: 0;
-	line-height: 1.45;
-}
-
-/* Registrar depósito button */
-.btn-register-deposit {
-	margin-top: 16px;
-	--border-radius: 12px;
-	font-weight: 600;
-}
-
-/* Crear anexo button */
-.btn-create-tranche {
-	--border-radius: 14px;
-	font-weight: 600;
-	padding: 16px;
 }
 
 .section-divider {
@@ -272,12 +223,6 @@
 	letter-spacing: .5px;
 	opacity: .75;
 	margin-bottom: 10px;
-}
-
-.empty-inline {
-	font-size: 15px;
-	opacity: .75;
-	margin-top: 10px;
 }
 
 /* Responsive */

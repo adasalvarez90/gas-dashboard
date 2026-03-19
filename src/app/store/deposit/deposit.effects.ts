@@ -105,7 +105,7 @@ export class DepositEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.depositFS.updateDeposit(deposit).then(
+					return this.trancheDepositService.updateDeposit(deposit).then(
 						async (response) => {
 							// Hide the loading
 							await loading.dismiss();
@@ -151,7 +151,7 @@ export class DepositEffects {
 					// Present the loading
 					await loading.present();
 
-					return this.depositFS.deleteDeposit(uid).then(
+					return this.trancheDepositService.deleteDeposit(uid).then(
 						async () => {
 							// Hide the loading
 							await loading.dismiss();

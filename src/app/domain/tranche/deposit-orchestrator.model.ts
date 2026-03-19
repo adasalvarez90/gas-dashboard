@@ -18,3 +18,12 @@ export interface AmendTrancheResult {
 	contractActivated: boolean;
 	commissionDrafts: CommissionPaymentDraft[];
 }
+
+/**
+ * Result of recalculating tranche from deposit list (update/delete flows).
+ */
+export interface RecalculateTrancheResult {
+	updatedTranche: Tranche;
+	contractActivated: boolean;
+	commissionDrafts: CommissionPaymentDraft[];
+}

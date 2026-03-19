@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, getDoc, doc, updateDoc, setDoc, query, where } from '@angular/fire/firestore';
 
 import * as _ from 'lodash';
 
@@ -13,6 +13,15 @@ export class DepositFirestoreService {
 	private readonly collectionName = 'deposits';
 
 	constructor(private firestore: Firestore) { }
+
+	// ===== GET ONE =====
+	async getDeposit(uid: string): Promise<Deposit | null> {
+		const ref = doc(this.firestore, this.collectionName, uid);
+		const snap = await getDoc(ref);
+		if (!snap.exists()) return null;
+		const data = snap.data() as Deposit;
+		return data._on !== false ? data : null;
+	}
 
 	// ===== GET ALL =====
 	async getDeposits(trancheUid: string): Promise<Deposit[]> {

@@ -14,7 +14,9 @@ import { CommissionPolicy } from 'src/app/store/commission-policy/commission-pol
 import {
 	computeAccountStatusAfterTranche1Funded,
 	computePaymentsAfterTranche1Funded,
+	normalizeContractAccounts,
 } from '../contract/contract-derived-fields.util';
+import { isDepositSourceValid, SOURCE_ACCOUNT_NO_ESPECIFICADA } from 'src/app/store/deposit/deposit.model';
 
 /**
  * Application service: coordinates persistence and domain.
@@ -46,20 +48,29 @@ export class TrancheDepositService {
 			throw new Error('No se pueden registrar depósitos en un contrato cancelado');
 		}
 
+		const existingDeposits = await this.depositFS.getDeposits(tranche.uid);
+		const hasOtherNoEspecificadaDeposits = existingDeposits.some(
+			d => d.sourceAccount === SOURCE_ACCOUNT_NO_ESPECIFICADA
+		);
+
 		const configs = await this.commissionConfigFS.getCommissionConfigs();
 		const roleSplits = this.roleResolver.resolveRoleSplits(contract, configs);
 
-		const willFund = tranche.totalDeposited + deposit.amount === tranche.amount;
+		const validAmount = isDepositSourceValid(deposit.sourceAccount) ? deposit.amount : 0;
+		const willFund = tranche.totalDeposited + validAmount === tranche.amount &&
+			!hasOtherNoEspecificadaDeposits &&
+			deposit.sourceAccount !== SOURCE_ACCOUNT_NO_ESPECIFICADA;
 		const commissionPolicy = willFund
 			? await this.resolveCommissionPolicy(contract, deposit.depositedAt)
 			: null;
 
 		const result = this.orchestrator.registerDeposit(
-			{ amount: deposit.amount, depositedAt: deposit.depositedAt },
+			{ amount: deposit.amount, depositedAt: deposit.depositedAt, sourceAccount: deposit.sourceAccount },
 			tranche,
 			contract,
 			roleSplits,
-			commissionPolicy
+			commissionPolicy,
+			hasOtherNoEspecificadaDeposits
 		);
 
 		const savedDeposit = await this.depositFS.createDeposit(deposit);
@@ -108,24 +119,27 @@ export class TrancheDepositService {
 			throw new Error('No se puede modificar un tramo en un contrato cancelado');
 		}
 
+		const deposits = await this.depositFS.getDeposits(tranche.uid);
 		let trancheForOrchestrator = { ...tranche };
 		if (
 			tranche.totalDeposited === newAmount &&
 			tranche.lastDepositAt == null &&
 			tranche.totalDeposited > 0
 		) {
-			const deposits = await this.depositFS.getDeposits(tranche.uid);
 			const lastDepositAt = deposits.reduce(
 				(max, d) => Math.max(max, d.depositedAt ?? 0),
 				0
 			);
 			trancheForOrchestrator = { ...tranche, lastDepositAt: lastDepositAt || undefined };
 		}
+		const hasNoEspecificadaDeposits = deposits.some(
+			d => d.sourceAccount === SOURCE_ACCOUNT_NO_ESPECIFICADA
+		);
 
 		const configs = await this.commissionConfigFS.getCommissionConfigs();
 		const roleSplits = this.roleResolver.resolveRoleSplits(contract, configs);
 
-		const willFundByAmendment = trancheForOrchestrator.totalDeposited === newAmount;
+		const willFundByAmendment = trancheForOrchestrator.totalDeposited === newAmount && !hasNoEspecificadaDeposits;
 		const fundedAt = trancheForOrchestrator.lastDepositAt;
 		const commissionPolicy = willFundByAmendment && fundedAt != null
 			? await this.resolveCommissionPolicy(contract, fundedAt)
@@ -138,7 +152,8 @@ export class TrancheDepositService {
 			amendedAt,
 			reason,
 			roleSplits,
-			commissionPolicy
+			commissionPolicy,
+			hasNoEspecificadaDeposits
 		});
 
 		await this.trancheFS.updateTranche(result.updatedTranche);
@@ -152,6 +167,90 @@ export class TrancheDepositService {
 		}
 
 		return result.updatedTranche;
+	}
+
+	async updateDeposit(deposit: Deposit): Promise<Deposit> {
+		const tranches = await this.trancheFS.getTranches(deposit.contractUid);
+		const tranche = tranches.find(t => t.uid === deposit.trancheUid);
+		if (!tranche) throw new Error('Tranche no encontrado');
+		if (tranche.funded) throw new Error('No se puede editar depósitos en un tramo ya fondeado');
+
+		const contracts = await this.contractFS.getContracts();
+		const contract = contracts.find(c => c.uid === deposit.contractUid);
+		if (!contract || contract.contractStatus === 'CANCELLED') throw new Error('Contrato no encontrado o cancelado');
+
+		const allDeposits = await this.depositFS.getDeposits(tranche.uid);
+		const updatedList = allDeposits.map(d => d.uid === deposit.uid ? deposit : d);
+
+		const configs = await this.commissionConfigFS.getCommissionConfigs();
+		const roleSplits = this.roleResolver.resolveRoleSplits(contract, configs);
+		const fundedAt = updatedList.reduce((max, d) => Math.max(max, d.depositedAt ?? 0), 0);
+		const commissionPolicy = await this.resolveCommissionPolicy(contract, fundedAt);
+
+		const result = this.orchestrator.recalculateTrancheFromDeposits(
+			updatedList.map(d => ({ amount: d.amount, sourceAccount: d.sourceAccount, depositedAt: d.depositedAt })),
+			tranche,
+			contract,
+			roleSplits,
+			commissionPolicy
+		);
+
+		const updatedDeposit = await this.depositFS.updateDeposit(deposit);
+		await this.trancheFS.updateTranche(result.updatedTranche);
+
+		if (result.contractActivated && result.updatedTranche.fundedAt) {
+			await this.activateContract(deposit.contractUid, result.updatedTranche.fundedAt);
+		}
+		if (result.commissionDrafts.length > 0) {
+			const existing = await this.commissionPaymentFS.getCommissionPayments(tranche.uid);
+			if (existing.length === 0) {
+				await this.commissionPaymentFS.createManyCommissionPayment(result.commissionDrafts);
+			}
+		}
+		return updatedDeposit;
+	}
+
+	async deleteDeposit(uid: string): Promise<void> {
+		const deposit = await this.depositFS.getDeposit(uid);
+		if (!deposit) throw new Error('Depósito no encontrado');
+
+		const tranches = await this.trancheFS.getTranches(deposit.contractUid);
+		const tranche = tranches.find(t => t.uid === deposit.trancheUid);
+		if (!tranche) throw new Error('Tranche no encontrado');
+		if (tranche.funded) throw new Error('No se puede eliminar depósitos de un tramo ya fondeado');
+
+		const contracts = await this.contractFS.getContracts();
+		const contract = contracts.find(c => c.uid === deposit.contractUid);
+		if (!contract || contract.contractStatus === 'CANCELLED') throw new Error('Contrato no encontrado o cancelado');
+
+		const allDeposits = await this.depositFS.getDeposits(tranche.uid);
+		const remainingDeposits = allDeposits.filter(d => d.uid !== uid);
+
+		const configs = await this.commissionConfigFS.getCommissionConfigs();
+		const roleSplits = this.roleResolver.resolveRoleSplits(contract, configs);
+		const lastDepositAt = remainingDeposits.reduce((max, d) => Math.max(max, d.depositedAt ?? 0), 0);
+		const commissionPolicy = await this.resolveCommissionPolicy(contract, lastDepositAt || Date.now());
+
+		const result = this.orchestrator.recalculateTrancheFromDeposits(
+			remainingDeposits.map(d => ({ amount: d.amount, sourceAccount: d.sourceAccount, depositedAt: d.depositedAt })),
+			tranche,
+			contract,
+			roleSplits,
+			commissionPolicy
+		);
+
+		await this.depositFS.deleteDeposit(uid);
+		await this.trancheFS.updateTranche(result.updatedTranche);
+
+		if (result.contractActivated && result.updatedTranche.fundedAt) {
+			await this.activateContract(deposit.contractUid, result.updatedTranche.fundedAt);
+		}
+		if (result.commissionDrafts.length > 0) {
+			const existing = await this.commissionPaymentFS.getCommissionPayments(tranche.uid);
+			if (existing.length === 0) {
+				await this.commissionPaymentFS.createManyCommissionPayment(result.commissionDrafts);
+			}
+		}
 	}
 
 	private async resolveCommissionPolicy(contract: Contract, fundedAt: number): Promise<CommissionPolicy | null> {

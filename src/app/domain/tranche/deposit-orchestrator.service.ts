@@ -7,7 +7,8 @@ import {
 } from 'src/app/models/commission-engine.model';
 import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
 import { CommissionEngineService } from '../engines/commission-engine.service';
-import { RegisterDepositResult, AmendTrancheResult } from './deposit-orchestrator.model';
+import { RegisterDepositResult, AmendTrancheResult, RecalculateTrancheResult } from './deposit-orchestrator.model';
+import { SourceAccountId, SOURCE_ACCOUNT_NO_ESPECIFICADA, isDepositSourceValid } from 'src/app/store/deposit/deposit.model';
 
 /**
  * Domain orchestrator for deposit and tranche-amount flows.
@@ -21,14 +22,18 @@ export class DepositOrchestratorService {
 
 	/**
 	 * Applies a deposit to a tranche and returns the new state and any commission drafts.
+	 * totalDeposited only counts deposits with sourceAccount valid (not no_especificada).
+	 * A tranche cannot be marked funded if it has any deposit with no_especificada.
 	 * Caller is responsible for validation that contract is not cancelled.
 	 */
 	registerDeposit(
-		deposit: { amount: number; depositedAt: number },
+		deposit: { amount: number; depositedAt: number; sourceAccount?: SourceAccountId },
 		tranche: Tranche,
 		contract: Contract,
 		roleSplits: CommissionRoleSplit[],
-		commissionPolicy?: CommissionPolicy | null
+		commissionPolicy?: CommissionPolicy | null,
+		/** Si el tranche ya tiene depósitos con cuenta no especificada */
+		hasOtherNoEspecificadaDeposits = false
 	): RegisterDepositResult {
 		if (deposit.amount <= 0) {
 			throw new Error('El monto del depósito debe ser mayor a 0');
@@ -37,7 +42,8 @@ export class DepositOrchestratorService {
 			throw new Error('Este tramo ya está fondeado al 100%');
 		}
 
-		const newTotal = tranche.totalDeposited + deposit.amount;
+		const validAmount = isDepositSourceValid(deposit.sourceAccount) ? deposit.amount : 0;
+		const newTotal = tranche.totalDeposited + validAmount;
 		if (newTotal > tranche.amount) {
 			throw new Error('El depósito excede el monto del tramo');
 		}
@@ -45,13 +51,17 @@ export class DepositOrchestratorService {
 		const updatedTranche: Tranche = {
 			...tranche,
 			totalDeposited: newTotal,
-			lastDepositAt: deposit.depositedAt
+			lastDepositAt: isDepositSourceValid(deposit.sourceAccount) ? deposit.depositedAt : tranche.lastDepositAt
 		};
 
 		let contractActivated = false;
 		let commissionDrafts: CommissionPaymentDraft[] = [];
 
-		if (newTotal === tranche.amount) {
+		// Fondeo bloqueado si hay depósitos no_especificada (este o existentes).
+		const hasNoEspecificada = deposit.sourceAccount === SOURCE_ACCOUNT_NO_ESPECIFICADA || hasOtherNoEspecificadaDeposits;
+		const canFund = newTotal === tranche.amount && !hasNoEspecificada;
+
+		if (canFund) {
 			updatedTranche.funded = true;
 			updatedTranche.fundedAt = deposit.depositedAt;
 			contractActivated = tranche.sequence === 1;
@@ -71,6 +81,50 @@ export class DepositOrchestratorService {
 	}
 
 	/**
+	 * Recalcula el tranche a partir de la lista completa de depósitos (usado en update/delete).
+	 */
+	recalculateTrancheFromDeposits(
+		deposits: { amount: number; sourceAccount?: SourceAccountId; depositedAt: number }[],
+		tranche: Tranche,
+		contract: Contract,
+		roleSplits: CommissionRoleSplit[],
+		commissionPolicy?: CommissionPolicy | null
+	): RegisterDepositResult {
+		const totalDeposited = deposits.reduce(
+			(sum, d) => sum + (isDepositSourceValid(d.sourceAccount) ? d.amount : 0),
+			0
+		);
+		const validDeposits = deposits.filter(d => isDepositSourceValid(d.sourceAccount));
+		const lastDepositAt = validDeposits.length > 0
+			? Math.max(...validDeposits.map(d => d.depositedAt))
+			: tranche.lastDepositAt;
+		const hasNoEspecificada = deposits.some(d => d.sourceAccount === SOURCE_ACCOUNT_NO_ESPECIFICADA);
+		const canFund = totalDeposited === tranche.amount && !hasNoEspecificada;
+
+		const updatedTranche: Tranche = {
+			...tranche,
+			totalDeposited,
+			lastDepositAt: lastDepositAt ?? tranche.lastDepositAt,
+			funded: canFund,
+			fundedAt: canFund && lastDepositAt ? lastDepositAt : undefined
+		};
+
+		let contractActivated = false;
+		let commissionDrafts: CommissionPaymentDraft[] = [];
+		if (canFund && !tranche.funded) {
+			contractActivated = tranche.sequence === 1;
+			commissionDrafts = this.commissionEngine.generateForTranche(
+				contract,
+				updatedTranche,
+				roleSplits,
+				commissionPolicy
+			);
+		}
+
+		return { updatedTranche, contractActivated, commissionDrafts };
+	}
+
+	/**
 	 * Amends tranche amount (before funded). When totalDeposited === newAmount, marks as funded
 	 * with fundedAt = tranche.lastDepositAt (rule B). Caller must ensure lastDepositAt is set
 	 * (e.g. backfill from deposits) when funding by amendment.
@@ -83,8 +137,10 @@ export class DepositOrchestratorService {
 		reason?: string;
 		roleSplits: CommissionRoleSplit[];
 		commissionPolicy?: CommissionPolicy | null;
+		/** Si el tranche tiene depósitos con cuenta no especificada, no se puede fondear */
+		hasNoEspecificadaDeposits?: boolean;
 	}): AmendTrancheResult {
-		const { tranche, contract, newAmount, amendedAt, reason, roleSplits, commissionPolicy } = params;
+		const { tranche, contract, newAmount, amendedAt, reason, roleSplits, commissionPolicy, hasNoEspecificadaDeposits } = params;
 
 		if (newAmount <= 0) {
 			throw new Error('El monto del tramo debe ser mayor a 0');
@@ -109,7 +165,8 @@ export class DepositOrchestratorService {
 		let commissionDrafts: CommissionPaymentDraft[] = [];
 
 		let contractActivated = false;
-		if (tranche.totalDeposited === newAmount) {
+		const canFundByAmendment = tranche.totalDeposited === newAmount && !hasNoEspecificadaDeposits;
+		if (canFundByAmendment) {
 			updatedTranche.funded = true;
 			const lastDepositAt = updatedTranche.lastDepositAt;
 			if (lastDepositAt == null) {
