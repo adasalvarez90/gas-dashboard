@@ -22,11 +22,11 @@ export class AdvisorEffects {
 	) { }
 
 	// 🔎 Load advisors
+	// Sin withLatestFrom(user$): las rutas protegidas ya pasaron guards. Bloqueaba en lazy load.
 	loadAdvisors$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(AdvisorActions.loadAdvisors),
-			withLatestFrom(this.authFacade.user$),
-			switchMap(([_, user]) =>
+			switchMap(() =>
 				this.advisorFS.getAdvisors().then(
 					advisors => AdvisorActions.loadAdvisorsSuccess({ advisors }),
 					err => AdvisorActions.loadAdvisorsFailure({ error: err.message }),

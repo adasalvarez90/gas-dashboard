@@ -10,7 +10,7 @@ export interface AuthState {
 
 export const initialState: AuthState = {
   user: null,
-  loading: false,
+  loading: true, // true inicial para que AuthGuard espere restoreSession antes de decidir
   error: null,
 };
 

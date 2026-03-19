@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "commissionPayments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_on", "order": "ASCENDING" },
+        { "fieldPath": "cutDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "commissionCutAdvisorStates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_on", "order": "ASCENDING" },
+        { "fieldPath": "cutDate", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

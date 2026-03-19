@@ -24,6 +24,12 @@ export const commissionPaymentReducer = createReducer(
 
 	on(CommissionPaymentsActions.loadCommissionPaymentsByCutDateFailure, (state, { error }) => ({ ...state, loading: false, selected: null, error, })),
 
+	on(CommissionPaymentsActions.loadCommissionPaymentsForCuts, (state) => ({ ...state, loading: true, selected: null, error: null, })),
+
+	on(CommissionPaymentsActions.loadCommissionPaymentsForCutsSuccess, (state, { commissionPayments }) => adapter.setAll(commissionPayments, { ...state, selected: null, loading: false })),
+
+	on(CommissionPaymentsActions.loadCommissionPaymentsForCutsFailure, (state, { error }) => ({ ...state, loading: false, selected: null, error, })),
+
 	on(CommissionPaymentsActions.selectCommissionPayment, (state, { commissionPayment }) => ({ ...state, selected: commissionPayment, })),
 
 	on(CommissionPaymentsActions.createCommissionPaymentSuccess, (state, { commissionPayments }) => adapter.addMany(commissionPayments, state)),
@@ -45,6 +51,16 @@ export const commissionPaymentReducer = createReducer(
 	}),
 
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateFailure, (state, { error }) => ({ ...state, loading: false, error })),
+
+	// Mark paid by cutDate + advisor
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisor, (state) => ({ ...state, loading: true, error: null })),
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisorSuccess, (state, { cutDate, advisorUid, paidAt }) => {
+		const updates = Object.values(state.entities)
+			.filter((p) => !!p && p.cutDate === cutDate && p.advisorUid === advisorUid && !p.paid && !p.cancelled)
+			.map((p) => ({ id: p!.uid, changes: { paid: true, paidAt } }));
+		return adapter.updateMany(updates, { ...state, loading: false });
+	}),
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisorFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
 	// Mark paid by tranche + advisor
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisor, (state) => ({ ...state, loading: true, error: null })),

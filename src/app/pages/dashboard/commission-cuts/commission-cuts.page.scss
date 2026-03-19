@@ -1,0 +1,141 @@
+.commission-cuts-page {
+	padding: 16px;
+
+	ion-card {
+		margin-bottom: 16px;
+	}
+
+	ion-item {
+		--padding-start: 0;
+		margin-bottom: 8px;
+	}
+
+	ion-select {
+		min-width: 200px;
+	}
+
+	.flex-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		justify-content: space-between;
+
+		.header-actions {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+	}
+
+	.summary-table {
+		overflow-x: auto;
+
+		.row {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 10px 8px;
+			border-bottom: 1px solid var(--ion-color-light);
+
+			&.header {
+				font-weight: 600;
+				background: var(--ion-color-light);
+			}
+
+			&.has-pending {
+				background: rgba(var(--ion-color-warning-rgb), 0.08);
+			}
+
+			&.overdue {
+				background: rgba(var(--ion-color-danger-rgb), 0.1);
+			}
+
+			&.all-paid {
+				// opcional: estilo sutil para filas pagadas
+			}
+		}
+
+		.cell {
+			flex: 0 0 auto;
+
+			&.cut { min-width: 100px; }
+			&.advisor { min-width: 140px; }
+			&.plazos { min-width: 140px; font-size: 0.9em; }
+			&.state { min-width: 140px; }
+			&.total { min-width: 100px; }
+			&.pending { min-width: 100px; }
+			&.paid { min-width: 90px; }
+			&.type { min-width: 70px; }
+			&.contracts { min-width: 70px; }
+			&.breakdown { min-width: 200px; flex: 1; }
+			&.attachments { min-width: 100px; }
+			&.actions { min-width: 180px; }
+		}
+
+		.cell.pending.warning {
+			color: var(--ion-color-warning-shade);
+			font-weight: 600;
+		}
+
+		.cell.pending.error {
+			color: var(--ion-color-danger);
+			font-weight: 700;
+		}
+
+		.state-badge {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 4px;
+			font-size: 0.8em;
+			font-weight: 500;
+
+			&.state-PENDING { background: var(--ion-color-light); color: var(--ion-color-dark); }
+			&.state-BREAKDOWN_SENT { background: rgba(var(--ion-color-primary-rgb), 0.2); color: var(--ion-color-primary); }
+			&.state-SENT_TO_PAYMENT { background: rgba(var(--ion-color-warning-rgb), 0.3); color: var(--ion-color-warning-shade); }
+			&.state-PAID { background: rgba(var(--ion-color-success-rgb), 0.3); color: var(--ion-color-success-shade); }
+		}
+
+		.badge {
+			display: inline-block;
+			margin-right: 6px;
+			padding: 2px 6px;
+			background: var(--ion-color-light);
+			border-radius: 4px;
+			font-size: 0.85em;
+
+			&.badge-sm { font-size: 0.8em; padding: 1px 4px; margin-right: 4px; }
+		}
+
+		.breakdown-individual {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 4px;
+			margin-top: 4px;
+			font-size: 0.9em;
+		}
+
+		.link {
+			display: inline-block;
+			margin-right: 8px;
+			font-size: 0.9em;
+		}
+
+		.upload-label {
+			cursor: pointer;
+			display: inline-block;
+		}
+	}
+
+	.export-by-advisor {
+		margin-top: 16px;
+		padding-top: 12px;
+		border-top: 1px solid var(--ion-color-light);
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+
+		span { margin-right: 8px; }
+	}
+}

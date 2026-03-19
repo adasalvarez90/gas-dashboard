@@ -18,6 +18,11 @@ export const loadCommissionPaymentsByCutDate = createAction('[CommissionPayments
 export const loadCommissionPaymentsByCutDateSuccess = createAction('[CommissionPayments] Load By CutDate Success', props<{ commissionPayments: CommissionPayment[] }>());
 export const loadCommissionPaymentsByCutDateFailure = createAction('[CommissionPayments] Load By CutDate Failure', props<{ error: string }>());
 
+// Load for commission cuts page (by date range)
+export const loadCommissionPaymentsForCuts = createAction('[CommissionPayments] Load For Cuts', props<{ startCutDate: number; endCutDate: number }>());
+export const loadCommissionPaymentsForCutsSuccess = createAction('[CommissionPayments] Load For Cuts Success', props<{ commissionPayments: CommissionPayment[] }>());
+export const loadCommissionPaymentsForCutsFailure = createAction('[CommissionPayments] Load For Cuts Failure', props<{ error: string }>());
+
 // Select
 export const selectCommissionPayment = createAction('[CommissionPayments] Select', props<{ commissionPayment: CommissionPayment }>());
 
@@ -30,6 +35,11 @@ export const createCommissionPaymentFailure = createAction('[CommissionPayments]
 export const markCommissionPaymentsPaidByCutDate = createAction('[CommissionPayments] Mark Paid By CutDate', props<{ cutDate: number; paidAt?: number }>());
 export const markCommissionPaymentsPaidByCutDateSuccess = createAction('[CommissionPayments] Mark Paid By CutDate Success', props<{ cutDate: number; paidAt: number; updatedCount: number }>());
 export const markCommissionPaymentsPaidByCutDateFailure = createAction('[CommissionPayments] Mark Paid By CutDate Failure', props<{ error: string }>());
+
+// Mark paid (by cutDate + advisor - for Commission Cuts page)
+export const markCommissionPaymentsPaidByCutDateAndAdvisor = createAction('[CommissionPayments] Mark Paid By CutDate And Advisor', props<{ cutDate: number; advisorUid: string; paidAt?: number }>());
+export const markCommissionPaymentsPaidByCutDateAndAdvisorSuccess = createAction('[CommissionPayments] Mark Paid By CutDate And Advisor Success', props<{ cutDate: number; advisorUid: string; paidAt: number; updatedCount: number }>());
+export const markCommissionPaymentsPaidByCutDateAndAdvisorFailure = createAction('[CommissionPayments] Mark Paid By CutDate And Advisor Failure', props<{ error: string }>());
 
 // Mark paid (by tranche + advisor)
 export const markCommissionPaymentsPaidByTrancheAndAdvisor = createAction('[CommissionPayments] Mark Paid By Tranche And Advisor', props<{ trancheUid: string; advisorUid: string; paidAt?: number }>());

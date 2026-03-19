@@ -62,6 +62,21 @@ export class CommissionPaymentEffects {
 		),
 	);
 
+	// 🔎 Load commissionPayments for cuts (date range)
+	// Sin withLatestFrom(user$): la ruta Commission Cuts pasa guards, ya hay usuario.
+	// withLatestFrom bloqueaba si user$ no emitía a tiempo (p. ej. lazy load).
+	loadCommissionPaymentsForCuts$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.loadCommissionPaymentsForCuts),
+			switchMap(({ startCutDate, endCutDate }) =>
+				this.commissionPaymentFS.getCommissionPaymentsByCutDateRange(startCutDate, endCutDate).then(
+					commissionPayments => CommissionPaymentActions.loadCommissionPaymentsForCutsSuccess({ commissionPayments }),
+					err => CommissionPaymentActions.loadCommissionPaymentsForCutsFailure({ error: err.message }),
+				),
+			),
+		),
+	);
+
 	// ➕ Create commissionPayment
 	createManyCommissionPayment$ = createEffect(() =>
 		this.actions$.pipe(
@@ -143,6 +158,50 @@ export class CommissionPaymentEffects {
 						});
 						await toast.present();
 						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateFailure({ error: err.message });
+					},
+				);
+			}),
+		),
+	);
+
+	// ✅ Mark as paid by cutDate + advisor (Commission Cuts page)
+	markCommissionPaymentsPaidByCutDateAndAdvisor$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.markCommissionPaymentsPaidByCutDateAndAdvisor),
+			exhaustMap(async ({ cutDate, advisorUid, paidAt }) => {
+				const resolvedPaidAt = paidAt ?? Date.now();
+				const loading = await this.loadingCtrl.create({
+					cssClass: 'my-custom-class',
+					message: 'Marcando comisiones del asesor como pagadas…',
+				});
+				await loading.present();
+				return this.commissionPaymentFS.markCommissionPaymentsPaidByCutDateAndAdvisor(cutDate, advisorUid, resolvedPaidAt).then(
+					async (updatedCount) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'primary',
+							message: `Se marcaron ${updatedCount} pago(s) del asesor como pagados.`,
+							duration: 3000,
+							position: 'middle',
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateAndAdvisorSuccess({
+							cutDate,
+							advisorUid,
+							paidAt: resolvedPaidAt,
+							updatedCount,
+						});
+					},
+					async (err) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'danger',
+							message: `Error: ${err.message}`,
+							duration: 3000,
+							position: 'middle',
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateAndAdvisorFailure({ error: err.message });
 					},
 				);
 			}),

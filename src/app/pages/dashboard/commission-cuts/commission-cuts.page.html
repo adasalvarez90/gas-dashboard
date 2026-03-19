@@ -1,0 +1,183 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-menu-button></ion-menu-button>
+		</ion-buttons>
+		<ion-title>Cortes de comisión</ion-title>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<div class="commission-cuts-page scrollbar">
+		<!-- Filters -->
+		<ion-card>
+			<ion-card-header>
+				<ion-card-title>Filtros</ion-card-title>
+			</ion-card-header>
+			<ion-card-content>
+				<ion-item>
+					<ion-label>Corte</ion-label>
+					<ion-select [value]="filterCutDate$ | async" (ionChange)="setFilterCut($any($event).detail.value)" placeholder="Todos los cortes">
+						<ion-select-option [value]="null">Todos los cortes</ion-select-option>
+						@for (cd of cutDates$ | async; track cd) {
+							<ion-select-option [value]="cd">{{ cd | date:'d MMM y' }}</ion-select-option>
+						}
+					</ion-select>
+				</ion-item>
+				<ion-item>
+					<ion-label>Asesora</ion-label>
+					<ion-select [value]="filterAdvisorUid$ | async" (ionChange)="setFilterAdvisor($any($event).detail.value)" placeholder="Todas las asesoras">
+						<ion-select-option [value]="null">Todas las asesoras</ion-select-option>
+						@for (a of advisorsForFilter$ | async; track a.uid) {
+							<ion-select-option [value]="a.uid">{{ a.name || a.uid }}</ion-select-option>
+						}
+					</ion-select>
+				</ion-item>
+			</ion-card-content>
+		</ion-card>
+
+		<!-- Tabs + Export -->
+		<ion-card>
+			<ion-card-header class="flex-header">
+				<ion-card-title>Resumen por asesora</ion-card-title>
+				<div class="header-actions">
+					<ion-segment [value]="viewMode$ | async" (ionChange)="setViewMode($any($event).detail.value)">
+						<ion-segment-button value="all">
+							<ion-label>Todas</ion-label>
+						</ion-segment-button>
+						<ion-segment-button value="noncompliance">
+							<ion-label>Incumplimiento</ion-label>
+							@if ((nonComplianceCount$ | async); as cnt) {
+								@if (cnt > 0) {
+									<ion-badge color="danger">{{ cnt }}</ion-badge>
+								}
+							}
+						</ion-segment-button>
+					</ion-segment>
+					<ion-button size="small" fill="outline" (click)="exportPdfGeneral()">
+						<ion-icon name="document-outline"></ion-icon>
+						Exportar PDF
+					</ion-button>
+				</div>
+			</ion-card-header>
+			<ion-card-content>
+				@if (loading$ | async) {
+					<ion-spinner name="crescent"></ion-spinner>
+				} @else {
+					@if ((advisorSummariesWithState$ | async); as summaries) {
+						@if (summaries.length === 0) {
+							<p>No hay comisiones en el rango seleccionado.</p>
+						} @else {
+							<div class="summary-table">
+								<div class="row header">
+									<div class="cell cut">Corte</div>
+									<div class="cell advisor">Asesora</div>
+									<div class="cell state">Estado</div>
+									<div class="cell plazos">Plazos</div>
+									<div class="cell total">Total</div>
+									<div class="cell pending">Pendiente</div>
+									<div class="cell paid">Pagado</div>
+									<div class="cell type">Tipo</div>
+									<div class="cell contracts">Contratos</div>
+									<div class="cell breakdown">Desglose</div>
+									<div class="cell attachments">Adjuntos</div>
+									<div class="cell actions">Acciones</div>
+								</div>
+								@for (s of summaries; track s.advisorUid + '-' + s.cutDate) {
+									<div class="row"
+										[class.has-pending]="s.pendingAmount > 0"
+										[class.all-paid]="s.pendingAmount === 0"
+										[class.overdue]="s.isOverdue">
+										<div class="cell cut">{{ s.cutDate | date:'d MMM y' }}</div>
+										<div class="cell advisor">{{ s.advisorName }}</div>
+										<div class="cell state">
+											<span class="state-badge" [class]="'state-' + (s.state?.state ?? 'PENDING')">
+												{{ stateLabel(s.state?.state ?? 'PENDING') }}
+											</span>
+											@if (s.state?.movedToNextCut) {
+												<ion-badge color="warning">Pasa al sig. corte</ion-badge>
+											}
+										</div>
+										<div class="cell plazos" [class.overdue-deadline]="s.isOverdue">
+											{{ getPlazoLabel(s) }}
+										</div>
+										<div class="cell total">{{ s.totalAmount | currency:'MXN':'symbol-narrow' }}</div>
+										<div class="cell pending" [class.warning]="s.pendingAmount > 0" [class.error]="s.isOverdue">
+											{{ s.pendingAmount | currency:'MXN':'symbol-narrow' }}
+										</div>
+										<div class="cell paid">{{ s.paidAmount | currency:'MXN':'symbol-narrow' }}</div>
+										<div class="cell type">{{ schemeLabel(s.scheme) }}</div>
+										<div class="cell contracts">{{ s.contractUids.length }}</div>
+										<div class="cell breakdown">
+											<div class="breakdown-by-type" title="Agrupado por tipo">
+												@for (b of s.breakdown; track b.paymentType) {
+													<span class="badge">{{ paymentTypeLabel(b.paymentType) }}: {{ b.amount | currency:'MXN':'symbol-narrow' }}</span>
+												}
+											</div>
+											<div class="breakdown-individual" title="Comisiones por contrato">
+												@for (pay of s.payments; track pay.uid || pay.contractUid + pay.amount) {
+													<span class="badge badge-sm">{{ paymentTypeLabel(pay.paymentType) }}: {{ pay.amount | currency:'MXN':'symbol-narrow' }}</span>
+												}
+											</div>
+										</div>
+										<div class="cell attachments">
+											@if (s.state?.invoiceUrl) {
+												<a [href]="s.state.invoiceUrl" target="_blank" rel="noopener" class="link">Factura</a>
+											}
+											@if (s.state?.receiptUrl) {
+												<a [href]="s.state.receiptUrl" target="_blank" rel="noopener" class="link">Comprobante</a>
+											}
+										</div>
+										<div class="cell actions">
+											@switch (s.state?.state ?? 'PENDING') {
+												@case ('PENDING') {
+													<ion-button size="small" fill="outline" (click)="markBreakdownSent(s.advisorUid, s.cutDate)">
+														Desglose enviado
+													</ion-button>
+												}
+												@case ('BREAKDOWN_SENT') {
+													<label class="upload-label">
+														<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceFileSelected($event, s.advisorUid, s.cutDate)" hidden>
+														<ion-button size="small" fill="outline">Enviar factura</ion-button>
+													</label>
+												}
+												@case ('SENT_TO_PAYMENT') {
+													@if (s.pendingAmount > 0) {
+														<label class="upload-label">
+															<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptFileSelected($event, s.advisorUid, s.cutDate)" hidden>
+															<ion-button size="small" fill="outline">Comprobante</ion-button>
+														</label>
+														<ion-button size="small" (click)="markPaid(s.advisorUid, s.cutDate)">
+															Marcar pagado
+														</ion-button>
+													}
+												}
+												@default {
+													@if (s.pendingAmount > 0) {
+														<ion-button size="small" (click)="markAdvisorCutAsPaid(s.advisorUid, s.cutDate)">
+															Marcar pagado
+														</ion-button>
+													}
+												}
+											}
+										</div>
+									</div>
+								}
+							</div>
+							<div class="export-by-advisor">
+								<span>Exportar por asesora:</span>
+								@for (a of advisorsForFilter$ | async; track a.uid) {
+									@if (getSummariesForAdvisor(a.uid, summaries).length > 0) {
+										<ion-button size="small" fill="clear" (click)="exportPdfByAdvisor(a.name, getSummariesForAdvisor(a.uid, summaries))">
+											{{ a.name }}
+										</ion-button>
+									}
+								}
+							</div>
+						}
+					}
+				}
+			</ion-card-content>
+		</ion-card>
+	</div>
+</ion-content>

@@ -49,6 +49,30 @@ export class CommissionPaymentFirestoreService {
 		return snap.docs.map(d => d.data() as CommissionPayment);
 	}
 
+	// ===== GET BY CUT DATE RANGE (for Commission Cuts page) =====
+	async getCommissionPaymentsByCutDateRange(startCutDate: number, endCutDate: number): Promise<CommissionPayment[]> {
+		// Debug: ver en consola qué rango se consulta y cuántos resultados
+		console.log('[CommissionPayments] Query cutDate range:', {
+			start: new Date(startCutDate).toISOString(),
+			end: new Date(endCutDate).toISOString(),
+		});
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(
+			ref,
+			where('cutDate', '>=', startCutDate),
+			where('cutDate', '<=', endCutDate),
+			where('_on', '==', true),
+		);
+
+		const snap = await getDocs(q);
+		const result = snap.docs.map(d => d.data() as CommissionPayment);
+		console.log('[CommissionPayments] Resultados:', result.length);
+		if (result.length === 0) {
+			console.warn('[CommissionPayments] No hay datos. Revisa: ¿tienen cutDate tus documentos? ¿El rango coincide?');
+		}
+		return result;
+	}
+
 	// ===== MARK PAID BY TRANCH + ADVISOR =====
 	async markCommissionPaymentsPaidByTrancheAndAdvisor(trancheUid: string, advisorUid: string, paidAt: number = Date.now()): Promise<number> {
 		const ref = collection(this.firestore, this.collectionName);
@@ -68,6 +92,46 @@ export class CommissionPaymentFirestoreService {
 			batch.update(d.ref, { paid: true, paidAt, _update: paidAt });
 		});
 
+		await batch.commit();
+		return snap.size;
+	}
+
+	// ===== MOVE PAYMENTS TO NEXT CUT (regla factura tardía) =====
+	async movePaymentsToNextCut(cutDate: number, advisorUid: string, newCutDate: number): Promise<number> {
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(
+			ref,
+			where('cutDate', '==', cutDate),
+			where('advisorUid', '==', advisorUid),
+			where('_on', '==', true),
+		);
+		const snap = await getDocs(q);
+		const batch = writeBatch(this.firestore);
+		const now = Date.now();
+		snap.docs.forEach((d) => {
+			batch.update(d.ref, { cutDate: newCutDate, _update: now });
+		});
+		await batch.commit();
+		return snap.size;
+	}
+
+	// ===== MARK PAID BY CUT DATE + ADVISOR =====
+	async markCommissionPaymentsPaidByCutDateAndAdvisor(cutDate: number, advisorUid: string, paidAt: number = Date.now()): Promise<number> {
+		const ref = collection(this.firestore, this.collectionName);
+		const q = query(
+			ref,
+			where('cutDate', '==', cutDate),
+			where('advisorUid', '==', advisorUid),
+			where('paid', '==', false),
+			where('cancelled', '==', false),
+			where('_on', '==', true),
+		);
+
+		const snap = await getDocs(q);
+		const batch = writeBatch(this.firestore);
+		snap.docs.forEach(d => {
+			batch.update(d.ref, { paid: true, paidAt, _update: paidAt });
+		});
 		await batch.commit();
 		return snap.size;
 	}

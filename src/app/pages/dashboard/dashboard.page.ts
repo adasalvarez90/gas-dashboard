@@ -26,6 +26,7 @@ export class DashboardPage implements OnInit {
 			pages: [
 				{ name: 'Equipo Futuro es Femenino', url: '/dashboard/advisors', icon: 'female', role: 1, hidden: false, badge: '' },
 				{ name: 'Esquema de comisiones', url: '/dashboard/commission-configs', icon: 'cash', role: 1, hidden: false, badge: '' },
+				{ name: 'Cortes de comisión', url: '/dashboard/commission-cuts', icon: 'cut', role: 1, hidden: false, badge: '' },
 				{ name: 'Contratos', url: '/dashboard/contracts', icon: 'briefcase', role: 1, hidden: false, badge: '' },
 				{ name: 'Invitaciones', url: '/dashboard/invites', icon: 'people', role: 1, hidden: true, badge: '' },
 			]

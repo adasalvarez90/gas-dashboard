@@ -118,8 +118,14 @@ Cut dates are **7** and **21** (depending on when the tranche is funded, per yie
 If the advisor does **not** generate the invoice within the 2-business-day limit:
 
 - That commission is **not** paid in the current cut.
-- It is paid in the **next scheduled cut**.
-- The next cut amount may change, **accumulating** the unpaid commissions.
+- It is paid in the **next corresponding cut** — the same cut day (7 or 21) in the **next month**.
+
+Examples:
+
+- Cut March 7, 2026 → next cut = **April 7, 2026**
+- Cut June 21, 2026 → next cut = **July 21, 2026**
+
+The next cut amount may change, **accumulating** the unpaid commissions that were deferred due to the late invoice.
 
 ---
 
