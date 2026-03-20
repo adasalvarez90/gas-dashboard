@@ -125,34 +125,6 @@ export class CommissionPaymentFirestoreService {
 		return snap.size;
 	}
 
-	// ===== MARK PAID BY CUT DATE =====
-	async markCommissionPaymentsPaidByCutDate(cutDate: number, paidAt: number = Date.now()): Promise<number> {
-		const ref = collection(this.firestore, this.collectionName);
-		const q = query(
-			ref,
-			where('cutDate', '==', cutDate),
-			where('paid', '==', false),
-			where('cancelled', '==', false),
-			where('_on', '==', true),
-		);
-
-		const snap = await getDocs(q);
-		const batch = writeBatch(this.firestore);
-
-		snap.docs.forEach(d => {
-			batch.update(d.ref, { paid: true, paidAt, _update: paidAt });
-		});
-
-		await batch.commit();
-		return snap.size;
-	}
-
-	// ===== MARK PAID BY UID (single payment) =====
-	async markCommissionPaymentPaidByUid(uid: string, paidAt: number = Date.now()): Promise<void> {
-		const ref = doc(this.firestore, this.collectionName, uid);
-		await updateDoc(ref, { paid: true, paidAt, _update: paidAt });
-	}
-
 	// ===== CANCEL FUTURE UNPAID BY CONTRACT =====
 	async cancelFutureUnpaidByContract(contractUid: string, cancelledAt: number = Date.now()): Promise<number> {
 		const ref = collection(this.firestore, this.collectionName);

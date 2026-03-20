@@ -40,20 +40,12 @@ export class CommissionPaymentFacade {
 		this.store.dispatch(CommissionPaymentActions.createManyCommissionPayment({ commissionPayments }));
 	}
 
-	markPaidByCutDate(cutDate: number, paidAt?: number) {
-		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentsPaidByCutDate({ cutDate, paidAt }));
-	}
-
 	markPaidByCutDateAndAdvisor(cutDate: number, advisorUid: string, paidAt?: number) {
 		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentsPaidByCutDateAndAdvisor({ cutDate, advisorUid, paidAt }));
 	}
 
 	markPaidByTrancheAndAdvisor(trancheUid: string, advisorUid: string, paidAt?: number) {
 		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentsPaidByTrancheAndAdvisor({ trancheUid, advisorUid, paidAt }));
-	}
-
-	markPaidByUid(uid: string, paidAt?: number) {
-		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentPaidByUid({ uid, paidAt }));
 	}
 
 	createAdjustment(adjustment: Parameters<typeof CommissionPaymentActions.createAdjustmentCommissionPayment>[0]['adjustment']) {

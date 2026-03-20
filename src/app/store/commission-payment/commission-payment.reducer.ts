@@ -36,22 +36,6 @@ export const commissionPaymentReducer = createReducer(
 
 	on(CommissionPaymentsActions.createAdjustmentCommissionPaymentSuccess, (state, { commissionPayment }) => adapter.addOne(commissionPayment, state)),
 
-	// Mark paid by cutDate
-	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDate, (state) => ({ ...state, loading: true, error: null })),
-
-	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateSuccess, (state, { cutDate, paidAt }) => {
-		const updates = Object.values(state.entities)
-			.filter((p) => !!p && p.cutDate === cutDate && !p.paid && !p.cancelled)
-			.map((p) => ({
-				id: p!.uid,
-				changes: { paid: true, paidAt },
-			}));
-
-		return adapter.updateMany(updates, { ...state, loading: false });
-	}),
-
-	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateFailure, (state, { error }) => ({ ...state, loading: false, error })),
-
 	// Mark paid by cutDate + advisor
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisor, (state) => ({ ...state, loading: true, error: null })),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisorSuccess, (state, { cutDate, advisorUid, paidAt }) => {
@@ -71,12 +55,6 @@ export const commissionPaymentReducer = createReducer(
 		return adapter.updateMany(updates, { ...state, loading: false });
 	}),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisorFailure, (state, { error }) => ({ ...state, loading: false, error })),
-
-	// Mark paid by uid (single payment)
-	on(CommissionPaymentsActions.markCommissionPaymentPaidByUid, (state) => ({ ...state, loading: true, error: null })),
-	on(CommissionPaymentsActions.markCommissionPaymentPaidByUidSuccess, (state, { uid, paidAt }) =>
-		adapter.updateOne({ id: uid, changes: { paid: true, paidAt } }, { ...state, loading: false })),
-	on(CommissionPaymentsActions.markCommissionPaymentPaidByUidFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
 	// Search actions
 	on(CommissionPaymentsActions.setSearchTerm, (state, { searchTerm }) => ({ ...state, searchTerm })),

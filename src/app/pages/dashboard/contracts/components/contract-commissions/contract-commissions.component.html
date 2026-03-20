@@ -84,7 +84,6 @@
 												<span>Corte</span>
 												<span>Monto</span>
 												<span>Estado</span>
-												<span>Acción</span>
 											</div>
 											@for (p of g.payments; track p.uid) {
 												<div class="detail-row" [class.paid]="!!p.paidAt || p.paid">
@@ -94,16 +93,6 @@
 													<span class="detail-value detail-amount">${{ p.amount | number:'1.0-0' }}</span>
 													<span class="pill" [class.paid]="!!p.paidAt || p.paid">
 														{{ (p.paidAt || p.paid) ? 'Pagado' : 'Por pagar' }}
-													</span>
-													<span class="detail-value">
-														@if (!p.paid && !p.paidAt && !p.cancelled) {
-															<ion-button size="small" fill="clear" shape="round"
-																(click)="markPaymentAsPaid(p); $event.stopPropagation()">
-																Pagar
-															</ion-button>
-														} @else {
-															—
-														}
 													</span>
 												</div>
 											}
@@ -132,13 +121,7 @@
 										</div>
 										<div class="subitem-right">
 											<div class="subitem-amount warning">${{ c.pendingAmount | number:'1.0-0' }}</div>
-											<div class="subitem-meta">Por pagar</div>
-											@if (c.pendingCount > 0) {
-												<ion-button size="small" fill="clear" shape="round"
-													(click)="markCutAsPaid(c.cutDate); $event.stopPropagation()">
-													Marcar pagado
-												</ion-button>
-											}
+											<div class="subitem-meta">{{ c.pendingCount > 0 ? 'Por pagar' : 'Pagado' }}</div>
 										</div>
 									</div>
 								}

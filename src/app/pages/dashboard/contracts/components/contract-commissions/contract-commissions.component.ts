@@ -273,12 +273,4 @@ export class ContractCommissionsComponent implements OnInit, OnChanges {
 		if (!role) return '';
 		return this.ROLE_LABELS[role] ?? this.ROLE_LABELS[role.toUpperCase()] ?? role;
 	}
-
-	markCutAsPaid(cutDate: number) {
-		this.commissionPaymentFacade.markPaidByCutDate(cutDate, Date.now());
-	}
-
-	markPaymentAsPaid(payment: CommissionPayment) {
-		this.commissionPaymentFacade.markPaidByUid(payment.uid);
-	}
 }
