@@ -12,7 +12,6 @@
 	border: 1px solid rgba(255, 255, 255, .06);
 	border-radius: 16px;
 	padding: 24px;
-	cursor: pointer;
 	transition: .2s ease;
 }
 
@@ -29,6 +28,7 @@
 /* ===== TRANCHE HEADER ===== */
 .tranche-header {
 	outline: none;
+	cursor: pointer;
 }
 
 .tranche-header-top {
@@ -87,10 +87,15 @@
 
 /* ===== HERO KPIs (aligned with contract-info) ===== */
 .tranche-hero {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
 	gap: 18px;
 	margin-top: 4px;
+}
+
+.tranche-hero-card {
+	flex: 0 0 160px;
 }
 
 .tranche-hero-card {
@@ -183,6 +188,24 @@
 	min-width: 0;
 }
 
+.deposit-meta-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.deposit-source-summary {
+	font-size: 13px;
+	opacity: .9;
+	font-weight: 600;
+	min-width: 0;
+	word-break: break-word;
+	text-align: right;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	opacity: .85;
+}
+
 .deposit-badge-invalid {
 	font-size: 10px;
 	text-transform: uppercase;
@@ -228,12 +251,18 @@
 /* Responsive */
 @media (max-width: 500px) {
 	.tranche-hero {
-		grid-template-columns: repeat(2, 1fr);
+		gap: 14px;
+	}
+	.tranche-hero-card {
+		flex-basis: calc(50% - 7px);
 	}
 }
 
 @media (max-width: 380px) {
 	.tranche-hero {
-		grid-template-columns: 1fr;
+		gap: 12px;
+	}
+	.tranche-hero-card {
+		flex-basis: 100%;
 	}
 }

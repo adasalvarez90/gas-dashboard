@@ -128,6 +128,37 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 			deposit.sourceAccount === undefined;
 	}
 
+	getDepositSourceInstitution(deposit: Deposit): string {
+		if (!this.contract || this.isDepositInvalid(deposit)) return 'No especificada';
+		switch (deposit.sourceAccount) {
+			case 'funding':
+				return this.contract.fundingBankInstitution || '—';
+			case 'returns':
+				return this.contract.returnsBankInstitution || '—';
+			default:
+				return '—';
+		}
+	}
+
+	getDepositSourceAccount(deposit: Deposit): string {
+		if (!this.contract || this.isDepositInvalid(deposit)) return '—';
+		switch (deposit.sourceAccount) {
+			case 'funding':
+				return this.contract.fundingAccount || '—';
+			case 'returns':
+				return this.contract.returnsAccount || this.contract.fundingAccount || '—';
+			default:
+				return '—';
+		}
+	}
+
+	getDepositSourceSummary(deposit: Deposit): string {
+		if (!this.contract || this.isDepositInvalid(deposit)) return 'No especificada';
+		const inst = this.getDepositSourceInstitution(deposit);
+		const acct = this.getDepositSourceAccount(deposit);
+		return `${inst} - ${acct}`;
+	}
+
 	openEditDepositModal(deposit: Deposit, event: Event) {
 		event.stopPropagation();
 		this.editingDeposit = deposit;

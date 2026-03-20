@@ -66,7 +66,10 @@
 						<div class="deposit-card" [class.deposit-card--invalid]="isDepositInvalid(deposit)">
 							<div class="deposit-card-main">
 								<div class="deposit-amount">${{ deposit.amount | number:'1.0-0' }}</div>
-								<div class="deposit-date">{{ deposit.depositedAt | date:'d MMM y' }}</div>
+								<div class="deposit-meta-row">
+									<div class="deposit-date">{{ deposit.depositedAt | date:'d MMM y' }}</div>
+									<div class="deposit-source-summary">{{ getDepositSourceSummary(deposit) }}</div>
+								</div>
 								@if (isDepositInvalid(deposit)) {
 								<span class="deposit-badge-invalid">No especificada</span>
 								}

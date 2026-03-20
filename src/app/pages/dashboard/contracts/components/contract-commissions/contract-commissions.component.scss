@@ -15,7 +15,6 @@
 }
 
 .tranche-card {
-	cursor: pointer;
 	transition: .2s ease;
 }
 
@@ -42,6 +41,10 @@
 .tranche-header-section {
 	margin-bottom: 0;
 	margin-top: 8px;
+}
+
+.tranche-header {
+	cursor: pointer;
 }
 
 .card-title {
