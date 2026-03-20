@@ -4,6 +4,8 @@ import { combineLatest, map, BehaviorSubject, take } from 'rxjs';
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
+import { Contract } from 'src/app/store/contract/contract.model';
+import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
 import { AdvisorCutSummary } from 'src/app/models/commission-cuts-summary.model';
 import { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
@@ -28,6 +30,17 @@ export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
 	isOverdue: boolean;
 	uploadingInvoice?: boolean;
 	uploadingReceipt?: boolean;
+	contractBreakdown: {
+		contractUid: string;
+		investorName: string;
+		contractAmount: number | null;
+		totalAmount: number;
+		pendingAmount: number;
+		paidAmount: number;
+		pendingCount: number;
+		paidCount: number;
+		payments: CommissionPayment[];
+	}[];
 };
 
 @Component({
@@ -39,6 +52,7 @@ export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
 export class CommissionCutsPage implements OnInit {
 	commissionPayments$ = this.commissionPaymentFacade.commissionPayments$;
 	advisors$ = this.advisorFacade.entities$;
+	contracts$ = this.contractFacade.contracts$;
 	loading$ = this.commissionPaymentFacade.loading$;
 
 	filterCutDate$ = new BehaviorSubject<number | null>(null);
@@ -146,12 +160,15 @@ export class CommissionCutsPage implements OnInit {
 	/** Resúmenes fusionados con estado y plazos */
 	advisorSummariesWithState$ = combineLatest([
 		this.advisorSummaries$,
+		this.contracts$,
 		this.stateStates$,
 		this.viewMode$,
 	]).pipe(
-		map(([summaries, states, viewMode]) => {
+		map(([summaries, contracts, states, viewMode]) => {
 			const stateMap = new Map<string, CommissionCutAdvisorState>();
 			states.forEach((s) => stateMap.set(`${s.cutDate}::${s.advisorUid}`, s));
+			const contractMap = new Map<string, Contract>();
+			contracts.forEach((c) => contractMap.set(c.uid, c));
 
 			let result: AdvisorCutSummaryWithState[] = summaries.map((s) => {
 				const state = stateMap.get(`${s.cutDate}::${s.advisorUid}`) ?? null;
@@ -170,6 +187,7 @@ export class CommissionCutsPage implements OnInit {
 					invoiceDeadline,
 					paymentDeadline,
 					isOverdue,
+					contractBreakdown: this.groupPaymentsByContract(s.payments, contractMap),
 				};
 			});
 
@@ -203,9 +221,29 @@ export class CommissionCutsPage implements OnInit {
 		ADJUSTMENT: 'Ajuste',
 	};
 
+	readonly ROLE_LABELS: Record<string, string> = {
+		CONSULTANT: 'Consultor(a)',
+		CONSULTORA: 'Consultora',
+		consultant: 'Consultor(a)',
+		MANAGER: 'Gerente',
+		manager: 'Gerente',
+		KAM: 'KAM',
+		kam: 'KAM',
+		SALES_DIRECTION: 'Dir. Ventas',
+		SALESDIRECTION: 'Dir. Ventas',
+		salesDirector: 'Dir. Ventas',
+		OPERATIONS: 'Operaciones',
+		operations: 'Operaciones',
+		CEO: 'CEO',
+		ceo: 'CEO',
+		REFERRAL: 'Referido',
+		referral: 'Referido',
+	};
+
 	constructor(
 		private commissionPaymentFacade: CommissionPaymentFacade,
 		private advisorFacade: AdvisorFacade,
+		private contractFacade: ContractFacade,
 		private stateService: CommissionCutStateFirestoreService,
 		private attachmentService: CommissionCutAttachmentService,
 		private pdfService: CommissionCutsPdfService,
@@ -214,9 +252,136 @@ export class CommissionCutsPage implements OnInit {
 
 	ngOnInit() {
 		this.advisorFacade.loadAdvisors();
+		this.contractFacade.loadContracts();
 		const { startCutDate, endCutDate } = getDefaultCutDateRange();
 		this.commissionPaymentFacade.loadCommissionPaymentsForCuts(startCutDate, endCutDate);
 		this.loadStates(startCutDate, endCutDate);
+	}
+
+	private groupPaymentsByContract(
+		payments: CommissionPayment[],
+		contractMap: Map<string, Contract>,
+	): {
+		contractUid: string;
+		investorName: string;
+		contractAmount: number | null;
+		totalAmount: number;
+		pendingAmount: number;
+		paidAmount: number;
+		pendingCount: number;
+		paidCount: number;
+		payments: CommissionPayment[];
+	}[] {
+		const byContract = new Map<string, CommissionPayment[]>();
+		for (const p of payments) {
+			if (!p.contractUid) continue;
+			const arr = byContract.get(p.contractUid) ?? [];
+			arr.push(p);
+			byContract.set(p.contractUid, arr);
+		}
+
+		return Array.from(byContract.entries())
+			.map(([contractUid, ps]) => ({
+				contractUid,
+				investorName: contractMap.get(contractUid)?.investor ?? '—',
+				contractAmount: contractMap.get(contractUid)?.initialCapital ?? null,
+				payments: [...ps].sort((a, b) => {
+					const da = a.dueDate ?? 0;
+					const db = b.dueDate ?? 0;
+					if (da !== db) return da - db;
+					return (a.installment ?? 0) - (b.installment ?? 0);
+				}),
+				totalAmount: ps.reduce((acc, p) => acc + (p.amount ?? 0), 0),
+				pendingAmount: ps
+					.filter((p) => !p.paidAt && !p.paid && !p.cancelled)
+					.reduce((acc, p) => acc + (p.amount ?? 0), 0),
+				paidAmount: ps
+					.filter((p) => !!p.paidAt || p.paid)
+					.reduce((acc, p) => acc + (p.amount ?? 0), 0),
+				pendingCount: ps.filter((p) => !p.paidAt && !p.paid && !p.cancelled).length,
+				paidCount: ps.filter((p) => !!p.paidAt || p.paid).length,
+			}))
+			.sort((a, b) => a.contractUid.localeCompare(b.contractUid));
+	}
+
+	private expandedSummaryKey: string | null = null;
+	expandedContractKeys = new Set<string>();
+
+	breakdownRowKey(s: AdvisorCutSummaryWithState): string {
+		return `breakdown::${s.advisorUid}::${s.cutDate}`;
+	}
+
+	toggleSummaryExpanded(s: AdvisorCutSummaryWithState) {
+		const key = this.breakdownRowKey(s);
+		const next = this.expandedSummaryKey === key ? null : key;
+		this.expandedSummaryKey = next;
+		if (next === null) {
+			this.expandedContractKeys = new Set();
+		} else {
+			this.expandedContractKeys = new Set();
+		}
+	}
+
+	isSummaryExpanded(s: AdvisorCutSummaryWithState): boolean {
+		return this.expandedSummaryKey === this.breakdownRowKey(s);
+	}
+
+	private contractBreakdownKey(s: AdvisorCutSummaryWithState, contractUid: string): string {
+		return `contract::${s.advisorUid}::${s.cutDate}::${contractUid}`;
+	}
+
+	toggleContractExpanded(s: AdvisorCutSummaryWithState, contractUid: string) {
+		const key = this.contractBreakdownKey(s, contractUid);
+		const next = new Set(this.expandedContractKeys);
+		if (next.has(key)) next.delete(key);
+		else next.add(key);
+		this.expandedContractKeys = next;
+	}
+
+	isContractExpanded(s: AdvisorCutSummaryWithState, contractUid: string): boolean {
+		const key = this.contractBreakdownKey(s, contractUid);
+		return this.expandedContractKeys.has(key);
+	}
+
+	commissionVersionLabel(p: CommissionPayment): string {
+		switch (p.paymentType) {
+			case 'IMMEDIATE':
+				return 'Nueva';
+			case 'RECURRING':
+				return 'Anterior';
+			case 'FINAL':
+				return 'Final';
+			case 'ADJUSTMENT':
+				return 'Ajuste';
+			default:
+				return this.paymentTypeLabel(p.paymentType);
+		}
+	}
+
+	commissionVersionColor(p: CommissionPayment): 'primary' | 'success' | 'warning' | 'medium' | 'danger' {
+		switch (p.paymentType) {
+			case 'IMMEDIATE':
+				return 'success';
+			case 'RECURRING':
+				return 'medium';
+			case 'FINAL':
+				return 'primary';
+			case 'ADJUSTMENT':
+				return 'warning';
+			default:
+				return 'medium';
+		}
+	}
+
+	roleLabel(role: string): string {
+		if (!role) return '—';
+		return this.ROLE_LABELS[role] ?? this.ROLE_LABELS[role.toUpperCase()] ?? role;
+	}
+
+	commissionReasonLabel(p: CommissionPayment): string {
+		if (p.paymentType === 'ADJUSTMENT' && p.adjustmentReason) return p.adjustmentReason;
+		if (p.scheme && p.scheme !== '—') return this.schemeLabel(p.scheme);
+		return this.paymentTypeLabel(p.paymentType);
 	}
 
 	loadStates(startCutDate: number, endCutDate: number) {
@@ -263,7 +428,7 @@ export class CommissionCutsPage implements OnInit {
 		if (!scheme || scheme === '—') return '—';
 		const s = scheme.toUpperCase();
 		if (s.includes('NEW') || s.includes('NUEV')) return 'Nueva';
-		if (s.includes('OLD') || s.includes('VIEJ')) return 'Vieja';
+		if (s.includes('OLD') || s.includes('VIEJ')) return 'Anterior';
 		return scheme;
 	}
 
