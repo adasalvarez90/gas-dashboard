@@ -138,6 +138,30 @@
 		background: rgba(var(--ion-color-primary-rgb), 0.08);
 	}
 
+	/* Incumplimiento: pintar toda la tarjeta/accordion en rojo */
+	.summary-card--overdue {
+		border-color: rgba(var(--ion-color-danger-rgb), 0.45);
+		background: rgba(var(--ion-color-danger-rgb), 0.08);
+
+		.summary-card-header {
+			&.overdue {
+				border-color: rgba(var(--ion-color-danger-rgb), 0.65);
+			}
+		}
+
+		.summary-card-body {
+			background: rgba(var(--ion-color-danger-rgb), 0.06);
+		}
+
+		.contract-header-item {
+			--background: rgba(var(--ion-color-danger-rgb), 0.07);
+		}
+
+		.contract-payment-item {
+			--background: rgba(var(--ion-color-danger-rgb), 0.055);
+		}
+	}
+
 	.summary-card-header {
 		padding: 14px 14px;
 		display: flex;

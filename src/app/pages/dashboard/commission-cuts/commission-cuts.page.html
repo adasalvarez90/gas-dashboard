@@ -96,7 +96,7 @@
 						} @else {
 							<div class="summary-cards">
 								@for (s of summaries; track s.advisorUid + '-' + s.cutDate) {
-									<div class="summary-card" [class.summary-card--open]="isSummaryExpanded(s)">
+									<div class="summary-card" [class.summary-card--open]="isSummaryExpanded(s)" [class.summary-card--overdue]="s.isOverdue">
 										<div
 											class="summary-card-header"
 											[class.overdue]="s.isOverdue"

@@ -179,10 +179,24 @@ export class CommissionCutsPage implements OnInit {
 				const paymentDeadline = state?.invoiceSentAt ? getPaymentDeadline(state.invoiceSentAt) : undefined;
 				const invOverdue = invoiceDeadline ? isInvoiceOverdue(state?.invoiceSentAt, invoiceDeadline) : false;
 				const payOverdue = paymentDeadline ? isPaymentOverdue(state?.receiptSentAt, paymentDeadline) : false;
+				// Incumplimiento basado en la fecha (YYYY-MM-DD) en México (evita saltos por timezone).
+				const todayKeyInMx = this.getMexicoDateKey(Date.now());
+				const isAnyPendingPaymentOverdue =
+					(s.payments?.length ?? 0) > 0 &&
+					s.payments.some((p) => {
+						const isPaid = !!p.paidAt || p.paid;
+						return (
+							!isPaid &&
+							!p.cancelled &&
+							typeof p.cutDate === 'number' &&
+							todayKeyInMx > this.getMexicoDateKey(p.cutDate)
+						);
+					});
 				const isOverdue =
 					(s.pendingAmount > 0 && invOverdue) ||
 					(s.pendingAmount > 0 && payOverdue) ||
-					(s.pendingAmount > 0 && !state?.breakdownSentAt && this.isBreakdownOverdue(s.cutDate));
+					(s.pendingAmount > 0 && !state?.breakdownSentAt && this.isBreakdownOverdue(s.cutDate)) ||
+					(s.pendingAmount > 0 && isAnyPendingPaymentOverdue);
 
 				return {
 					...s,
@@ -195,7 +209,8 @@ export class CommissionCutsPage implements OnInit {
 			});
 
 			if (viewMode === 'noncompliance') {
-				result = result.filter((r) => r.isOverdue || (r.pendingAmount > 0 && r.state?.state !== 'PAID'));
+				// Solo las que realmente están atrasadas/incumplidas.
+				result = result.filter((r) => r.isOverdue);
 			}
 
 			return result;
@@ -260,6 +275,16 @@ export class CommissionCutsPage implements OnInit {
 		// Ionic's web component usually exposes `open()`; fallback to click for safety.
 		if (typeof el.open === 'function') el.open();
 		else if (typeof el.click === 'function') el.click();
+	}
+
+	private getMexicoDateKey(timestampMs: number): string {
+		// Formato ISO YYYY-MM-DD en zona horaria de México (para comparar por fecha, sin errores de timezone).
+		return new Intl.DateTimeFormat('en-CA', {
+			timeZone: 'America/Mexico_City',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+		}).format(new Date(timestampMs));
 	}
 
 	openCutSelect() {
@@ -420,8 +445,7 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	isBreakdownOverdue(cutDate: number): boolean {
-		const d = new Date(cutDate);
-		return Date.now() > d.getTime();
+		return this.getMexicoDateKey(Date.now()) > this.getMexicoDateKey(cutDate);
 	}
 
 	setFilterCut(cutDate: number | null) {
