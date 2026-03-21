@@ -3,6 +3,7 @@ import { Contract } from '../../store/contract/contract.model';
 import { Tranche } from '../../store/tranche/tranche.model';
 import { CommissionPaymentDraft } from '../../models/commission-engine.model';
 import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
+import { getCutDateForDueDateMexico, toCanonicalMexicoDateTimestamp } from 'src/app/domain/time/mexico-time.util';
 
 @Injectable({ providedIn: 'root' })
 export class CommissionEngineService {
@@ -29,7 +30,7 @@ export class CommissionEngineService {
 		const totalCommission =
 			tranche.amount * (grossCommissionPercent / 100);
 
-		const startDate = tranche.fundedAt;
+		const startDate = toCanonicalMexicoDateTimestamp(tranche.fundedAt)!;
 
 		roleSplits.forEach(split => {
 
@@ -233,14 +234,14 @@ export class CommissionEngineService {
 		const startDate = tranche.fundedAt!;
 		if (endDate == null) return 12;
 
-		const endYear = new Date(endDate).getFullYear();
-		const endMonth = new Date(endDate).getMonth();
+		const endYear = new Date(endDate).getUTCFullYear();
+		const endMonth = new Date(endDate).getUTCMonth();
 
 		let count = 0;
 		for (let i = 1; i <= 12; i++) {
 			const due = this.addMonths(startDate, i);
-			const dueYear = new Date(due).getFullYear();
-			const dueMonth = new Date(due).getMonth();
+			const dueYear = new Date(due).getUTCFullYear();
+			const dueMonth = new Date(due).getUTCMonth();
 			// Incluir si el mes natural del pago es <= mes de fin de contrato (vigencia hasta ese mes inclusive).
 			if (dueYear < endYear || (dueYear === endYear && dueMonth <= endMonth)) {
 				count++;
@@ -252,16 +253,12 @@ export class CommissionEngineService {
 	}
 
 	private addMonths(timestamp: number, months: number): number {
-
-		const date = new Date(timestamp);
-
-		const year = date.getFullYear();
-		const month = date.getMonth();
-		const day = date.getDate();
-
-		const newDate = new Date(year, month + months, day);
-
-		return newDate.getTime();
+		const base = toCanonicalMexicoDateTimestamp(timestamp) ?? timestamp;
+		const date = new Date(base);
+		const year = date.getUTCFullYear();
+		const month = date.getUTCMonth();
+		const day = date.getUTCDate();
+		return Date.UTC(year, month + months, day, 12, 0, 0, 0);
 	}
 
 	/**
@@ -269,18 +266,7 @@ export class CommissionEngineService {
 	 * dueDate day ≤ 7 → cut day 7 of same month; ≤ 21 → cut day 21 of same month; > 21 → cut day 7 of next month.
 	 */
 	private getCutDateForDueDate(dueDate: number): number {
-		const d = new Date(dueDate);
-		const year = d.getFullYear();
-		const month = d.getMonth();
-		const day = d.getDate();
-
-		if (day <= 7) {
-			return new Date(year, month, 7).getTime();
-		}
-		if (day <= 21) {
-			return new Date(year, month, 21).getTime();
-		}
-		return new Date(year, month + 1, 7).getTime();
+		return getCutDateForDueDateMexico(dueDate);
 	}
 
 }

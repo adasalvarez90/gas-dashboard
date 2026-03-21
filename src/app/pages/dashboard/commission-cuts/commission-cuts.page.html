@@ -90,16 +90,30 @@
 				@if (loading$ | async) {
 					<ion-spinner name="crescent"></ion-spinner>
 				} @else {
-					@if ((advisorSummariesWithState$ | async); as summaries) {
-						@if (summaries.length === 0) {
+					@if ((summariesGroupedByCut$ | async); as cutGroups) {
+						@if (cutGroups.length === 0) {
 							<p>No hay comisiones en el rango seleccionado.</p>
 						} @else {
-							<div class="summary-cards">
-								@for (s of summaries; track s.advisorUid + '-' + s.cutDate) {
-									<div class="summary-card" [class.summary-card--open]="isSummaryExpanded(s)" [class.summary-card--overdue]="s.isOverdue">
+							<div class="summary-by-cut">
+								@for (group of cutGroups; track group.cutDate) {
+									<section class="cut-section" [class.cut-section--first]="$first">
+										<header class="cut-section__header">
+											<span class="cut-section__eyebrow">Corte</span>
+											<h3 class="cut-section__title">{{ group.cutDate | date:'d MMM y' }}</h3>
+										</header>
+										<hr class="cut-section__rule" />
+										<div class="summary-cards">
+								@for (s of group.items; track s.advisorUid + '-' + s.cutDate) {
+									<div
+										class="summary-card"
+										[class.summary-card--open]="isSummaryExpanded(s)"
+										[class.summary-card--overdue]="s.isOverdue"
+										[class.summary-card--warning]="s.pendingAmount > 0 && !s.isOverdue"
+									>
 										<div
 											class="summary-card-header"
 											[class.overdue]="s.isOverdue"
+											[class.warning-pending]="s.pendingAmount > 0 && !s.isOverdue"
 											(click)="toggleSummaryExpanded(s)"
 										>
 											<div class="summary-card-left">
@@ -260,17 +274,20 @@
 										}
 									</div>
 								}
+										</div>
+									</section>
+								}
 							</div>
 							<div class="export-by-advisor">
 								<span>Exportar por asesora:</span>
 								@for (a of advisorsForFilter$ | async; track a.uid) {
-									@if (getSummariesForAdvisor(a.uid, summaries).length > 0) {
+									@if (getSummariesForAdvisor(a.uid, flattenCutGroups(cutGroups)).length > 0) {
 										<ion-button
 											size="small"
 											class="export-advisor-btn action-btn"
 											color="primary"
 											fill="outline"
-											(click)="exportPdfByAdvisor(a.name, getSummariesForAdvisor(a.uid, summaries))"
+											(click)="exportPdfByAdvisor(a.name, getSummariesForAdvisor(a.uid, flattenCutGroups(cutGroups)))"
 										>
 											{{ a.name }}
 										</ion-button>

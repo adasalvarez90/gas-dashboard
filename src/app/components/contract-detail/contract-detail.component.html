@@ -5,7 +5,7 @@
 		<ion-title>Contrato</ion-title>
 
 		<ion-buttons slot="end">
-			<ion-button (click)="toggleSign(contract)">
+			<ion-button (click)="onSignToolbarClick(contract)">
 				<ion-icon slot="icon-only" [color]="contract.signed ? 'success' : 'medium'"
 					[name]="contract.signed ? 'checkbox' : 'square-outline'">
 				</ion-icon>
@@ -267,4 +267,41 @@
 	</div>
 
 </ion-content>
+
+<ion-modal [isOpen]="isSignContractModalOpen" (didDismiss)="closeSignContractModal()">
+	<ng-template>
+		<ion-header>
+			<ion-toolbar>
+				<ion-title>Firmar contrato</ion-title>
+				<ion-buttons slot="end">
+					<ion-button (click)="closeSignContractModal()">Cerrar</ion-button>
+				</ion-buttons>
+			</ion-toolbar>
+		</ion-header>
+		<ion-content class="ion-padding">
+			<p style="margin-bottom: 16px; opacity: 0.9;">
+				Indica la fecha de firma y el <strong>capital inicial</strong> del primer anexo para crear el tranche 1.
+			</p>
+			<ion-item lines="full">
+				<ion-label position="stacked">Fecha de firma</ion-label>
+				<ion-input type="date" [(ngModel)]="signContractDate"></ion-input>
+			</ion-item>
+			<ion-item lines="full">
+				<ion-label position="stacked">Capital inicial (MXN)</ion-label>
+				<ion-input type="number" inputmode="decimal" min="1" [(ngModel)]="signInitialCapital" placeholder="Ej. 100000"></ion-input>
+			</ion-item>
+			@if (signInitialCapital && +signInitialCapital < 1) {
+				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
+					El capital inicial debe ser al menos $1.
+				</div>
+			}
+			<div style="margin-top: 16px;">
+				<ion-button expand="block" shape="round" (click)="confirmSignContract()" [disabled]="!isSignContractValid">
+					Firmar contrato
+				</ion-button>
+				<ion-button expand="block" fill="clear" (click)="closeSignContractModal()">Cancelar</ion-button>
+			</div>
+		</ion-content>
+	</ng-template>
+</ion-modal>
 }

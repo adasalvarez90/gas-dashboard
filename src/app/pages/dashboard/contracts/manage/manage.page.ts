@@ -12,6 +12,7 @@ import { CommissionPaymentFirestoreService } from 'src/app/services/commission-p
 import { Contract, ContractBeneficiary } from 'src/app/store/contract/contract.model';
 import { resolvePaymentsAndAccountStatus } from 'src/app/domain/contract/contract-derived-fields.util';
 import { beneficiariesArrayValidator, beneficiaryAgeValidator } from 'src/app/domain/contract/beneficiary-validators.util';
+import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/domain/time/mexico-time.util';
 
 @Component({
 	selector: 'app-manage-contract',
@@ -179,7 +180,7 @@ export class ManagePage implements OnInit {
 				term: this.contract.term,
 				yieldFrequency: this.contract.yieldFrequency,
 				source: this.contract.source,
-				signatureDate: this.contract.signatureDate,
+				signatureDate: toMexicoDateInputValue(this.contract.signatureDate),
 				signed: this.contract.signed,
 				docs: this.contract.docs,
 				docsComments: this.contract.docsComments,
@@ -219,6 +220,22 @@ export class ManagePage implements OnInit {
 		return this.preview.find((p) => p.role === role)?.percent || 0;
 	}
 
+	/**
+	 * Capital inicial acordado en el contrato (histórico del anexo 1).
+	 * Si el formulario trae monto válido, gana; si no, se conserva el del contrato base.
+	 */
+	private resolveInitialCapitalForPayload(base: Partial<Contract>): number | undefined {
+		const v = this.form.getRawValue();
+		const ic = v.initialCapital;
+		if (ic != null && String(ic).trim() !== '') {
+			const n = Number(ic);
+			if (Number.isFinite(n) && n >= 1) return n;
+		}
+		const b = base.initialCapital;
+		if (b != null && Number.isFinite(Number(b)) && Number(b) >= 1) return Number(b);
+		return undefined;
+	}
+
 	private buildContractPayload(base: Partial<Contract>): Contract {
 		const ben = (this.beneficiariesArray.value as ContractBeneficiary[]).filter(
 			(x) => x?.nombre?.trim() || x?.fechaNacimiento,
@@ -233,6 +250,7 @@ export class ManagePage implements OnInit {
 			fundingBankInstitution: (v.fundingBankInstitution ?? '').trim(),
 			returnsAccount: (v.returnsAccount ?? '').trim(),
 			returnsBankInstitution: (v.returnsBankInstitution ?? '').trim(),
+			initialCapital: this.resolveInitialCapitalForPayload(base),
 			beneficiaries,
 		} as Contract;
 	}
@@ -240,17 +258,20 @@ export class ManagePage implements OnInit {
 	async create() {
 		if (this.form.invalid) return;
 		const v = this.form.getRawValue();
-		const { initialCapital, beneficiaries, ...rest } = v;
+		const { beneficiaries, ...rest } = v;
+		const normalizedSignatureDate = toCanonicalMexicoDateTimestamp(v.signatureDate);
 		const contractData = this.buildContractPayload({
 			...rest,
+			signatureDate: normalizedSignatureDate,
 			uid: '',
 			contractStatus: 'PENDING',
 			payments: '',
 			accountStatus: '',
 		} as Contract);
 
-		if (v.signed === true && v.signatureDate != null && initialCapital != null && initialCapital >= 1) {
-			this.contractFacade.createContractWithInitialTranche(contractData, initialCapital);
+		const cap = contractData.initialCapital;
+		if (v.signed === true && normalizedSignatureDate != null && cap != null && cap >= 1) {
+			this.contractFacade.createContractWithInitialTranche(contractData, cap);
 		} else {
 			this.contractFacade.createContract(contractData);
 		}
@@ -260,6 +281,7 @@ export class ManagePage implements OnInit {
 	async update() {
 		if (!this.contract || this.form.invalid) return;
 		const v = this.form.getRawValue();
+		const normalizedSignatureDate = toCanonicalMexicoDateTimestamp(v.signatureDate);
 		const merged = this.buildContractPayload({
 			...this.contract,
 			investor: v.investor,
@@ -270,12 +292,11 @@ export class ManagePage implements OnInit {
 			term: v.term,
 			yieldFrequency: v.yieldFrequency,
 			source: v.source,
-			signatureDate: v.signatureDate,
+			signatureDate: normalizedSignatureDate,
 			signed: v.signed,
 			docs: v.docs,
 			docsComments: v.docsComments,
 			roles: v.roles,
-			initialCapital: v.initialCapital,
 			...resolvePaymentsAndAccountStatus(this.contract),
 		});
 

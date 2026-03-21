@@ -10,6 +10,7 @@ import { Tranche } from 'src/app/store/tranche/tranche.model';
 import { Deposit, SOURCE_ACCOUNT_NO_ESPECIFICADA, SourceAccountId } from 'src/app/store/deposit/deposit.model';
 
 import { getSourceAccountOptions, SourceAccountOption } from 'src/app/domain/contract/contract-derived-fields.util';
+import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/domain/time/mexico-time.util';
 
 import { DepositFacade } from 'src/app/store/deposit/deposit.facade';
 import { TrancheFacade } from 'src/app/store/tranche/tranche.facade';
@@ -99,7 +100,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 	confirmCreateTranche() {
 		if (!this.contract?.uid) return;
 		if (!this.isCreateTrancheAmountValid) return;
-		const dateMs = this.createTrancheDate ? new Date(this.createTrancheDate).getTime() : undefined;
+		const dateMs = toCanonicalMexicoDateTimestamp(this.createTrancheDate);
 		this.trancheFacade.createTranche(this.contract.uid, this.createTrancheAmount!, dateMs, dateMs);
 		this.closeCreateTrancheModal();
 	}
@@ -163,7 +164,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 		event.stopPropagation();
 		this.editingDeposit = deposit;
 		this.editDepositAmount = deposit.amount;
-		this.editDepositDate = deposit.depositedAt ? new Date(deposit.depositedAt).toISOString().slice(0, 10) : null;
+		this.editDepositDate = toMexicoDateInputValue(deposit.depositedAt);
 		this.editDepositSourceAccount = deposit.sourceAccount ?? SOURCE_ACCOUNT_NO_ESPECIFICADA;
 		this.isEditDepositModalOpen = true;
 	}
@@ -177,7 +178,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 
 	confirmEditDeposit() {
 		if (!this.editingDeposit || !this.isEditDepositFormValid) return;
-		const depositedAt = this.editDepositDate ? new Date(this.editDepositDate).getTime() : this.editingDeposit.depositedAt;
+		const depositedAt = toCanonicalMexicoDateTimestamp(this.editDepositDate) ?? this.editingDeposit.depositedAt;
 		const updated: Deposit = {
 			...this.editingDeposit,
 			amount: this.editDepositAmount!,
@@ -199,7 +200,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 		if (!this.contract?.uid) return;
 		if (!this.depositTargetTranche?.uid) return;
 		if (!this.isCreateDepositFormValid) return;
-		const depositedAt = this.createDepositDate ? new Date(this.createDepositDate).getTime() : Date.now();
+		const depositedAt = toCanonicalMexicoDateTimestamp(this.createDepositDate) ?? Date.now();
 		this.selectTranche(this.depositTargetTranche.uid);
 		const newDeposit: Deposit = {
 			contractUid: this.contract.uid,

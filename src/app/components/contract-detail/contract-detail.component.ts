@@ -1,34 +1,44 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ModalController, NavController } from '@ionic/angular';
-import * as _ from 'lodash';
+import { FormsModule } from '@angular/forms';
+import { IonicModule, ModalController, NavController, ToastController } from '@ionic/angular';
 
 // Models
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 import { Contract, ContractStatus } from '../../store/contract/contract.model';
+import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/domain/time/mexico-time.util';
 
 @Component({
 	selector: 'app-contract-detail',
 	standalone: true,
 	templateUrl: './contract-detail.component.html',
 	styleUrls: ['./contract-detail.component.scss'],
-	imports: [
-		CommonModule,
-		IonicModule
-	],
+	imports: [CommonModule, FormsModule, IonicModule],
 })
 export class ContractDetailComponent {
 
 	contract$ = this.contractFacade.selectedContract$;
 
-	advisorsDic$ = this.advisorFacade.entities$
+	advisorsDic$ = this.advisorFacade.entities$;
+
+	private contractPendingSign: Contract | null = null;
+	isSignContractModalOpen = false;
+	signContractDate: string | null = null;
+	signInitialCapital = '';
+
+	get isSignContractValid(): boolean {
+		if (!this.signContractDate) return false;
+		const cap = Number(String(this.signInitialCapital).replace(',', '.'));
+		return Number.isFinite(cap) && cap >= 1;
+	}
 
 	constructor(
 		private advisorFacade: AdvisorFacade,
 		private contractFacade: ContractFacade,
 		private navCtrl: NavController,
-		private modalCtrl: ModalController
+		private modalCtrl: ModalController,
+		private toastCtrl: ToastController,
 	) { }
 
 	close(): void {
@@ -52,15 +62,45 @@ export class ContractDetailComponent {
 		return m[s] ?? s;
 	}
 
-	toggleSign(contract: Contract) {
-		// Create clone
-		let updated = _.cloneDeep(contract);
+	async onSignToolbarClick(contract: Contract) {
+		if (contract.signed) {
+			const t = await this.toastCtrl.create({
+				message: 'Para cambiar firma o capital inicial usa Editar.',
+				duration: 2800,
+				position: 'middle',
+				color: 'medium',
+			});
+			await t.present();
+			return;
+		}
+		this.contractPendingSign = contract;
+		this.signContractDate = toMexicoDateInputValue(Date.now());
+		const existing = contract.initialCapital;
+		this.signInitialCapital =
+			existing != null && Number.isFinite(existing) && existing >= 1 ? String(existing) : '';
+		this.isSignContractModalOpen = true;
+	}
 
-		// Update signed
-		updated.signed = !contract.signed;
+	closeSignContractModal() {
+		this.isSignContractModalOpen = false;
+		this.signContractDate = null;
+		this.signInitialCapital = '';
+		this.contractPendingSign = null;
+	}
 
-		// Update contract
-		this.contractFacade.updateContract(updated);
+	confirmSignContract() {
+		const contract = this.contractPendingSign;
+		if (!contract || !this.isSignContractValid) return;
+		const signatureDate = toCanonicalMexicoDateTimestamp(this.signContractDate);
+		if (!signatureDate) return;
+		const initialCapital = Number(String(this.signInitialCapital).replace(',', '.'));
+		this.contractFacade.updateContract({
+			...contract,
+			signed: true,
+			signatureDate,
+			initialCapital,
+		});
+		this.closeSignContractModal();
 	}
 
 }

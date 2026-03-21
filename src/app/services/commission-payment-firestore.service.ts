@@ -6,6 +6,7 @@ import * as _ from 'lodash';
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { v4 as uuidv4 } from 'uuid';
 import { CommissionPaymentDraft } from '../models/commission-engine.model';
+import { getCutDateForDueDateMexico } from 'src/app/domain/time/mexico-time.util';
 
 @Injectable({
 	providedIn: 'root',
@@ -232,13 +233,6 @@ export class CommissionPaymentFirestoreService {
 	}
 
 	private getCutDateForDueDate(dueDate: number): number {
-		const d = new Date(dueDate);
-		const year = d.getFullYear();
-		const month = d.getMonth();
-		const day = d.getDate();
-
-		if (day <= 7) return new Date(year, month, 7).getTime();
-		if (day <= 21) return new Date(year, month, 21).getTime();
-		return new Date(year, month + 1, 7).getTime();
+		return getCutDateForDueDateMexico(dueDate);
 	}
 }

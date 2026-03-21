@@ -13,6 +13,7 @@ import { CommissionCutStateFirestoreService } from 'src/app/services/commission-
 import { CommissionCutAttachmentService } from 'src/app/services/commission-cut-attachment.service';
 import { CommissionCutsPdfService } from 'src/app/services/commission-cuts-pdf.service';
 import {
+	getBreakdownDeadline,
 	getDefaultCutDateRange,
 	getInvoiceDeadline,
 	getNextCutDate,
@@ -41,6 +42,12 @@ export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
 		paidCount: number;
 		payments: CommissionPayment[];
 	}[];
+};
+
+/** Resúmenes agrupados por fecha de corte (para UI). */
+export type CutSummariesGroup = {
+	cutDate: number;
+	items: AdvisorCutSummaryWithState[];
 };
 
 @Component({
@@ -175,28 +182,15 @@ export class CommissionCutsPage implements OnInit {
 
 			let result: AdvisorCutSummaryWithState[] = summaries.map((s) => {
 				const state = stateMap.get(`${s.cutDate}::${s.advisorUid}`) ?? null;
-				const invoiceDeadline = state?.breakdownSentAt ? getInvoiceDeadline(state.breakdownSentAt) : undefined;
+				const invoiceDeadline = state?.breakdownSentAt
+					? getInvoiceDeadline(state.breakdownSentAt)
+					: getBreakdownDeadline(s.cutDate);
 				const paymentDeadline = state?.invoiceSentAt ? getPaymentDeadline(state.invoiceSentAt) : undefined;
 				const invOverdue = invoiceDeadline ? isInvoiceOverdue(state?.invoiceSentAt, invoiceDeadline) : false;
 				const payOverdue = paymentDeadline ? isPaymentOverdue(state?.receiptSentAt, paymentDeadline) : false;
-				// Incumplimiento basado en la fecha (YYYY-MM-DD) en México (evita saltos por timezone).
-				const todayKeyInMx = this.getMexicoDateKey(Date.now());
-				const isAnyPendingPaymentOverdue =
-					(s.payments?.length ?? 0) > 0 &&
-					s.payments.some((p) => {
-						const isPaid = !!p.paidAt || p.paid;
-						return (
-							!isPaid &&
-							!p.cancelled &&
-							typeof p.cutDate === 'number' &&
-							todayKeyInMx > this.getMexicoDateKey(p.cutDate)
-						);
-					});
 				const isOverdue =
 					(s.pendingAmount > 0 && invOverdue) ||
-					(s.pendingAmount > 0 && payOverdue) ||
-					(s.pendingAmount > 0 && !state?.breakdownSentAt && this.isBreakdownOverdue(s.cutDate)) ||
-					(s.pendingAmount > 0 && isAnyPendingPaymentOverdue);
+					(s.pendingAmount > 0 && payOverdue);
 
 				return {
 					...s,
@@ -219,6 +213,11 @@ export class CommissionCutsPage implements OnInit {
 
 	nonComplianceCount$ = this.advisorSummariesWithState$.pipe(
 		map((summaries) => summaries.filter((s) => s.isOverdue).length)
+	);
+
+	/** Misma data que `advisorSummariesWithState$`, ordenada por corte y agrupada para separadores en UI. */
+	summariesGroupedByCut$ = this.advisorSummariesWithState$.pipe(
+		map((summaries) => this.groupSummariesByCutDate(summaries))
 	);
 
 	cutDateLabel$ = this.filterCutDate$.pipe(
@@ -275,16 +274,6 @@ export class CommissionCutsPage implements OnInit {
 		// Ionic's web component usually exposes `open()`; fallback to click for safety.
 		if (typeof el.open === 'function') el.open();
 		else if (typeof el.click === 'function') el.click();
-	}
-
-	private getMexicoDateKey(timestampMs: number): string {
-		// Formato ISO YYYY-MM-DD en zona horaria de México (para comparar por fecha, sin errores de timezone).
-		return new Intl.DateTimeFormat('en-CA', {
-			timeZone: 'America/Mexico_City',
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit',
-		}).format(new Date(timestampMs));
 	}
 
 	openCutSelect() {
@@ -444,10 +433,6 @@ export class CommissionCutsPage implements OnInit {
 		this.loadStates(startCutDate, endCutDate);
 	}
 
-	isBreakdownOverdue(cutDate: number): boolean {
-		return this.getMexicoDateKey(Date.now()) > this.getMexicoDateKey(cutDate);
-	}
-
 	setFilterCut(cutDate: number | null) {
 		this.filterCutDate$.next(cutDate);
 	}
@@ -496,7 +481,10 @@ export class CommissionCutsPage implements OnInit {
 	/** Texto del plazo vigente según estado */
 	getPlazoLabel(s: AdvisorCutSummaryWithState): string {
 		const state = s.state?.state ?? 'PENDING';
-		if (state === 'PENDING') return `Desglose: hasta ${new Date(s.cutDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+		if (state === 'PENDING') {
+			const deadline = getBreakdownDeadline(s.cutDate);
+			return `Factura: hasta ${new Date(deadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+		}
 		if (state === 'BREAKDOWN_SENT' && s.invoiceDeadline) return `Factura: hasta ${new Date(s.invoiceDeadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 		if (state === 'SENT_TO_PAYMENT' && s.paymentDeadline) return `Pago: hasta ${new Date(s.paymentDeadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 		if (state === 'PAID') return '—';
@@ -563,6 +551,23 @@ export class CommissionCutsPage implements OnInit {
 
 	getSummariesForAdvisor(advisorUid: string, summaries: AdvisorCutSummaryWithState[]): AdvisorCutSummaryWithState[] {
 		return summaries.filter((x) => x.advisorUid === advisorUid);
+	}
+
+	groupSummariesByCutDate(summaries: AdvisorCutSummaryWithState[]): CutSummariesGroup[] {
+		const byCut = new Map<number, AdvisorCutSummaryWithState[]>();
+		for (const s of summaries) {
+			const arr = byCut.get(s.cutDate) ?? [];
+			arr.push(s);
+			byCut.set(s.cutDate, arr);
+		}
+		return Array.from(byCut.entries())
+			.sort((a, b) => a[0] - b[0])
+			.map(([cutDate, items]) => ({ cutDate, items }));
+	}
+
+	/** Lista plana en orden de corte (export por asesora, etc.). */
+	flattenCutGroups(groups: CutSummariesGroup[]): AdvisorCutSummaryWithState[] {
+		return groups.flatMap((g) => g.items);
 	}
 
 	exportPdfByAdvisor(advisorName: string, summaries: AdvisorCutSummaryWithState[]) {

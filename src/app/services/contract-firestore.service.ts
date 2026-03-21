@@ -12,6 +12,7 @@ import {
 import { Tranche } from 'src/app/store/tranche/tranche.model';
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { TrancheFirestoreService } from './tranche-firestore.service';
+import { toCanonicalMexicoDateTimestamp } from 'src/app/domain/time/mexico-time.util';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -66,6 +67,7 @@ export class ContractFirestoreService {
 		const now = Date.now();
 		const contract: Contract = {
 			...contractData,
+			signatureDate: toCanonicalMexicoDateTimestamp(contractData.signatureDate),
 			uid: contractUid,
 			contractStatus: 'PENDING',
 			startDate: undefined,
@@ -89,6 +91,7 @@ export class ContractFirestoreService {
 		const now = Date.now();
 		const contract: Contract = {
 			...contractData,
+			signatureDate: toCanonicalMexicoDateTimestamp(contractData.signatureDate),
 			uid: contractUid,
 			contractStatus: 'PENDING',
 			startDate: undefined,
@@ -104,7 +107,7 @@ export class ContractFirestoreService {
 
 		const shouldCreateTranche =
 			contractData.signed === true &&
-			contractData.signatureDate != null &&
+			contract.signatureDate != null &&
 			initialCapital != null &&
 			initialCapital > 0;
 
@@ -113,7 +116,7 @@ export class ContractFirestoreService {
 				contractUid,
 				initialCapital,
 				undefined,
-				contractData.signatureDate
+				contract.signatureDate
 			);
 		}
 
@@ -123,6 +126,7 @@ export class ContractFirestoreService {
 	// ✏️ Update contract
 	async updateContract(contract: Contract): Promise<Contract> {
 		const updateContract = _.cloneDeep(contract);
+		updateContract.signatureDate = toCanonicalMexicoDateTimestamp(updateContract.signatureDate);
 		updateContract._update = Date.now();
 		const docData = _.omitBy(updateContract, _.isUndefined) as Record<string, unknown>;
 		docData['clientAccount'] = deleteField();

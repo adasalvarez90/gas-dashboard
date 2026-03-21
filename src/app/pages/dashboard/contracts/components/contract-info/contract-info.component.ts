@@ -9,6 +9,7 @@ import { Contract } from 'src/app/store/contract/contract.model';
 
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
+import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/domain/time/mexico-time.util';
 
 @Component({
 	selector: 'app-contract-info',
@@ -24,8 +25,12 @@ export class ContractInfoComponent implements OnInit {
 
 	isSignContractModalOpen = false;
 	signContractDate: string | null = null;
+
+	/** Firma: fecha válida y el contrato ya debe traer capital inicial (capturado en Editar / alta). */
 	get isSignContractValid(): boolean {
-		return !!this.signContractDate;
+		if (!this.signContractDate) return false;
+		const cap = this.contract?.initialCapital;
+		return cap != null && Number.isFinite(Number(cap)) && Number(cap) >= 1;
 	}
 
 	readonly CONTRACT_STATUS_LABELS: Record<string, string> = {
@@ -56,7 +61,7 @@ export class ContractInfoComponent implements OnInit {
 	}
 
 	openSignContractModal() {
-		this.signContractDate = new Date().toISOString().slice(0, 10);
+		this.signContractDate = toMexicoDateInputValue(Date.now());
 		this.isSignContractModalOpen = true;
 	}
 
@@ -68,13 +73,14 @@ export class ContractInfoComponent implements OnInit {
 	confirmSignContract() {
 		if (!this.contract) return;
 		if (!this.isSignContractValid) return;
-		const signatureDate = this.signContractDate ? new Date(this.signContractDate).getTime() : undefined;
+		const signatureDate = toCanonicalMexicoDateTimestamp(this.signContractDate);
 		if (!signatureDate) return;
+		const initialCapital = Number(this.contract.initialCapital);
 		this.contractFacade.updateContract({
 			...this.contract,
 			signed: true,
 			signatureDate,
-			initialCapital: this.contract.initialCapital ?? undefined,
+			initialCapital,
 		});
 		this.closeSignContractModal();
 	}

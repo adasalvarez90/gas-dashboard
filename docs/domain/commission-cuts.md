@@ -105,12 +105,24 @@ The breakdown includes multiple commissions from different contracts. Status app
 
 Cut dates are **7** and **21** (depending on when the tranche is funded, per yield payment schedule in contracts.md).
 
+## Timezone Rule (System-wide)
+
+All business dates must be interpreted in **America/Mexico_City**:
+
+- Contract signature date
+- Tranche signed/registered dates
+- Deposit date
+- Commission due date and cut date
+- Deadline checks for overdue status
+
+Date-only fields must be normalized before saving so they do not shift by timezone when read from the database.
+
 ## Timeline
 
 | Step | Actor | Deadline |
 |------|-------|----------|
 | Send breakdown | User | Day 7 or 21 of the cut |
-| Generate invoice | Advisor | 2 business days after receiving breakdown |
+| Generate invoice | Advisor | **2 business days after cut date** |
 | Pay invoice | User | 2 business days after receiving invoice |
 
 ## Late Invoice Rule

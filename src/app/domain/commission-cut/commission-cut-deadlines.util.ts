@@ -1,3 +1,10 @@
+import {
+	addBusinessDaysMexico,
+	isAfterMexicoDate,
+	mexicoDateKeyFromTimestamp,
+	mexicoDateKeyToCanonicalTimestamp,
+} from 'src/app/domain/time/mexico-time.util';
+
 /**
  * Utilidades para plazos de comisión:
  * - Desglose: día 7 o 21 del mes
@@ -8,20 +15,17 @@
 
 /** Añade N días hábiles a una fecha */
 export function addBusinessDays(fromTs: number, days: number): number {
-	const d = new Date(fromTs);
-	let remaining = days;
-	while (remaining > 0) {
-		d.setDate(d.getDate() + 1);
-		const day = d.getDay();
-		if (day !== 0 && day !== 6) remaining--;
-	}
-	return d.getTime();
+	return addBusinessDaysMexico(fromTs, days);
 }
 
 /** Obtiene el día límite de desglose (7 o 21) para un cutDate */
 export function getBreakdownDeadlineDay(cutDate: number): 7 | 21 {
-	const d = new Date(cutDate);
-	return d.getDate() === 7 ? 7 : 21;
+	return mexicoDateKeyFromTimestamp(cutDate).endsWith('-07') ? 7 : 21;
+}
+
+/** Límite para enviar factura desde el corte: 2 días hábiles. */
+export function getBreakdownDeadline(cutDate: number): number {
+	return addBusinessDays(cutDate, 2);
 }
 
 /** Calcula límite para factura: 2 días hábiles desde breakdownSentAt */
@@ -37,37 +41,43 @@ export function getPaymentDeadline(invoiceSentAt: number): number {
 /** Indica si la factura se envió tarde (después del plazo) */
 export function isInvoiceLate(invoiceSentAt: number | undefined, invoiceDeadline: number): boolean {
 	if (!invoiceSentAt) return false;
-	return invoiceSentAt > invoiceDeadline;
+	return isAfterMexicoDate(invoiceSentAt, invoiceDeadline);
 }
 
 /** Indica si falta enviar factura y ya pasó el plazo */
 export function isInvoiceOverdue(invoiceSentAt: number | undefined, invoiceDeadline: number): boolean {
 	if (invoiceSentAt) return false;
-	return Date.now() > invoiceDeadline;
+	return isAfterMexicoDate(Date.now(), invoiceDeadline);
 }
 
 /** Indica si falta pagar y ya pasó el plazo */
 export function isPaymentOverdue(receiptSentAt: number | undefined, paymentDeadline: number): boolean {
 	if (receiptSentAt) return false;
-	return Date.now() > paymentDeadline;
+	return isAfterMexicoDate(Date.now(), paymentDeadline);
 }
 
 /** Rango por defecto para cortes: últimos 12 meses (días 7 y 21). Usado en loadAfterAuth y Commission Cuts. */
+/** Usa formato canónico (12:00 UTC) igual que getCutDateForDueDateMexico para que la query incluya los documentos. */
 export function getDefaultCutDateRange(): { startCutDate: number; endCutDate: number } {
-	const now = new Date();
-	// end = corte más reciente o próximo: si estamos antes del 7 → 21 del mes anterior; entre 7-21 → 21 del mes actual; después del 21 → 21 del mes actual
-	let end: Date;
-	if (now.getDate() < 7) {
-		end = new Date(now.getFullYear(), now.getMonth() - 1, 21); // 21 del mes anterior
+	const todayKey = mexicoDateKeyFromTimestamp(Date.now());
+	const [y, m, d] = todayKey.split('-').map((x) => parseInt(x, 10));
+	let endKey: string;
+	if ((d || 1) < 7) {
+		const prevMonth = m === 1 ? 12 : (m || 1) - 1;
+		const prevYear = m === 1 ? y - 1 : y;
+		endKey = `${prevYear}-${String(prevMonth).padStart(2, '0')}-21`;
 	} else {
-		end = new Date(now.getFullYear(), now.getMonth(), 21); // 21 del mes actual (incluye corte del 21)
+		endKey = `${y}-${String(m || 1).padStart(2, '0')}-21`;
 	}
-	const start = new Date(end);
-	start.setMonth(start.getMonth() - 12);
-	start.setDate(7);
+	const [ey, em] = endKey.split('-').map((x) => parseInt(x, 10));
+	const endDate = new Date(ey, (em || 1) - 1, 21);
+	endDate.setMonth(endDate.getMonth() - 12);
+	const sy = endDate.getFullYear();
+	const sm = endDate.getMonth() + 1;
+	const startKey = `${sy}-${String(sm).padStart(2, '0')}-07`;
 	return {
-		startCutDate: start.getTime(),
-		endCutDate: end.getTime(),
+		startCutDate: mexicoDateKeyToCanonicalTimestamp(startKey),
+		endCutDate: mexicoDateKeyToCanonicalTimestamp(endKey),
 	};
 }
 
@@ -78,9 +88,7 @@ export function getDefaultCutDateRange(): { startCutDate: number; endCutDate: nu
  * @see docs/domain/commission-cuts.md
  */
 export function getNextCutDate(cutDate: number): number {
-	const d = new Date(cutDate);
-	const day = d.getDate(); // 7 o 21
-	const year = d.getFullYear();
-	const month = d.getMonth();
-	return new Date(year, month + 1, day).getTime();
+	const key = mexicoDateKeyFromTimestamp(cutDate);
+	const [year, month, day] = key.split('-').map((x) => parseInt(x, 10));
+	return Date.UTC(year, month, day, 12, 0, 0, 0);
 }

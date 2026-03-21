@@ -108,6 +108,58 @@
 		color: var(--ion-color-danger);
 	}
 
+	/* Bloques separados por fecha de corte */
+	.summary-by-cut {
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+	}
+
+	.cut-section {
+		margin-bottom: 22px;
+		padding: 14px 14px 18px;
+		border-radius: 18px;
+		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.14);
+		background: rgba(0, 0, 0, 0.12);
+
+		&:not(.cut-section--first) {
+			margin-top: 8px;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	.cut-section__header {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-bottom: 10px;
+	}
+
+	.cut-section__eyebrow {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		opacity: 0.55;
+		color: var(--ion-color-medium);
+	}
+
+	.cut-section__title {
+		margin: 0;
+		font-size: 1.15rem;
+		font-weight: 900;
+		letter-spacing: 0.02em;
+	}
+
+	.cut-section__rule {
+		border: none;
+		border-top: 1px solid rgba(var(--ion-color-medium-rgb), 0.2);
+		margin: 0 0 14px 0;
+	}
+
 	/* Modern cards list (Resumen por asesora) */
 	.summary-cards {
 		display: flex;
@@ -128,14 +180,27 @@
 		}
 	}
 
-	.summary-card:hover {
-		border-color: rgba(var(--ion-color-primary-rgb), 0.35);
-		background: rgba(var(--ion-color-primary-rgb), 0.04);
-	}
-
 	.summary-card--open {
 		border-color: rgba(var(--ion-color-primary-rgb), 0.4);
 		background: rgba(var(--ion-color-primary-rgb), 0.08);
+	}
+
+	/* Pendiente de pago (aún no liquidada) — warning; el rojo de incumplimiento gana con .summary-card--overdue */
+	.summary-card--warning:not(.summary-card--overdue) {
+		border-color: rgba(var(--ion-color-warning-rgb), 0.42);
+		background: rgba(var(--ion-color-warning-rgb), 0.07);
+
+		.summary-card-body {
+			background: rgba(var(--ion-color-warning-rgb), 0.05);
+		}
+
+		.contract-header-item {
+			--background: rgba(var(--ion-color-warning-rgb), 0.06);
+		}
+
+		.contract-payment-item {
+			--background: rgba(var(--ion-color-warning-rgb), 0.045);
+		}
 	}
 
 	/* Incumplimiento: pintar toda la tarjeta/accordion en rojo */
@@ -178,6 +243,10 @@
 
 		&.overdue {
 			border-color: rgba(var(--ion-color-danger-rgb), 0.35);
+		}
+
+		&.warning-pending {
+			border-color: rgba(var(--ion-color-warning-rgb), 0.32);
 		}
 	}
 

@@ -113,7 +113,7 @@
 					<ion-icon name="document-text-outline"></ion-icon>
 				</div>
 				<div class="sign-cta-title">Contrato sin firmar</div>
-				<p class="sign-cta-text">Para crear el primer anexo y registrar depósitos, marca el contrato como firmado. La fecha se indica aquí.</p>
+				<p class="sign-cta-text">Indica la fecha de firma aquí; el capital inicial debe estar guardado en el contrato (captúralo en Editar si aún no está). Con eso se crea el primer anexo.</p>
 				<ion-button (click)="openSignContractModal()" expand="block" shape="round" size="default">
 					<ion-icon name="create-outline"></ion-icon>
 					Firmar contrato
@@ -179,16 +179,21 @@
 			</ion-toolbar>
 		</ion-header>
 		<ion-content class="ion-padding">
-			<p style="margin-bottom: 16px; opacity: 0.9;">Indica la fecha de firma.</p>
+			<p style="margin-bottom: 16px; opacity: 0.9;">
+				Elige la <strong>fecha de firma</strong>.
+				@if (contract.initialCapital != null && +contract.initialCapital >= 1) {
+					Se usará el capital inicial guardado: <strong>{{ contract.initialCapital | number:'1.0-0' }}&nbsp;MXN</strong>.
+				}
+			</p>
+			@if (!contract.initialCapital || +contract.initialCapital < 1) {
+				<p style="color: var(--ion-color-danger); font-size: 14px;">
+					Este contrato no tiene capital inicial guardado. Abre <strong>Editar</strong>, captura el monto en «Capital inicial» y guarda; luego vuelve a firmar aquí.
+				</p>
+			}
 			<ion-item lines="full">
 				<ion-label position="stacked">Fecha de firma</ion-label>
 				<ion-input type="date" [(ngModel)]="signContractDate"></ion-input>
 			</ion-item>
-			@if (!isSignContractValid && signContractDate) {
-				<div style="margin-top: 8px; color: var(--ion-color-danger); font-size: 12px;">
-					Ingresa una fecha válida.
-				</div>
-			}
 			<div style="margin-top: 16px;">
 				<ion-button expand="block" shape="round" (click)="confirmSignContract()" [disabled]="!isSignContractValid">
 					Firmar contrato

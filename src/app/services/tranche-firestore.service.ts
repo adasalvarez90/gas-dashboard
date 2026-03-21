@@ -5,6 +5,7 @@ import * as _ from 'lodash';
 
 import { Tranche } from 'src/app/store/tranche/tranche.model';
 import { v4 as uuidv4 } from 'uuid';
+import { toCanonicalMexicoDateTimestamp } from 'src/app/domain/time/mexico-time.util';
 
 @Injectable({
 	providedIn: 'root',
@@ -49,13 +50,16 @@ export class TrancheFirestoreService {
 		// 3️⃣ Crear nuevo tranche (signedAt = fecha firma; registeredAt = opcional)
 		const uid = uuidv4();
 
+		const normalizedSignedAt = toCanonicalMexicoDateTimestamp(signedAt);
+		const normalizedRegisteredAt = toCanonicalMexicoDateTimestamp(registeredAt);
+
 		const newTranche: Tranche = {
 			uid,
 			contractUid,
 			sequence: newSequence,
 			amount,
-			...(signedAt != null && { signedAt }),
-			...(registeredAt != null && { registeredAt }),
+			...(normalizedSignedAt != null && { signedAt: normalizedSignedAt }),
+			...(normalizedRegisteredAt != null && { registeredAt: normalizedRegisteredAt }),
 			totalDeposited: 0,
 			funded: false,
 			amountAmendments: [],
