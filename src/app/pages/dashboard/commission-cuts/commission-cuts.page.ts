@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { combineLatest, map, BehaviorSubject, take } from 'rxjs';
 
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
@@ -58,6 +58,9 @@ export class CommissionCutsPage implements OnInit {
 	filterCutDate$ = new BehaviorSubject<number | null>(null);
 	filterAdvisorUid$ = new BehaviorSubject<string | null>(null);
 	viewMode$ = new BehaviorSubject<'all' | 'noncompliance'>('all');
+
+	@ViewChild('cutSelect', { read: ElementRef }) private cutSelectRef?: ElementRef;
+	@ViewChild('advisorSelect', { read: ElementRef }) private advisorSelectRef?: ElementRef;
 
 	stateStates$ = new BehaviorSubject<CommissionCutAdvisorState[]>([]);
 
@@ -250,6 +253,23 @@ export class CommissionCutsPage implements OnInit {
 		private paymentFirestore: CommissionPaymentFirestoreService
 	) {}
 
+	private openIonSelect(selectRef?: ElementRef) {
+		const el = selectRef?.nativeElement as any;
+		if (!el) return;
+
+		// Ionic's web component usually exposes `open()`; fallback to click for safety.
+		if (typeof el.open === 'function') el.open();
+		else if (typeof el.click === 'function') el.click();
+	}
+
+	openCutSelect() {
+		this.openIonSelect(this.cutSelectRef);
+	}
+
+	openAdvisorSelect() {
+		this.openIonSelect(this.advisorSelectRef);
+	}
+
 	ngOnInit() {
 		this.advisorFacade.loadAdvisors();
 		this.contractFacade.loadContracts();
@@ -422,6 +442,23 @@ export class CommissionCutsPage implements OnInit {
 
 	paymentTypeLabel(type: string): string {
 		return this.PAYMENT_TYPE_LABELS[type] ?? type;
+	}
+
+	/** UI corta: inmediata → Nueva, recurrente → Antigua */
+	paymentTypeUiLabel(type: string): string {
+		const t = (type ?? '').toUpperCase();
+		switch (t) {
+			case 'IMMEDIATE':
+				return 'Nueva';
+			case 'RECURRING':
+				return 'Antigua';
+			case 'FINAL':
+				return 'Final';
+			case 'ADJUSTMENT':
+				return 'Ajuste';
+			default:
+				return this.paymentTypeLabel(type);
+		}
 	}
 
 	schemeLabel(scheme: string): string {

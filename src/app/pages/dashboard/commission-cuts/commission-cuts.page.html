@@ -9,42 +9,56 @@
 
 <ion-content>
 	<div class="commission-cuts-page scrollbar">
+		<ion-grid fixed class="page-grid">
+			<ion-row>
+				<ion-col size="12">
 		<!-- Filters -->
 		<ion-card>
 			<ion-card-header>
 				<ion-card-title>Filtros</ion-card-title>
 			</ion-card-header>
 			<ion-card-content>
-				<ion-item lines="none" class="filter-item">
-					<ion-label>Corte</ion-label>
-					<ion-select
-						class="filter-select"
-						interface="popover"
-						[value]="filterCutDate$ | async"
-						(ionChange)="setFilterCut($any($event).detail.value)"
-						placeholder="Todos los cortes"
-					>
-						<ion-select-option [value]="null">Todos los cortes</ion-select-option>
-						@for (cd of cutDates$ | async; track cd) {
-							<ion-select-option [value]="cd">{{ cd | date:'d MMM y' }}</ion-select-option>
-						}
-					</ion-select>
-				</ion-item>
-				<ion-item lines="none" class="filter-item">
-					<ion-label>Asesora</ion-label>
-					<ion-select
-						class="filter-select"
-						interface="popover"
-						[value]="filterAdvisorUid$ | async"
-						(ionChange)="setFilterAdvisor($any($event).detail.value)"
-						placeholder="Todas las asesoras"
-					>
-						<ion-select-option [value]="null">Todas las asesoras</ion-select-option>
-						@for (a of advisorsForFilter$ | async; track a.uid) {
-							<ion-select-option [value]="a.uid">{{ a.name || a.uid }}</ion-select-option>
-						}
-					</ion-select>
-				</ion-item>
+				<ion-grid>
+					<ion-row>
+						<ion-col size="6">
+							<ion-item lines="none" class="filter-item" (click)="openCutSelect()">
+								<ion-label>Corte &nbsp;</ion-label>
+								<ion-select
+									#cutSelect
+									class="filter-select"
+									interface="popover"
+									[value]="filterCutDate$ | async"
+									(ionChange)="setFilterCut($any($event).detail.value)"
+									placeholder="Todos los cortes"
+								>
+									<ion-select-option [value]="null">Todos los cortes</ion-select-option>
+									@for (cd of cutDates$ | async; track cd) {
+										<ion-select-option [value]="cd">{{ cd | date:'d MMM y' }}</ion-select-option>
+									}
+								</ion-select>
+							</ion-item>
+						</ion-col>
+
+						<ion-col size="6">
+							<ion-item lines="none" class="filter-item" (click)="openAdvisorSelect()">
+								<ion-label>Asesora&nbsp;</ion-label>
+								<ion-select
+									#advisorSelect
+									class="filter-select"
+									interface="popover"
+									[value]="filterAdvisorUid$ | async"
+									(ionChange)="setFilterAdvisor($any($event).detail.value)"
+									placeholder="Todas las asesoras"
+								>
+									<ion-select-option [value]="null">Todas las asesoras</ion-select-option>
+									@for (a of advisorsForFilter$ | async; track a.uid) {
+										<ion-select-option [value]="a.uid">{{ a.name || a.uid }}</ion-select-option>
+									}
+								</ion-select>
+							</ion-item>
+						</ion-col>
+					</ion-row>
+				</ion-grid>
 			</ion-card-content>
 		</ion-card>
 
@@ -61,12 +75,12 @@
 							<ion-label>Incumplimiento</ion-label>
 							@if ((nonComplianceCount$ | async); as cnt) {
 								@if (cnt > 0) {
-									<ion-badge color="danger">{{ cnt }}</ion-badge>
+									<ion-badge color="danger" class="badge-outline badge-outline--danger">{{ cnt }}</ion-badge>
 								}
 							}
 						</ion-segment-button>
 					</ion-segment>
-					<ion-button size="small" class="export-pdf-btn" color="primary" fill="solid" (click)="exportPdfGeneral()">
+					<ion-button size="small" class="export-pdf-btn" color="primary" fill="outline" (click)="exportPdfGeneral()">
 						<ion-icon name="document-outline"></ion-icon>
 						Exportar PDF
 					</ion-button>
@@ -82,7 +96,7 @@
 						} @else {
 							<div class="summary-cards">
 								@for (s of summaries; track s.advisorUid + '-' + s.cutDate) {
-									<div class="summary-card">
+									<div class="summary-card" [class.summary-card--open]="isSummaryExpanded(s)">
 										<div
 											class="summary-card-header"
 											[class.overdue]="s.isOverdue"
@@ -105,7 +119,7 @@
 													{{ stateLabel(s.state?.state ?? 'PENDING') }}
 												</span>
 												@if (s.state?.movedToNextCut) {
-													<ion-badge color="warning">Pasa al sig. corte</ion-badge>
+													<ion-badge color="warning" class="badge-outline badge-outline--warning">Pasa al sig. corte</ion-badge>
 												}
 
 												<div class="summary-kpis">
@@ -151,7 +165,7 @@
 																size="small"
 																class="action-btn"
 																color="primary"
-																fill="solid"
+																fill="outline"
 																(click)="$event.stopPropagation(); markBreakdownSent(s.advisorUid, s.cutDate)"
 															>
 																Desglose enviado
@@ -160,20 +174,20 @@
 														@case ('BREAKDOWN_SENT') {
 															<label class="upload-label" (click)="$event.stopPropagation()">
 																<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceFileSelected($event, s.advisorUid, s.cutDate)" hidden>
-																<ion-button size="small" class="action-btn" color="primary" fill="solid">Enviar factura</ion-button>
+																<ion-button size="small" class="action-btn" color="primary" fill="outline">Enviar factura</ion-button>
 															</label>
 														}
 														@case ('SENT_TO_PAYMENT') {
 															@if (s.pendingAmount > 0) {
 																<label class="upload-label" (click)="$event.stopPropagation()">
 																	<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptFileSelected($event, s.advisorUid, s.cutDate)" hidden>
-																	<ion-button size="small" class="action-btn" color="warning" fill="solid">Comprobante</ion-button>
+																	<ion-button size="small" class="action-btn" color="warning" fill="outline">Comprobante</ion-button>
 																</label>
 																<ion-button
 																	size="small"
 																	class="action-btn"
 																	color="success"
-																	fill="solid"
+																	fill="outline"
 																	(click)="$event.stopPropagation(); markPaid(s.advisorUid, s.cutDate)"
 																>
 																	Marcar pagado
@@ -186,7 +200,7 @@
 																	size="small"
 																	class="action-btn"
 																	color="success"
-																	fill="solid"
+																	fill="outline"
 																	(click)="$event.stopPropagation(); markAdvisorCutAsPaid(s.advisorUid, s.cutDate)"
 																>
 																	Marcar pagado
@@ -205,50 +219,40 @@
 										@if (isSummaryExpanded(s)) {
 											<div class="summary-card-body" (click)="$event.stopPropagation()">
 												<div class="section-title">Contratos</div>
-												<div class="contracts-list">
+												<div class="contracts-groups">
 													@for (c of s.contractBreakdown; track c.contractUid) {
-														<div class="contract-card">
-															<div class="contract-card-header">
-																<div class="contract-card-title">
-																	<span class="contract-investor">{{ c.investorName }}</span>
-																	<span class="contract-amount">
-																		@if (c.contractAmount != null) {
-																			{{ c.contractAmount | currency:'MXN':'symbol-narrow' }}
-																		} @else {
-																			—
-																		}
-																	</span>
-																</div>
-
-																<span class="pill" [class.paid]="c.pendingAmount === 0">
-																	{{ c.pendingAmount === 0 ? 'Liquidado' : 'Activo' }}
-																</span>
-															</div>
-
-															@if (c.payments.length) {
-																<div class="detail-list">
-																	<div class="detail-list-header">
-																		<span>Cuota</span>
-																		<span>Tipo</span>
-																		<span>Rol</span>
-																		<span>Esquema</span>
-																		<span>Monto</span>
-																	</div>
-
-																	@for (pay of c.payments; track pay.uid) {
-																		<div class="detail-row" [class.paid]="!!pay.paidAt || pay.paid">
-																			<span class="detail-value">{{ pay.installment }}</span>
-																			<span class="detail-value">{{ paymentTypeLabel(pay.paymentType) }}</span>
-																			<span class="detail-value">{{ roleLabel(pay.role) }}</span>
-																			<span class="detail-value">
-																				<div class="detail-sub">Esquema</div>
-																				{{ commissionReasonLabel(pay) }}
-																			</span>
-																			<span class="detail-value detail-amount">{{ pay.amount | currency:'MXN':'symbol-narrow' }}</span>
-																		</div>
-																	}
-																</div>
-															}
+														<div class="contract-group">
+															<ion-list lines="full" class="contracts-ion-list">
+																<ion-item lines="full" class="contract-header-item">
+																	<ion-label>
+																		<h3 class="contract-investor-name">{{ c.investorName }}</h3>
+																		<p class="contract-commission-sum">
+																			Comisión: {{ c.totalAmount | currency:'MXN':'symbol-narrow' }}
+																		</p>
+																	</ion-label>
+																	<ion-badge
+																		slot="end"
+																		[class.badge-outline--success]="c.pendingAmount === 0"
+																		[class.badge-outline--warning]="c.pendingAmount > 0"
+																		class="badge-outline"
+																	>
+																		{{ c.pendingAmount === 0 ? 'Liquidado' : 'Activo' }}
+																	</ion-badge>
+																</ion-item>
+																@for (pay of c.payments; track pay.uid) {
+																	<ion-item [lines]="c.payments.length > 1 && c.payments.indexOf(pay) !== c.payments.length - 1 ? 'inset' : 'none'" class="contract-payment-item" [class.is-paid-row]="!!pay.paidAt || pay.paid">
+																		<ion-label class="ion-text-wrap payment-inline-label">
+																			<div class="payment-inline">
+																				<span class="pi"><span class="pi-label">Cuota</span>{{ pay.installment }}</span>
+																				<span class="pi"><span class="pi-label">Tipo</span>{{ paymentTypeUiLabel(pay.paymentType) }}</span>
+																				<span class="pi"><span class="pi-label">Rol</span>{{ roleLabel(pay.role) }}</span>
+																				<span class="pi pi-grow"><span class="pi-label">Esquema</span>{{ commissionReasonLabel(pay) }}</span>
+																				<span class="pi pi-amount"><span class="pi-label">Monto</span>{{ pay.amount | currency:'MXN':'symbol-narrow' }}</span>
+																			</div>
+																		</ion-label>
+																	</ion-item>
+																}
+															</ion-list>
 														</div>
 													}
 												</div>
@@ -265,7 +269,7 @@
 											size="small"
 											class="export-advisor-btn action-btn"
 											color="primary"
-											fill="solid"
+											fill="outline"
 											(click)="exportPdfByAdvisor(a.name, getSummariesForAdvisor(a.uid, summaries))"
 										>
 											{{ a.name }}
@@ -278,5 +282,8 @@
 				}
 			</ion-card-content>
 		</ion-card>
+				</ion-col>
+			</ion-row>
+		</ion-grid>
 	</div>
 </ion-content>

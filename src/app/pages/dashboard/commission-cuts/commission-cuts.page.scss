@@ -1,26 +1,54 @@
 .commission-cuts-page {
 	padding: 16px 30px;
 
+	.page-grid {
+		width: 100%;
+		max-width: 1120px;
+		margin-left: auto;
+		margin-right: auto;
+		padding: 0;
+	}
+
 	ion-card {
 		margin-bottom: 16px;
 	}
 
 	ion-card-content ion-item.filter-item {
+		--min-height: 44px;
+		--inner-padding-top: 6px;
+		--inner-padding-bottom: 6px;
 		--padding-start: 12px;
 		--padding-end: 12px;
-		--background: rgba(var(--ion-color-light-rgb), 0.55);
-		--border-radius: 12px;
-		margin-bottom: 12px;
-		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
+		--background: rgba(var(--ion-color-light-rgb), 0.45);
+		--border-radius: 16px;
+		--border-width: 0;
+		--inner-border-width: 0;
+		margin-bottom: 10px;
+		border-radius: 16px;
+		overflow: hidden;
+		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.14);
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 	}
 
 	ion-select.filter-select {
-		min-width: 220px;
+		flex: 1 1 auto;
+		min-width: 0;
+		max-width: 100%;
+		font-size: 15px;
+		width: 100%;
 	}
 
 	.filter-item ion-label {
 		font-weight: 650;
 		color: var(--ion-color-medium);
+		font-size: 15px;
+		white-space: nowrap;
+		flex: 0 0 auto;
 	}
 
 	ion-select-popover {
@@ -36,19 +64,48 @@
 	}
 
 	.export-pdf-btn {
-		--border-radius: 14px;
-		--padding-start: 14px;
-		--padding-end: 14px;
-		box-shadow: 0 10px 26px rgba(var(--ion-color-primary-rgb), 0.35);
-		font-weight: 700;
-		letter-spacing: 0.2px;
+		--border-radius: 10px;
+		--border-width: 1px;
+		--padding-start: 12px;
+		--padding-end: 12px;
+		--box-shadow: none;
+		box-shadow: none;
+		font-weight: 600;
+		letter-spacing: 0.02em;
 	}
 
 	.action-btn {
-		--border-radius: 12px;
+		--border-radius: 10px;
+		--border-width: 1px;
 		--padding-top: 8px;
 		--padding-bottom: 8px;
+		--box-shadow: none;
+		box-shadow: none;
+		font-weight: 600;
+	}
+
+	/* Badges tipo outline / transparente */
+	ion-badge.badge-outline {
+		--background: transparent !important;
+		--padding-start: 8px;
+		--padding-end: 8px;
+		--padding-top: 4px;
+		--padding-bottom: 4px;
 		font-weight: 700;
+		font-size: 12px;
+		border: 1px solid currentColor;
+	}
+
+	ion-badge.badge-outline.badge-outline--warning {
+		color: var(--ion-color-warning);
+	}
+
+	ion-badge.badge-outline.badge-outline--success {
+		color: var(--ion-color-success);
+	}
+
+	ion-badge.badge-outline.badge-outline--danger {
+		color: var(--ion-color-danger);
 	}
 
 	/* Modern cards list (Resumen por asesora) */
@@ -63,6 +120,22 @@
 		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
 		background: rgba(255, 255, 255, 0.03);
 		overflow: hidden;
+		transition: border-color 0.2s ease, background 0.2s ease;
+		transition: transform 0.2s ease;
+
+		&:hover {
+			transform: translateY(-2px);
+		}
+	}
+
+	.summary-card:hover {
+		border-color: rgba(var(--ion-color-primary-rgb), 0.35);
+		background: rgba(var(--ion-color-primary-rgb), 0.04);
+	}
+
+	.summary-card--open {
+		border-color: rgba(var(--ion-color-primary-rgb), 0.4);
+		background: rgba(var(--ion-color-primary-rgb), 0.08);
 	}
 
 	.summary-card-header {
@@ -72,12 +145,11 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		cursor: pointer;
-		transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+		transition: border-color 0.15s ease, background 0.15s ease;
 
 		&:hover {
-			transform: translateY(-2px);
 			border-color: rgba(var(--ion-color-primary-rgb), 0.35);
-			box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+			background: rgba(var(--ion-color-primary-rgb), 0.04);
 		}
 
 		&.overdue {
@@ -96,7 +168,7 @@
 	}
 
 	.summary-cut {
-		font-size: 13px;
+		font-size: 14px;
 		letter-spacing: 0.4px;
 		opacity: 0.75;
 		text-transform: uppercase;
@@ -104,7 +176,7 @@
 	}
 
 	.summary-advisor {
-		font-size: 18px;
+		font-size: 21px;
 		font-weight: 900;
 		line-height: 1.1;
 	}
@@ -123,7 +195,7 @@
 		padding: 6px 10px;
 		border-radius: 999px;
 		font-weight: 900;
-		font-size: 12px;
+		font-size: 13px;
 		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
 	}
 
@@ -162,7 +234,7 @@
 
 	.kpi-label {
 		display: block;
-		font-size: 11px;
+		font-size: 12px;
 		letter-spacing: 0.4px;
 		opacity: 0.75;
 		text-transform: uppercase;
@@ -171,7 +243,7 @@
 
 	.kpi-value {
 		display: block;
-		font-size: 15px;
+		font-size: 17px;
 		font-weight: 950;
 		margin-top: 3px;
 	}
@@ -222,43 +294,118 @@
 		padding: 14px 14px 16px 14px;
 		border-top: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
 		background: rgba(var(--ion-color-primary-rgb), 0.03);
+
+		.section-title {
+			font-size: 16px;
+			letter-spacing: 0.06em;
+			font-weight: 900;
+			margin-bottom: 12px;
+		}
 	}
 
-	.contracts-list {
+	.contracts-groups {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 0;
 	}
 
-	.contract-card {
-		border-radius: 14px;
+	.contract-group {
+		margin-bottom: 18px;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	.contracts-ion-list {
+		--background: transparent;
+		background: transparent;
+		padding: 0;
+		margin: 0;
+		border-radius: 12px;
+		overflow: hidden;
 		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
-		background: rgba(255, 255, 255, 0.03);
-		padding: 12px 12px;
 	}
 
-	.contract-card-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
+	.contract-header-item {
+		--background: rgba(255, 255, 255, 0.04);
+		--padding-start: 14px;
+		--padding-end: 14px;
+		--inner-padding-end: 8px;
 	}
 
-	.contract-card-title {
+	.contract-investor-name {
+		margin: 0 0 4px 0;
+		font-size: 17px;
+		font-weight: 800;
+	}
+
+	.contract-commission-sum {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 700;
+		opacity: 0.9;
+	}
+
+	.contract-payment-item {
+		--background: rgba(0, 0, 0, 0.12);
+		--padding-start: 14px;
+		--padding-end: 14px;
+		--min-height: 52px;
+	}
+
+	.contract-payment-item.is-paid-row {
+		opacity: 0.78;
+	}
+
+	.payment-inline-label {
+		margin: 8px 0;
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Grid fijo: mismas columnas en cada fila → alineación vertical entre comisiones */
+	.payment-inline {
+		display: grid;
+		grid-template-columns:
+			2.75rem /* cuota */
+			4.75rem /* tipo (Nueva / Antigua) */
+			minmax(6.75rem, 1.15fr) /* rol (p. ej. Consultor(a)) */
+			minmax(3rem, 1fr) /* esquema */
+			minmax(8.5rem, 8.5rem); /* monto fijo: importes alineados aunque cambie la longitud */
+		column-gap: 12px;
+		align-items: start;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.pi {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 2px;
+		font-size: 15px;
+		min-width: 0;
 	}
 
-	.contract-investor {
-		font-weight: 950;
-		font-size: 14px;
+	.pi-label {
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		opacity: 0.6;
+		font-weight: 700;
 	}
 
-	.contract-amount {
-		font-weight: 900;
-		font-size: 13px;
-		opacity: 0.9;
+	.pi-grow {
+		min-width: 0;
+		word-break: break-word;
+	}
+
+	.pi-amount {
+		font-weight: 800;
+		margin-left: 0;
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 
 	/* Shared UI bits used by summary cards */
@@ -371,6 +518,8 @@
 		--padding-bottom: 6px;
 		--padding-start: 12px;
 		--padding-end: 12px;
+		--box-shadow: none;
+		box-shadow: none;
 	}
 
 	.flex-header {
@@ -641,10 +790,6 @@
 
 			&.overdue {
 				background: rgba(var(--ion-color-danger-rgb), 0.1);
-			}
-
-			&.all-paid {
-				// opcional: estilo sutil para filas pagadas
 			}
 		}
 
