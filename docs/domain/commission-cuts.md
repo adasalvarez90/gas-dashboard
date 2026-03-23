@@ -32,7 +32,7 @@ The summary page groups commissions **by advisor (asesora)**.
 | Advisor name | Name of the asesora |
 | Total for cut | Accumulated commissions for the selected cut |
 | Breakdown | List of individual commissions |
-| Type | **Nueva (immediata)** or **Vieja (recurrente)** per commission |
+| Type | **Diferida** or **Regular** — label explicitly when origin differs (helps more than only "Cuota 1, 2, 3") |
 | Contracts | Can span N contracts |
 
 ## Data Selection
@@ -54,6 +54,16 @@ The user can consult:
 
 ---
 
+# View: Comisiones atrasadas / Requieren acción
+
+A dedicated view or filter to show commissions that:
+
+- Require user or advisor action
+- Are overdue (desglose not sent, invoice not received, payment pending past deadline)
+- Were deferred to the current cut
+
+---
+
 # PDF Export
 
 The system must be able to generate a PDF breakdown that can be downloaded and sent by email.
@@ -65,7 +75,9 @@ The system must be able to generate a PDF breakdown that can be downloaded and s
 | **General breakdown** | All advisors that are owed in the specified cut |
 | **Per advisor** | Individual breakdown for one selected advisor |
 
-Each PDF must include: advisor name(s), total for the cut, commission breakdown, type per commission (nueva/vieja), contract reference(s).
+Each PDF must include: advisor name(s), total for the cut, commission breakdown, type per commission (regular/diferida), contract reference(s).
+
+**Multiple advisors in same contract:** The user sends the breakdown to **each advisor separately**. If one advisor is late, it does **not** affect the others. Each advisor’s commission is handled independently.
 
 ---
 
@@ -99,6 +111,8 @@ The breakdown includes multiple commissions from different contracts. Status app
 - **Invoice (factura)**: Linked to each commission. Required to move from Desglose enviado → Enviada a pago.
 - **Payment receipt (comprobante de pago)**: Linked to each commission. Required to move from Enviada a pago → Pagada.
 
+**The user can attach the invoice to a late commission at any time** — there is no restriction. Exceptions are possible (see Deferred & Exception Rules).
+
 ---
 
 # Cut Schedule and Deadlines
@@ -125,25 +139,52 @@ Date-only fields must be normalized before saving so they do not shift by timezo
 | Generate invoice | Advisor | **2 business days after cut date** |
 | Pay invoice | User | 2 business days after receiving invoice |
 
-## Late Invoice Rule
+---
 
-If the advisor does **not** generate the invoice within the 2-business-day limit:
+# Deferral Rules (Diferida)
+
+## When a commission is deferred
+
+**Only the advisor’s late invoice defers a commission.** If the advisor does **not** send the invoice within the 2-business-day limit:
 
 - That commission is **not** paid in the current cut.
-- It is paid in the **next corresponding cut** — the same cut day (7 or 21) in the **next month**.
+- It moves to the **next corresponding cut** — the same cut day (7 or 21) in the **next month**.
 
 Examples:
 
 - Cut March 7, 2026 → next cut = **April 7, 2026**
 - Cut June 21, 2026 → next cut = **July 21, 2026**
 
-The next cut amount may change, **accumulating** the unpaid commissions that were deferred due to the late invoice.
+**User failure does NOT defer:** If the user fails to send the breakdown on time, or fails to send the invoice for payment, the commission is **not** deferred. It stays in the current cut as late/overdue (marked with late reason) and the user handles it.
+
+## Late reasons
+
+A late commission can have more than one reason. The system must support at least:
+
+| Reason code | Label |
+|-------------|-------|
+| `DESGLOSE_NO_ENVIADO_A_TIEMPO` | El desglose no se envió a la asesora a tiempo |
+
+Additional reasons may be added later.
+
+---
+
+# Exception Rules (Pago antes del siguiente corte)
+
+- The user **can attach the invoice to a late/deferred commission at any time**.
+- There are **exceptions** for specific reasons where, even if the commission was deferred to the next cut, the user can send it to payment **before** the next cut.
+- **If a deferred commission is paid before the next cut:**
+  1. Remove it from the deferred cut (it will no longer appear in that next cut).
+  2. Keep the **paid-late** indicator (color) for audit — the commission is marked as paid late.
+  3. The next cut where it was supposed to be paid will treat it as "already paid late" — it will not appear as pending there, but the late reason and color remain for historical visibility.
 
 ---
 
 # Visual Alerts for Unpaid Commissions
 
 The system must highlight commissions that have **not** been paid on time with an **error or warning color**, so the user can quickly identify which commissions are overdue.
+
+Commissions that were **paid late** (exception payment before next cut) must **retain** that color/indicator for audit, even after payment.
 
 ---
 
@@ -152,3 +193,9 @@ The system must highlight commissions that have **not** been paid on time with a
 The system must show the user which advisors are **not meeting** the established deadlines (e.g., did not generate the invoice on time).
 
 This may be displayed on the same breakdown (desglose) screen or on a separate screen. The purpose is to identify advisors who did not submit their invoice within the 2-business-day limit.
+
+---
+
+# Product Notes (Non-technical)
+
+- **Same advisor in multiple places:** An advisor may appear in different contracts with **different roles**. Keep them in both places with distinct roles.
