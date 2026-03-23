@@ -143,29 +143,104 @@ Date-only fields must be normalized before saving so they do not shift by timezo
 
 # Deferral Rules (Diferida)
 
-## When a commission is deferred
+## Definition: When a commission is diferida
 
-**Only the advisor’s late invoice defers a commission.** If the advisor does **not** send the invoice within the 2-business-day limit:
+**A commission is considered diferida when it has exceeded its payment deadline, regardless of the cause.**
 
-- That commission is **not** paid in the current cut.
-- It moves to the **next corresponding cut** — the same cut day (7 or 21) in the **next month**.
+The system **automatically** flags a commission as diferida by comparing the current date with the computed deadlines (2 business days per step). No user action is required to mark it.
 
-Examples:
+Example:
 
-- Cut March 7, 2026 → next cut = **April 7, 2026**
-- Cut June 21, 2026 → next cut = **July 21, 2026**
+- Commission due: 21 February 2026 (cut date).
+- Today: 23 March 2026.
+- Commission not paid → system marks it as **diferida**.
 
-**User failure does NOT defer:** If the user fails to send the breakdown on time, or fails to send the invoice for payment, the commission is **not** deferred. It stays in the current cut as late/overdue (marked with late reason) and the user handles it.
+**Legacy / invoice-late flow:** When the advisor’s invoice arrives after the 2-business-day limit, the commission may also have `deferredToCutDate` and appear in the next cut. Both concepts coexist: auto-diferida by deadline, and explicit deferral to next cut.
 
-## Late reasons
+---
 
-A late commission can have more than one reason. The system must support at least:
+# Late Reasons (Motivos de atraso)
 
-| Reason code | Label |
-|-------------|-------|
+## Structure
+
+Each late reason is stored as:
+
+```ts
+{
+  step: 'DESGLOSE' | 'FACTURA' | 'PAGO';
+  reason: string;   // catalog code (required)
+  text?: string;    // optional free text
+  at?: number;      // when the delay occurred
+}
+```
+
+- **step**: Which transition was late (breakdown sent, invoice received, or payment).
+- **reason**: Catalog code. Required. The user selects one from the catalog.
+- **text**: Optional free text. The user may add an explanation in addition to the catalog reason.
+- **at**: Optional timestamp when the delay occurred.
+
+Reasons are recorded at each status change where a deadline is exceeded.
+
+## Catalog
+
+| Code | Label |
+|------|-------|
 | `DESGLOSE_NO_ENVIADO_A_TIEMPO` | El desglose no se envió a la asesora a tiempo |
+| `FACTURA_NO_RECIBIDA_A_TIEMPO` | No se recibió factura a tiempo |
 
-Additional reasons may be added later.
+The user selects a catalog reason (**motivo**) and may optionally add free text (**texto**). Both fields are stored.
+
+---
+
+# Visual Alerts (Colores en el detalle)
+
+| Condition | Color | Meaning |
+|-----------|-------|---------|
+| Commission **diferida** (past deadline) | **Red** | Past payment deadline, regardless of cause |
+| Commission **on time** but payment not yet done | **Yellow** | Within deadline, pending receipt |
+| Commission **paid** (receipt attached) | **Green / normal** | Complete |
+
+Commissions that were **paid late** retain the audit indicator (color) even after payment, for historical visibility.
+
+---
+
+# Payment Flow with Deferred Commissions
+
+The normal flow is: **Download breakdown** → **Attach invoice** → **Attach payment receipt**. This flow covers all commissions in the cut.
+
+When there are **diferida** commissions in the cut, the system must support two exception paths:
+
+## Path 1: Normal flow including all deferred
+
+- User follows the normal flow (download breakdown, invoice, receipt) for the entire cut.
+- Because there are deferred commissions, the system **asks for a reason** before proceeding:
+  - **Motivo** (required): Why these deferred commissions are being paid in this cut.
+  - **Texto** (optional): Additional explanation.
+- That reason is **assigned to all** deferred commissions in the cut.
+- Flow continues: attach invoice → attach receipt. One invoice and one receipt for the whole cut.
+
+## Path 2: Process only selected deferred commissions
+
+- User **selects** one or more deferred commissions (some or all, only diferida).
+- User follows the same flow as Path 1:
+  - System asks for **motivo** (required) and **texto** (optional).
+  - That reason applies **only to the selected** deferred commissions.
+  - Attach **one invoice** and **one receipt** for the selected group.
+- Deferred commissions **not** selected remain pending and will be processed later via Path 1 (or another Path 2 selection).
+
+---
+
+# Guided Flow (Flujo por pasos)
+
+The system guides the user through three steps:
+
+1. **Desglose**: Download/attach the breakdown.
+2. **Factura**: Attach the advisor invoice.
+3. **Pago**: Attach the payment receipt.
+
+**Deadline per step:** Each transition has a limit of **2 business days**. If the user attempts to advance to the next step after that limit has passed (e.g., attaching the invoice after the 2-day window), the system **asks for a motivo** (required) and optional text **before** allowing the transition.
+
+This applies at each step: DESGLOSE → FACTURA, FACTURA → PAGO. If the deadline for that step was exceeded, the system records the reason in `lateReasons` before continuing.
 
 ---
 
@@ -177,14 +252,6 @@ Additional reasons may be added later.
   1. Remove it from the deferred cut (it will no longer appear in that next cut).
   2. Keep the **paid-late** indicator (color) for audit — the commission is marked as paid late.
   3. The next cut where it was supposed to be paid will treat it as "already paid late" — it will not appear as pending there, but the late reason and color remain for historical visibility.
-
----
-
-# Visual Alerts for Unpaid Commissions
-
-The system must highlight commissions that have **not** been paid on time with an **error or warning color**, so the user can quickly identify which commissions are overdue.
-
-Commissions that were **paid late** (exception payment before next cut) must **retain** that color/indicator for audit, even after payment.
 
 ---
 

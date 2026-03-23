@@ -1,0 +1,65 @@
+---
+description: Reglas de negocio para cortes de comisión — al editar o crear docs .md
+globs: docs/**/*commission*.md
+alwaysApply: false
+---
+
+# Commission Cuts — Domain Rules for Docs
+
+When editing or creating commission-related `.md` files, follow these rules so docs stay consistent.
+
+## Diferida (Deferral)
+
+- **Definition:** A commission is **diferida** when it has **exceeded its payment deadline**, regardless of cause.
+- Marked **automatically** by the system (compare current date vs deadlines). No manual flag.
+- Example: due 21 Feb, today 23 Mar, not paid → diferida.
+
+## Visual Alerts (Colores)
+
+| Condition | Color |
+|-----------|-------|
+| Past deadline (diferida) | Red |
+| On time, pending receipt | Yellow |
+| Paid (receipt attached) | Green / normal |
+
+Paid-late commissions retain the audit color.
+
+## Late Reasons Schema
+
+```ts
+{
+  step: 'DESGLOSE' | 'FACTURA' | 'PAGO';
+  reason: string;   // catalog code (required)
+  text?: string;    // optional free text
+  at?: number;
+}
+```
+
+- **reason** = catalog code (motivo). Required.
+- **text** = optional free text (texto). User can add explanation.
+- Multiple entries allowed.
+- Catalog: `DESGLOSE_NO_ENVIADO_A_TIEMPO`, `FACTURA_NO_RECIBIDA_A_TIEMPO`.
+
+## Payment Flow with Diferidas
+
+**Normal:** Download breakdown → Attach invoice → Attach receipt.
+
+**Path 1:** User processes entire cut including deferrals. System asks **motivo** (required) + **texto** (optional) for all deferrals before proceeding. One invoice, one receipt for the whole cut.
+
+**Path 2:** User selects only some deferrals. Same motivo+texto for selected group. One invoice, one receipt for that group. Rest remain pending.
+
+## Guided Flow
+
+1. **Desglose** → 2. **Factura** → 3. **Pago**
+- **2 business days** per step.
+- If deadline exceeded when advancing: system asks motivo (required) + optional text, records in `lateReasons`.
+
+## Exception Rules
+
+- Invoice can be attached to a late commission **at any time**.
+- If paid before next cut: remove from deferred cut, keep paid-late indicator for audit.
+
+## Source of Truth
+
+- `docs/domain/commission-cuts.md` — full domain rules
+- `docs/domain/commission-cut-implementation.md` — schemas and `LateReasonEntry`
