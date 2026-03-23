@@ -67,16 +67,13 @@ export const COMMISSION_CUT_LATE_REASONS: Record<string, string> = {
 
 ---
 
-# CommissionPayment — Considered Changes
+# CommissionPayment — Implemented
 
-When a commission is **deferred** to the next cut, the system must update `CommissionPayment.cutDate` to the next cut date so that:
+When a commission is **deferred** to the next cut:
 
-- The commission appears in the next cut's aggregation.
-- The "Comisiones atrasadas" / "Requieren acción" view can query by the correct cut.
-
-**Current behavior:** `moveStateToNextCut` only updates `CommissionCutAdvisorState`. The `CommissionPayment` records keep their original `cutDate`. This may cause a mismatch: the state moves to April 21, but payments still have March 21.
-
-**Recommendation:** When deferring, also update `CommissionPayment.cutDate` (and optionally add `originalCutDate` to `CommissionPayment` for audit) so aggregation and views stay consistent.
+- `movePaymentsToNextCut` sets `deferredToCutDate` to the next cut. The `cutDate` **stays** as the original cut.
+- The commission appears in **both** cuts: original (read-only badge "Diferida al sig. corte") and target (for payment).
+- `markCommissionPaymentsPaidByCutDateAndAdvisor` finds payments by `cutDate` OR `deferredToCutDate`. On pay, clears `deferredToCutDate`.
 
 ---
 

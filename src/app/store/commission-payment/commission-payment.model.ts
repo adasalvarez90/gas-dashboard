@@ -24,6 +24,9 @@ export interface CommissionPayment extends Metadata {
 	dueDate: number;
 	cutDate: number;
 
+	/** Corte al que se difirió cuando la factura llega tarde. Si existe, la comisión aparece en ambos cortes. */
+	deferredToCutDate?: number;
+
 	paid: boolean;
 	paidAt?: number;
 

@@ -40,8 +40,18 @@ export const commissionPaymentReducer = createReducer(
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisor, (state) => ({ ...state, loading: true, error: null })),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisorSuccess, (state, { cutDate, advisorUid, paidAt }) => {
 		const updates = Object.values(state.entities)
-			.filter((p) => !!p && p.cutDate === cutDate && p.advisorUid === advisorUid && !p.paid && !p.cancelled)
-			.map((p) => ({ id: p!.uid, changes: { paid: true, paidAt } }));
+			.filter(
+				(p) =>
+					!!p &&
+					p.advisorUid === advisorUid &&
+					!p.paid &&
+					!p.cancelled &&
+					(p.cutDate === cutDate || p.deferredToCutDate === cutDate)
+			)
+			.map((p) => ({
+				id: p!.uid,
+				changes: { paid: true, paidAt, ...(p!.deferredToCutDate ? { deferredToCutDate: undefined } : {}) },
+			}));
 		return adapter.updateMany(updates, { ...state, loading: false });
 	}),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisorFailure, (state, { error }) => ({ ...state, loading: false, error })),

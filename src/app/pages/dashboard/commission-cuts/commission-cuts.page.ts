@@ -1,4 +1,5 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, map, BehaviorSubject, take } from 'rxjs';
 
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
@@ -9,6 +10,7 @@ import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
 import { AdvisorCutSummary } from 'src/app/models/commission-cuts-summary.model';
 import { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
+import { getLateReasonLabel } from 'src/app/models/commission-cut-late-reason.model';
 import { CommissionCutStateFirestoreService } from 'src/app/services/commission-cut-state-firestore.service';
 import { CommissionCutAttachmentService } from 'src/app/services/commission-cut-attachment.service';
 import { CommissionCutsPdfService } from 'src/app/services/commission-cuts-pdf.service';
@@ -64,7 +66,7 @@ export class CommissionCutsPage implements OnInit {
 
 	filterCutDate$ = new BehaviorSubject<number | null>(null);
 	filterAdvisorUid$ = new BehaviorSubject<string | null>(null);
-	viewMode$ = new BehaviorSubject<'all' | 'noncompliance'>('all');
+	viewMode$ = new BehaviorSubject<'all' | 'noncompliance' | 'paidLate'>('all');
 
 	@ViewChild('cutSelect', { read: ElementRef }) private cutSelectRef?: ElementRef;
 	@ViewChild('advisorSelect', { read: ElementRef }) private advisorSelectRef?: ElementRef;
@@ -74,7 +76,10 @@ export class CommissionCutsPage implements OnInit {
 	cutDates$ = this.commissionPayments$.pipe(
 		map((payments) => {
 			const set = new Set<number>();
-			payments.forEach((p) => p.cutDate && set.add(p.cutDate));
+			payments.forEach((p) => {
+				if (p.cutDate) set.add(p.cutDate);
+				if (p.deferredToCutDate) set.add(p.deferredToCutDate);
+			});
 			return Array.from(set).sort((a, b) => a - b);
 		})
 	);
@@ -99,12 +104,11 @@ export class CommissionCutsPage implements OnInit {
 		map(([payments, advisorsDic, filterCut, filterAdvisor]) => {
 			const byCutAdvisor = new Map<string, AdvisorCutSummary>();
 
-			for (const p of payments) {
-				if (p.cancelled) continue;
-				if (filterCut != null && p.cutDate !== filterCut) continue;
-				if (filterAdvisor != null && p.advisorUid !== filterAdvisor) continue;
+			const addToBucket = (p: CommissionPayment, effectiveCutDate: number) => {
+				if (filterCut != null && effectiveCutDate !== filterCut) return;
+				if (filterAdvisor != null && p.advisorUid !== filterAdvisor) return;
 
-				const key = `${p.cutDate}::${p.advisorUid}`;
+				const key = `${effectiveCutDate}::${p.advisorUid}`;
 				const name =
 					(advisorsDic as Record<string, { name?: string }>)?.[p.advisorUid]?.name ??
 					(advisorsDic as Record<string, { displayName?: string }>)?.[p.advisorUid]?.displayName ??
@@ -124,7 +128,7 @@ export class CommissionCutsPage implements OnInit {
 					existing = {
 						advisorUid: p.advisorUid,
 						advisorName: name,
-						cutDate: p.cutDate,
+						cutDate: effectiveCutDate,
 						totalAmount: amount,
 						pendingAmount: isPaid ? 0 : amount,
 						paidAmount: isPaid ? amount : 0,
@@ -156,6 +160,12 @@ export class CommissionCutsPage implements OnInit {
 						existing.breakdown.push({ paymentType: type, amount, count: 1 });
 					}
 				}
+			};
+
+			for (const p of payments) {
+				if (p.cancelled) continue;
+				addToBucket(p, p.cutDate);
+				if (p.deferredToCutDate) addToBucket(p, p.deferredToCutDate);
 			}
 
 			const result = Array.from(byCutAdvisor.values());
@@ -181,16 +191,24 @@ export class CommissionCutsPage implements OnInit {
 			contracts.forEach((c) => contractMap.set(c.uid, c));
 
 			let result: AdvisorCutSummaryWithState[] = summaries.map((s) => {
-				const state = stateMap.get(`${s.cutDate}::${s.advisorUid}`) ?? null;
+				let state = stateMap.get(`${s.cutDate}::${s.advisorUid}`);
+				if (!state && s.payments.length) {
+					const deferredFrom = s.payments.find((p) => p.deferredToCutDate === s.cutDate);
+					if (deferredFrom) state = stateMap.get(`${deferredFrom.cutDate}::${s.advisorUid}`) ?? null;
+				}
+				if (!state) state = null;
 				const invoiceDeadline = state?.breakdownSentAt
 					? getInvoiceDeadline(state.breakdownSentAt)
 					: getBreakdownDeadline(s.cutDate);
 				const paymentDeadline = state?.invoiceSentAt ? getPaymentDeadline(state.invoiceSentAt) : undefined;
 				const invOverdue = invoiceDeadline ? isInvoiceOverdue(state?.invoiceSentAt, invoiceDeadline) : false;
 				const payOverdue = paymentDeadline ? isPaymentOverdue(state?.receiptSentAt, paymentDeadline) : false;
+				const hasLateReasons = (state?.lateReasons?.length ?? 0) > 0;
+				const isDeferred = !!(state?.movedToNextCut || state?.originalCutDate);
 				const isOverdue =
-					(s.pendingAmount > 0 && invOverdue) ||
-					(s.pendingAmount > 0 && payOverdue);
+					(s.pendingAmount > 0 && (invOverdue || payOverdue)) ||
+					(s.pendingAmount > 0 && hasLateReasons) ||
+					(s.pendingAmount > 0 && isDeferred);
 
 				return {
 					...s,
@@ -203,8 +221,9 @@ export class CommissionCutsPage implements OnInit {
 			});
 
 			if (viewMode === 'noncompliance') {
-				// Solo las que realmente están atrasadas/incumplidas.
 				result = result.filter((r) => r.isOverdue);
+			} else if (viewMode === 'paidLate') {
+				result = result.filter((r) => r.state?.paidLate);
 			}
 
 			return result;
@@ -213,6 +232,10 @@ export class CommissionCutsPage implements OnInit {
 
 	nonComplianceCount$ = this.advisorSummariesWithState$.pipe(
 		map((summaries) => summaries.filter((s) => s.isOverdue).length)
+	);
+
+	paidLateCount$ = this.advisorSummariesWithState$.pipe(
+		map((summaries) => summaries.filter((s) => s.state?.paidLate).length)
 	);
 
 	/** Misma data que `advisorSummariesWithState$`, ordenada por corte y agrupada para separadores en UI. */
@@ -257,7 +280,10 @@ export class CommissionCutsPage implements OnInit {
 		referral: 'Referido',
 	};
 
+	private persistedLateReasonKeys = new Set<string>();
+
 	constructor(
+		private destroyRef: DestroyRef,
 		private commissionPaymentFacade: CommissionPaymentFacade,
 		private advisorFacade: AdvisorFacade,
 		private contractFacade: ContractFacade,
@@ -290,6 +316,35 @@ export class CommissionCutsPage implements OnInit {
 		const { startCutDate, endCutDate } = getDefaultCutDateRange();
 		this.commissionPaymentFacade.loadCommissionPaymentsForCuts(startCutDate, endCutDate);
 		this.loadStates(startCutDate, endCutDate);
+		this.persistLateReasonsWhenNeeded();
+	}
+
+	/** Persiste lateReasons cuando desglose no enviado a tiempo (lazy, una vez por sesión por clave). */
+	private persistLateReasonsWhenNeeded() {
+		this.advisorSummariesWithState$
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe((summaries) => {
+				for (const s of summaries) {
+					const key = `${s.cutDate}::${s.advisorUid}`;
+					if (this.persistedLateReasonKeys.has(key)) continue;
+					const hasStoredReason = (s.state?.lateReasons?.length ?? 0) > 0;
+					if (hasStoredReason) {
+						this.persistedLateReasonKeys.add(key);
+						continue;
+					}
+					const isPendingPastDeadline =
+						(s.state?.state === 'PENDING' || !s.state) &&
+						s.invoiceDeadline &&
+						isInvoiceOverdue(s.state?.invoiceSentAt, s.invoiceDeadline);
+					if (!isPendingPastDeadline) continue;
+					this.persistedLateReasonKeys.add(key);
+					const { startCutDate, endCutDate } = getDefaultCutDateRange();
+					this.stateService
+						.addLateReason(s.cutDate, s.advisorUid, 'DESGLOSE_NO_ENVIADO_A_TIEMPO')
+						.then(() => this.loadStates(startCutDate, endCutDate))
+						.catch(() => {});
+				}
+			});
 	}
 
 	private groupPaymentsByContract(
@@ -441,8 +496,42 @@ export class CommissionCutsPage implements OnInit {
 		this.filterAdvisorUid$.next(advisorUid);
 	}
 
-	setViewMode(mode: 'all' | 'noncompliance') {
+	setViewMode(mode: 'all' | 'noncompliance' | 'paidLate') {
 		this.viewMode$.next(mode);
+	}
+
+	/** true si el corte es diferido (vino del corte anterior por factura tardía). */
+	isDeferred(s: AdvisorCutSummaryWithState): boolean {
+		return !!(s.state?.movedToNextCut || s.state?.originalCutDate);
+	}
+
+	/** Corte donde está el estado (puede ser original cuando es diferida). */
+	getStateCutDate(s: AdvisorCutSummaryWithState): number {
+		return s.state?.cutDate ?? s.cutDate;
+	}
+
+	/** true cuando se muestra en corte original y está diferida (solo lectura). */
+	isReadOnlyDeferred(s: AdvisorCutSummaryWithState): boolean {
+		return !!(s.state?.deferredToCutDate && s.cutDate === s.state?.cutDate);
+	}
+
+	/** Motivos de atraso efectivos (persistidos o computados). */
+	getEffectiveLateReasons(s: AdvisorCutSummaryWithState): string[] {
+		if (s.state?.lateReasons?.length) return s.state.lateReasons;
+		// Desglose no enviado a tiempo: PENDING + pasado el plazo
+		if (s.state?.state === 'PENDING' && s.invoiceDeadline && isInvoiceOverdue(undefined, s.invoiceDeadline)) {
+			return ['DESGLOSE_NO_ENVIADO_A_TIEMPO'];
+		}
+		return [];
+	}
+
+	getLateReasonLabel(code: string): string {
+		return getLateReasonLabel(code);
+	}
+
+	/** Motivos de atraso como string unido por comas. */
+	getLateReasonsLabel(s: AdvisorCutSummaryWithState): string {
+		return this.getEffectiveLateReasons(s).map((r) => this.getLateReasonLabel(r)).join(', ');
 	}
 
 	stateLabel(state: string): string {
@@ -491,48 +580,50 @@ export class CommissionCutsPage implements OnInit {
 		return '—';
 	}
 
-	markBreakdownSent(advisorUid: string, cutDate: number) {
-		this.stateService.markBreakdownSent(cutDate, advisorUid).then(() => this.refreshCutData());
+	/** stateCutDate: corte donde está el estado (puede ser original si es diferida). summaryCutDate: corte del resumen (para pagos). */
+	markBreakdownSent(advisorUid: string, stateCutDate: number) {
+		this.stateService.markBreakdownSent(stateCutDate, advisorUid).then(() => this.refreshCutData());
 	}
 
-	async markInvoiceSent(advisorUid: string, cutDate: number, file?: File) {
-		const invoiceUrl = file ? await this.attachmentService.uploadAttachment(cutDate, advisorUid, 'invoice', file) : undefined;
-		const state = await this.stateService.markInvoiceSent(cutDate, advisorUid, invoiceUrl);
+	async markInvoiceSent(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File) {
+		const invoiceUrl = file ? await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'invoice', file) : undefined;
+		const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl);
 		const invoiceDeadline = state.breakdownSentAt ? getInvoiceDeadline(state.breakdownSentAt) : 0;
 		const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadline));
 		if (invoiceWasLate) {
-			const nextCutDate = getNextCutDate(cutDate);
-			await this.paymentFirestore.movePaymentsToNextCut(cutDate, advisorUid, nextCutDate);
-			await this.stateService.moveStateToNextCut(cutDate, advisorUid);
+			const nextCutDate = getNextCutDate(stateCutDate);
+			await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, advisorUid, nextCutDate);
+			await this.stateService.moveStateToNextCut(stateCutDate, advisorUid);
+			await this.stateService.addLateReason(stateCutDate, advisorUid, 'FACTURA_NO_RECIBIDA_A_TIEMPO');
 		}
 		this.refreshCutData(invoiceWasLate);
 	}
 
-	async markPaid(advisorUid: string, cutDate: number, file?: File) {
-		const receiptUrl = file ? await this.attachmentService.uploadAttachment(cutDate, advisorUid, 'receipt', file) : undefined;
-		await this.stateService.markPaid(cutDate, advisorUid, receiptUrl);
-		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(cutDate, advisorUid, Date.now());
+	async markPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File) {
+		const receiptUrl = file ? await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'receipt', file) : undefined;
+		await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl);
+		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, Date.now());
 		this.refreshCutData();
 	}
 
-	markAdvisorCutAsPaid(advisorUid: string, cutDate: number) {
-		this.markPaid(advisorUid, cutDate);
+	markAdvisorCutAsPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number) {
+		this.markPaid(advisorUid, stateCutDate, summaryCutDate);
 	}
 
-	onInvoiceFileSelected(event: Event, advisorUid: string, cutDate: number) {
+	onInvoiceFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file) {
-			this.markInvoiceSent(advisorUid, cutDate, file);
+			this.markInvoiceSent(advisorUid, stateCutDate, summaryCutDate, file);
 		}
 		input.value = '';
 	}
 
-	onReceiptFileSelected(event: Event, advisorUid: string, cutDate: number) {
+	onReceiptFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file) {
-			this.markPaid(advisorUid, cutDate, file);
+			this.markPaid(advisorUid, stateCutDate, summaryCutDate, file);
 		}
 		input.value = '';
 	}

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where, writeBatch } from '@angular/fire/firestore';
+import { deleteField } from 'firebase/firestore';
 
 import * as _ from 'lodash';
 
@@ -50,17 +51,19 @@ export class CommissionPaymentFirestoreService {
 		return snap.docs.map(d => d.data() as CommissionPayment);
 	}
 
-	// ===== GET BY CUT DATE RANGE (for Commission Cuts page) =====
+	// ===== GET BY CUT DATE RANGE (for Commission Cuts page). Incluye pagos con cutDate en rango O deferredToCutDate en rango. =====
 	async getCommissionPaymentsByCutDateRange(startCutDate: number, endCutDate: number): Promise<CommissionPayment[]> {
 		const ref = collection(this.firestore, this.collectionName);
-		const q = query(
-			ref,
-			where('cutDate', '>=', startCutDate),
-			where('cutDate', '<=', endCutDate),
-			where('_on', '==', true),
-		);
-		const snap = await getDocs(q);
-		return snap.docs.map((d) => d.data() as CommissionPayment);
+		const [snapCut, snapDeferred] = await Promise.all([
+			getDocs(query(ref, where('cutDate', '>=', startCutDate), where('cutDate', '<=', endCutDate), where('_on', '==', true))),
+			getDocs(query(ref, where('deferredToCutDate', '>=', startCutDate), where('deferredToCutDate', '<=', endCutDate), where('_on', '==', true))),
+		]);
+		const byUid = new Map<string, CommissionPayment>();
+		[...snapCut.docs, ...snapDeferred.docs].forEach((d) => {
+			const p = d.data() as CommissionPayment;
+			if (!byUid.has(p.uid)) byUid.set(p.uid, p);
+		});
+		return Array.from(byUid.values());
 	}
 
 	// ===== MARK PAID BY TRANCH + ADVISOR =====
@@ -86,8 +89,8 @@ export class CommissionPaymentFirestoreService {
 		return snap.size;
 	}
 
-	// ===== MOVE PAYMENTS TO NEXT CUT (regla factura tardía) =====
-	async movePaymentsToNextCut(cutDate: number, advisorUid: string, newCutDate: number): Promise<number> {
+	// ===== DEFER PAYMENTS TO NEXT CUT (regla factura tardía). La comisión permanece en cutDate y se añade deferredToCutDate. =====
+	async movePaymentsToNextCut(cutDate: number, advisorUid: string, nextCutDate: number): Promise<number> {
 		const ref = collection(this.firestore, this.collectionName);
 		const q = query(
 			ref,
@@ -99,31 +102,36 @@ export class CommissionPaymentFirestoreService {
 		const batch = writeBatch(this.firestore);
 		const now = Date.now();
 		snap.docs.forEach((d) => {
-			batch.update(d.ref, { cutDate: newCutDate, _update: now });
+			batch.update(d.ref, {
+				deferredToCutDate: nextCutDate,
+				_update: now,
+			});
 		});
 		await batch.commit();
 		return snap.size;
 	}
 
-	// ===== MARK PAID BY CUT DATE + ADVISOR =====
+	// ===== MARK PAID BY CUT DATE + ADVISOR (incluye pagos con cutDate o deferredToCutDate = cutDate) =====
 	async markCommissionPaymentsPaidByCutDateAndAdvisor(cutDate: number, advisorUid: string, paidAt: number = Date.now()): Promise<number> {
 		const ref = collection(this.firestore, this.collectionName);
-		const q = query(
-			ref,
-			where('cutDate', '==', cutDate),
-			where('advisorUid', '==', advisorUid),
-			where('paid', '==', false),
-			where('cancelled', '==', false),
-			where('_on', '==', true),
-		);
-
-		const snap = await getDocs(q);
+		const [snapCut, snapDeferred] = await Promise.all([
+			getDocs(query(ref, where('cutDate', '==', cutDate), where('advisorUid', '==', advisorUid), where('paid', '==', false), where('cancelled', '==', false), where('_on', '==', true))),
+			getDocs(query(ref, where('deferredToCutDate', '==', cutDate), where('advisorUid', '==', advisorUid), where('paid', '==', false), where('cancelled', '==', false), where('_on', '==', true))),
+		]);
+		const allDocs = [...snapCut.docs, ...snapDeferred.docs];
+		const docIds = new Set<string>();
 		const batch = writeBatch(this.firestore);
-		snap.docs.forEach(d => {
-			batch.update(d.ref, { paid: true, paidAt, _update: paidAt });
+		allDocs.forEach((d) => {
+			if (!docIds.has(d.id)) {
+				docIds.add(d.id);
+				const p = d.data() as CommissionPayment;
+				const updates: Record<string, unknown> = { paid: true, paidAt, _update: paidAt };
+				if (p.deferredToCutDate) (updates as any).deferredToCutDate = deleteField();
+				batch.update(d.ref, updates);
+			}
 		});
 		await batch.commit();
-		return snap.size;
+		return docIds.size;
 	}
 
 	// ===== CANCEL FUTURE UNPAID BY CONTRACT =====

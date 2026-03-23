@@ -72,10 +72,18 @@
 							<ion-label>Todas</ion-label>
 						</ion-segment-button>
 						<ion-segment-button value="noncompliance">
-							<ion-label>Incumplimiento</ion-label>
+							<ion-label>Requieren acción</ion-label>
 							@if ((nonComplianceCount$ | async); as cnt) {
 								@if (cnt > 0) {
 									<ion-badge color="danger" class="badge-outline badge-outline--danger">{{ cnt }}</ion-badge>
+								}
+							}
+						</ion-segment-button>
+						<ion-segment-button value="paidLate">
+							<ion-label>Pagadas con retraso</ion-label>
+							@if ((paidLateCount$ | async); as cnt) {
+								@if (cnt > 0) {
+									<ion-badge color="warning" class="badge-outline badge-outline--warning">{{ cnt }}</ion-badge>
 								}
 							}
 						</ion-segment-button>
@@ -109,6 +117,7 @@
 										[class.summary-card--open]="isSummaryExpanded(s)"
 										[class.summary-card--overdue]="s.isOverdue"
 										[class.summary-card--warning]="s.pendingAmount > 0 && !s.isOverdue"
+										[class.summary-card--paid-late]="s.state?.paidLate"
 									>
 										<div
 											class="summary-card-header"
@@ -124,6 +133,11 @@
 
 												<div class="summary-card-meta">
 													<span class="chip chip--type">{{ schemeLabel(s.scheme) }}</span>
+													@if (isDeferred(s)) {
+														<span class="chip chip--deferred">Diferida</span>
+													} @else {
+														<span class="chip chip--regular">Regular</span>
+													}
 													<span class="chip chip--neutral">{{ s.contractUids.length }} contratos</span>
 												</div>
 											</div>
@@ -132,8 +146,11 @@
 												<span class="state-badge" [class]="'state-' + (s.state?.state ?? 'PENDING')">
 													{{ stateLabel(s.state?.state ?? 'PENDING') }}
 												</span>
-												@if (s.state?.movedToNextCut) {
-													<ion-badge color="warning" class="badge-outline badge-outline--warning">Pasa al sig. corte</ion-badge>
+												@if (s.state?.paidLate) {
+													<ion-badge color="warning" class="badge-outline badge-outline--warning">Pagada atrasada</ion-badge>
+												}
+												@for (reason of getEffectiveLateReasons(s); track reason) {
+													<ion-badge color="danger" class="badge-outline badge-outline--danger">{{ getLateReasonLabel(reason) }}</ion-badge>
 												}
 
 												<div class="summary-kpis">
@@ -153,6 +170,9 @@
 											</div>
 
 											<div class="summary-card-right">
+												@if (isReadOnlyDeferred(s)) {
+													<span class="chip chip--deferred">Diferida al sig. corte</span>
+												}
 												<div class="summary-card-actions">
 													@if (s.state?.invoiceUrl) {
 														<a
@@ -180,21 +200,21 @@
 																class="action-btn"
 																color="primary"
 																fill="outline"
-																(click)="$event.stopPropagation(); markBreakdownSent(s.advisorUid, s.cutDate)"
+																(click)="$event.stopPropagation(); markBreakdownSent(s.advisorUid, getStateCutDate(s))"
 															>
 																Desglose enviado
 															</ion-button>
 														}
 														@case ('BREAKDOWN_SENT') {
 															<label class="upload-label" (click)="$event.stopPropagation()">
-																<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceFileSelected($event, s.advisorUid, s.cutDate)" hidden>
+																<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceFileSelected($event, s.advisorUid, getStateCutDate(s), s.cutDate)" hidden>
 																<ion-button size="small" class="action-btn" color="primary" fill="outline">Enviar factura</ion-button>
 															</label>
 														}
 														@case ('SENT_TO_PAYMENT') {
 															@if (s.pendingAmount > 0) {
 																<label class="upload-label" (click)="$event.stopPropagation()">
-																	<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptFileSelected($event, s.advisorUid, s.cutDate)" hidden>
+																	<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptFileSelected($event, s.advisorUid, getStateCutDate(s), s.cutDate)" hidden>
 																	<ion-button size="small" class="action-btn" color="warning" fill="outline">Comprobante</ion-button>
 																</label>
 																<ion-button
@@ -202,7 +222,7 @@
 																	class="action-btn"
 																	color="success"
 																	fill="outline"
-																	(click)="$event.stopPropagation(); markPaid(s.advisorUid, s.cutDate)"
+																	(click)="$event.stopPropagation(); markPaid(s.advisorUid, getStateCutDate(s), s.cutDate)"
 																>
 																	Marcar pagado
 																</ion-button>
@@ -215,7 +235,7 @@
 																	class="action-btn"
 																	color="success"
 																	fill="outline"
-																	(click)="$event.stopPropagation(); markAdvisorCutAsPaid(s.advisorUid, s.cutDate)"
+																	(click)="$event.stopPropagation(); markAdvisorCutAsPaid(s.advisorUid, getStateCutDate(s), s.cutDate)"
 																>
 																	Marcar pagado
 																</ion-button>
@@ -257,11 +277,17 @@
 																	<ion-item [lines]="c.payments.length > 1 && c.payments.indexOf(pay) !== c.payments.length - 1 ? 'inset' : 'none'" class="contract-payment-item" [class.is-paid-row]="!!pay.paidAt || pay.paid">
 																		<ion-label class="ion-text-wrap payment-inline-label">
 																			<div class="payment-inline">
-																				<span class="pi"><span class="pi-label">Cuota</span>{{ pay.installment }}</span>
+																				<span class="pi" [class.pi--deferred]="!!pay.deferredToCutDate"><span class="pi-label">Origen</span>{{ pay.deferredToCutDate ? 'Diferida' : 'Regular' }}</span>
+																				@if (pay.deferredToCutDate) {
+																					<span class="pi"><span class="pi-label">Corte orig.</span>{{ pay.cutDate | date:'d/M' }}</span>
+																				}
 																				<span class="pi"><span class="pi-label">Tipo</span>{{ paymentTypeUiLabel(pay.paymentType) }}</span>
 																				<span class="pi"><span class="pi-label">Rol</span>{{ roleLabel(pay.role) }}</span>
 																				<span class="pi pi-grow"><span class="pi-label">Esquema</span>{{ commissionReasonLabel(pay) }}</span>
 																				<span class="pi pi-amount"><span class="pi-label">Monto</span>{{ pay.amount | currency:'MXN':'symbol-narrow' }}</span>
+																				@if (getEffectiveLateReasons(s).length) {
+																					<span class="pi"><span class="pi-label">Motivo</span>{{ getLateReasonsLabel(s) }}</span>
+																				}
 																			</div>
 																		</ion-label>
 																	</ion-item>

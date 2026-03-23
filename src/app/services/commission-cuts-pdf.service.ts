@@ -1,11 +1,14 @@
 import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
 import { AdvisorCutSummary } from '../models/commission-cuts-summary.model';
+import { CommissionCutAdvisorState } from '../models/commission-cut-state.model';
+
+export type SummaryForPdf = AdvisorCutSummary & { state?: CommissionCutAdvisorState | null };
 
 @Injectable({ providedIn: 'root' })
 export class CommissionCutsPdfService {
-	/** Exporta resumen general de cortes a PDF */
-	exportGeneral(summaries: AdvisorCutSummary[], cutDateLabel?: string): void {
+	/** Exporta resumen general de cortes a PDF. Incluye tipo Regular/Diferida. */
+	exportGeneral(summaries: SummaryForPdf[], cutDateLabel?: string): void {
 		const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 		const title = cutDateLabel
 			? `Cortes de comisión - Corte ${cutDateLabel}`
@@ -33,13 +36,14 @@ export class CommissionCutsPdfService {
 		doc.setTextColor(0, 0, 0);
 		let y = startY + rowHeight;
 		summaries.forEach((s) => {
+			const tipoLabel = s.state?.movedToNextCut || s.state?.originalCutDate ? 'Diferida' : 'Regular';
 			const row = [
 				new Date(s.cutDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
 				s.advisorName,
 				this.formatCurrency(s.totalAmount),
 				this.formatCurrency(s.pendingAmount),
 				this.formatCurrency(s.paidAmount),
-				s.scheme === '—' ? '—' : s.scheme,
+				tipoLabel,
 				String(s.contractUids.length),
 			];
 			x = 14;
@@ -53,10 +57,10 @@ export class CommissionCutsPdfService {
 		doc.save(`cortes-comision-${Date.now()}.pdf`);
 	}
 
-	/** Exporta resumen por asesora a PDF */
+	/** Exporta resumen por asesora a PDF. Incluye tipo Regular/Diferida por corte. */
 	exportByAdvisor(
 		advisorName: string,
-		summaries: AdvisorCutSummary[],
+		summaries: SummaryForPdf[],
 		totalAmount: number,
 		pendingAmount: number,
 		paidAmount: number
@@ -89,10 +93,11 @@ export class CommissionCutsPdfService {
 		doc.setTextColor(0, 0, 0);
 		let y = startY + rowHeight;
 		summaries.forEach((s) => {
+			const tipoLabel = s.state?.movedToNextCut || s.state?.originalCutDate ? 'Diferida' : 'Regular';
 			const row = [
 				new Date(s.cutDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
 				this.formatCurrency(s.totalAmount),
-				s.breakdown.map((b) => `${b.paymentType}: ${this.formatCurrency(b.amount)}`).join(', '),
+				`${tipoLabel} - ${s.breakdown.map((b) => `${b.paymentType}: ${this.formatCurrency(b.amount)}`).join(', ')}`,
 			];
 			x = 14;
 			colWidths.forEach((w, i) => {

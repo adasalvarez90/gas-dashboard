@@ -11,7 +11,11 @@ import {
 } from '@angular/fire/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { CommissionCutAdvisorState } from '../models/commission-cut-state.model';
-import { getNextCutDate } from '../domain/commission-cut/commission-cut-deadlines.util';
+import {
+	getBreakdownDeadline,
+	getNextCutDate,
+} from '../domain/commission-cut/commission-cut-deadlines.util';
+import { isAfterMexicoDate } from '../domain/time/mexico-time.util';
 
 @Injectable({ providedIn: 'root' })
 export class CommissionCutStateFirestoreService {
@@ -83,15 +87,39 @@ export class CommissionCutStateFirestoreService {
 		}
 	}
 
-	/** Marca desglose enviado */
+	/** Añade un motivo de atraso sin cambiar el estado. Crea el doc si no existe. */
+	async addLateReason(
+		cutDate: number,
+		advisorUid: string,
+		reasonCode: string
+	): Promise<CommissionCutAdvisorState> {
+		const existing = await this.getByCutAndAdvisor(cutDate, advisorUid);
+		const reasons = existing?.lateReasons ?? [];
+		if (reasons.includes(reasonCode)) return { ...existing!, lateReasons: reasons } as CommissionCutAdvisorState;
+		const newReasons = [...reasons, reasonCode];
+		return this.upsert({
+			cutDate,
+			advisorUid,
+			state: existing?.state ?? 'PENDING',
+			lateReasons: newReasons,
+		});
+	}
+
+	/** Marca desglose enviado. Si ya pasó el plazo, añade lateReasons. */
 	async markBreakdownSent(cutDate: number, advisorUid: string): Promise<CommissionCutAdvisorState> {
 		const now = Date.now();
-		return this.upsert({
+		const deadline = getBreakdownDeadline(cutDate);
+		const wasLate = isAfterMexicoDate(now, deadline);
+		const state = await this.upsert({
 			cutDate,
 			advisorUid,
 			state: 'BREAKDOWN_SENT',
 			breakdownSentAt: now,
 		});
+		if (wasLate) {
+			return this.addLateReason(cutDate, advisorUid, 'DESGLOSE_NO_ENVIADO_A_TIEMPO');
+		}
+		return state;
 	}
 
 	/** Marca factura enviada (con URL opcional) */
@@ -110,23 +138,26 @@ export class CommissionCutStateFirestoreService {
 		});
 	}
 
-	/** Marca pagada (comprobante recibido, con URL opcional) */
+	/** Marca pagada (comprobante recibido, con URL opcional). Si el estado fue diferido, setea paidLate. */
 	async markPaid(
 		cutDate: number,
 		advisorUid: string,
 		receiptUrl?: string
 	): Promise<CommissionCutAdvisorState> {
 		const now = Date.now();
+		const existing = await this.getByCutAndAdvisor(cutDate, advisorUid);
+		const wasDeferred = !!(existing?.movedToNextCut || existing?.originalCutDate);
 		return this.upsert({
 			cutDate,
 			advisorUid,
 			state: 'PAID',
 			receiptSentAt: now,
 			receiptUrl,
+			...(wasDeferred && { paidLate: true }),
 		});
 	}
 
-	/** Mueve estado al siguiente corte (regla factura tardía) */
+	/** Marca estado como diferido al siguiente corte. NO mueve el doc; actualiza en el corte original. */
 	async moveStateToNextCut(cutDate: number, advisorUid: string): Promise<void> {
 		const ref = collection(this.firestore, this.collectionName);
 		const q = query(
@@ -140,8 +171,9 @@ export class CommissionCutStateFirestoreService {
 		const docRef = doc(this.firestore, this.collectionName, snap.docs[0].id);
 		const nextCutDate = getNextCutDate(cutDate);
 		await updateDoc(docRef, {
-			cutDate: nextCutDate,
 			movedToNextCut: true,
+			originalCutDate: cutDate,
+			deferredToCutDate: nextCutDate,
 			_update: Date.now(),
 		} as Record<string, unknown>);
 	}

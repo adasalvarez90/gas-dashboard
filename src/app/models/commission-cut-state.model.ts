@@ -39,6 +39,18 @@ export interface CommissionCutAdvisorState {
 	/** Si no se envió factura a tiempo, la comisión pasa al siguiente corte */
 	movedToNextCut?: boolean;
 
+	/** Motivos de atraso (ej. DESGLOSE_NO_ENVIADO_A_TIEMPO). Una comisión atrasada puede tener más de uno. */
+	lateReasons?: string[];
+
+	/** true cuando se pagó después del plazo (excepción). Mantiene color de auditoría. */
+	paidLate?: boolean;
+
+	/** Corte original cuando se difirió. Para etiqueta "Diferida" y auditoría. */
+	originalCutDate?: number;
+
+	/** Corte al que se difirió. La comisión aparece en el corte original (solo lectura) y en este. */
+	deferredToCutDate?: number;
+
 	_on?: boolean;
 	_create?: number;
 	_update?: number;

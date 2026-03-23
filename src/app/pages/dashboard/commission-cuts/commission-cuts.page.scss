@@ -227,6 +227,12 @@
 		}
 	}
 
+	/* Pagada atrasada (excepción): mantiene color de auditoría */
+	.summary-card--paid-late {
+		border-color: rgba(var(--ion-color-warning-rgb), 0.4);
+		background: rgba(var(--ion-color-warning-rgb), 0.06);
+	}
+
 	.summary-card-header {
 		padding: 14px 14px;
 		display: flex;
@@ -299,6 +305,19 @@
 	}
 
 	.chip--neutral {
+		opacity: 0.9;
+	}
+
+	.chip--deferred {
+		border-color: rgba(var(--ion-color-warning-rgb), 0.35);
+		color: var(--ion-color-warning);
+		background: rgba(var(--ion-color-warning-rgb), 0.1);
+	}
+
+	.chip--regular {
+		border-color: rgba(var(--ion-color-success-rgb), 0.25);
+		color: var(--ion-color-success);
+		background: rgba(var(--ion-color-success-rgb), 0.08);
 		opacity: 0.9;
 	}
 
