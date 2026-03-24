@@ -1,3 +1,5 @@
+import type { LateReasonEntry } from './commission-cut-late-reason.model';
+
 /** Estado del flujo de comisión por asesora y corte */
 export type CommissionCutState =
 	| 'PENDING'           // Pendiente: sin desglose enviado
@@ -39,8 +41,8 @@ export interface CommissionCutAdvisorState {
 	/** Si no se envió factura a tiempo, la comisión pasa al siguiente corte */
 	movedToNextCut?: boolean;
 
-	/** Motivos de atraso (ej. DESGLOSE_NO_ENVIADO_A_TIEMPO). Una comisión atrasada puede tener más de uno. */
-	lateReasons?: string[];
+	/** Motivos de atraso. Una comisión atrasada puede tener más de uno. */
+	lateReasons?: LateReasonEntry[];
 
 	/** true cuando se pagó después del plazo (excepción). Mantiene color de auditoría. */
 	paidLate?: boolean;

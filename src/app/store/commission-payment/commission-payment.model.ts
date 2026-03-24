@@ -35,4 +35,11 @@ export interface CommissionPayment extends Metadata {
 	installment: number;
 
 	scheme: string;
+
+	/**
+	 * Motivo de atraso (mismo catálogo que cortes: desglose / factura / pago) + texto libre opcional,
+	 * cuando el fondeo es anterior al corte vigente. Captura en flujo de alta.
+	 */
+	fundingDeferralReasonCode?: string;
+	fundingDeferralReasonText?: string;
 }

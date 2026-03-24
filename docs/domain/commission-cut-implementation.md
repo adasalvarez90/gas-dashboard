@@ -51,12 +51,14 @@ A simple catalog of late reasons. Can be implemented as:
 |------|--------------|
 | `DESGLOSE_NO_ENVIADO_A_TIEMPO` | El desglose no se envió a la asesora a tiempo |
 | `FACTURA_NO_RECIBIDA_A_TIEMPO` | No se recibió factura a tiempo |
+| `PAGO_NO_REALIZADO_A_TIEMPO` | El pago no se realizó a tiempo |
 
 ```typescript
 // Example: src/app/models/commission-cut-late-reason.model.ts
 export const COMMISSION_CUT_LATE_REASONS: Record<string, string> = {
   DESGLOSE_NO_ENVIADO_A_TIEMPO: 'El desglose no se envió a la asesora a tiempo',
   FACTURA_NO_RECIBIDA_A_TIEMPO: 'No se recibió factura a tiempo',
+  PAGO_NO_REALIZADO_A_TIEMPO: 'El pago no se realizó a tiempo',
 };
 ```
 
@@ -95,6 +97,28 @@ When a commission is **deferred** to the next cut:
 - `movePaymentsToNextCut` sets `deferredToCutDate` to the next cut. The `cutDate` **stays** as the original cut.
 - The commission appears in **both** cuts: original (read-only badge "Diferida al sig. corte") and target (for payment).
 - `markCommissionPaymentsPaidByCutDateAndAdvisor` finds payments by `cutDate` OR `deferredToCutDate`. On pay, clears `deferredToCutDate`.
+
+## Diferida — agregación en pantalla (Cortes de comisión)
+
+Una misma línea de pago **solo puede listarse en dos cortes a la vez** (como mucho):
+
+1. **Corte original** (`cutDate`).
+2. **Un único corte destino** cuando aplique:
+   - **Explícito:** `deferredToCutDate` ≠ `cutDate` (p. ej. factura tarde) e impaga → ese destino.
+   - **Implícito:** cualquier `paymentType` impago, corte original ya ocurrido, y cadena desglose → factura → comprobante vencida (`isWorkflowOverdueForImplicitDeferral` + estado por `cutDate`+`advisorUid`) → también en `getNextCutDate(cutDate)`.
+
+Implementación: `getUnpaidDeferredSecondCutDate(p, originalCutAdvisorState)` + `addToBucket`; `paymentDeferralStates` en el resumen para etiquetar cada línea con el estado de **su** corte original; `paymentRolledIntoSummaryCut` solo si ese segundo corte existe.
+
+## Path 2: markCommissionPaymentsPaidByUids (selección de diferidas)
+
+Al procesar comisiones diferidas seleccionadas con fechas retroactivas:
+
+- **`cutDate`** nunca se modifica; siempre es el corte original.
+- **`targetCutDate`** = corte donde se procesó (≤ desglose, con restricción de piso).
+- **`deferredToCutDate`**: Si `targetCutDate === originalCutDate` → se elimina; si no → se actualiza a `targetCutDate`.
+- **Piso:** `getMinValidTargetCut(originalCutDate, deferredCutDate)` — no se puede asignar a un corte anterior al primer corte en que fue diferida. Implementado en `commission-cut-deadlines.util.ts`.
+- **Agrupación:** Si las comisiones seleccionadas tienen distintos `cutDate` (original), se agrupan y cada grupo se procesa con su propio `originalCutDate` y `targetCutDate`.
+- **Utilidades** (`commission-cut-deadlines.util.ts`): `getLastCutDateOnOrBefore(ts)` = corte ≤ fecha; `getPreviousCutDate(cutDate)` = corte anterior en secuencia 7/21; `getMinValidTargetCut(original, deferred)` = mínimo corte válido para asignación.
 
 ---
 

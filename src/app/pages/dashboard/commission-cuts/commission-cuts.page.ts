@@ -10,24 +10,41 @@ import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
 import { AdvisorCutSummary } from 'src/app/models/commission-cuts-summary.model';
 import { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
-import { getLateReasonLabel } from 'src/app/models/commission-cut-late-reason.model';
+import {
+	type LateReasonEntry,
+	getLateReasonLabel,
+	normalizeLateReasons,
+} from 'src/app/models/commission-cut-late-reason.model';
+import { LateReasonModalComponent } from 'src/app/components/late-reason-modal/late-reason-modal.component';
+import { ProcessDeferredModalComponent, type ProcessDeferredResult } from 'src/app/components/process-deferred-modal/process-deferred-modal.component';
 import { CommissionCutStateFirestoreService } from 'src/app/services/commission-cut-state-firestore.service';
 import { CommissionCutAttachmentService } from 'src/app/services/commission-cut-attachment.service';
 import { CommissionCutsPdfService } from 'src/app/services/commission-cuts-pdf.service';
 import {
+	addBusinessDays,
 	getBreakdownDeadline,
-	getDefaultCutDateRange,
+	getDeferralEndCutDate,
+	getUnpaidDeferredSecondCutDate,
 	getInvoiceDeadline,
+	getLastCutDateOnOrBefore,
+	getMinValidTargetCut,
 	getNextCutDate,
 	getPaymentDeadline,
 	isInvoiceLate,
 	isInvoiceOverdue,
 	isPaymentOverdue,
+	paymentFlowHasAnyLateStep,
 } from 'src/app/domain/commission-cut/commission-cut-deadlines.util';
+import { isAfterMexicoDate } from 'src/app/domain/time/mexico-time.util';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
+import { ModalController } from '@ionic/angular';
+import { Store } from '@ngrx/store';
+import * as CommissionPaymentActions from 'src/app/store/commission-payment/commission-payment.actions';
 
 export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
 	state: CommissionCutAdvisorState | null;
+	/** Estado del flujo en el corte **original** de cada línea (uid de pago → estado). */
+	paymentDeferralStates?: Map<string, CommissionCutAdvisorState | null>;
 	invoiceDeadline?: number;
 	paymentDeadline?: number;
 	isOverdue: boolean;
@@ -73,12 +90,18 @@ export class CommissionCutsPage implements OnInit {
 
 	stateStates$ = new BehaviorSubject<CommissionCutAdvisorState[]>([]);
 
-	cutDates$ = this.commissionPayments$.pipe(
-		map((payments) => {
+	cutDates$ = combineLatest([this.commissionPayments$, this.stateStates$]).pipe(
+		map(([payments, states]) => {
+			const stateMap = new Map<string, CommissionCutAdvisorState>();
+			states.forEach((st) => stateMap.set(`${st.cutDate}::${st.advisorUid}`, st));
 			const set = new Set<number>();
+			const endCutDate = getDeferralEndCutDate(payments);
 			payments.forEach((p) => {
 				if (p.cutDate) set.add(p.cutDate);
 				if (p.deferredToCutDate) set.add(p.deferredToCutDate);
+				const origSt = stateMap.get(`${p.cutDate}::${p.advisorUid}`) ?? null;
+				const second = getUnpaidDeferredSecondCutDate(p, origSt);
+				if (second != null && second <= endCutDate) set.add(second);
 			});
 			return Array.from(set).sort((a, b) => a - b);
 		})
@@ -100,8 +123,12 @@ export class CommissionCutsPage implements OnInit {
 		this.advisors$,
 		this.filterCutDate$,
 		this.filterAdvisorUid$,
+		this.stateStates$,
 	]).pipe(
-		map(([payments, advisorsDic, filterCut, filterAdvisor]) => {
+		map(([payments, advisorsDic, filterCut, filterAdvisor, states]) => {
+			const stateMap = new Map<string, CommissionCutAdvisorState>();
+			states.forEach((st) => stateMap.set(`${st.cutDate}::${st.advisorUid}`, st));
+			const rangeEndCut = getDeferralEndCutDate(payments);
 			const byCutAdvisor = new Map<string, AdvisorCutSummary>();
 
 			const addToBucket = (p: CommissionPayment, effectiveCutDate: number) => {
@@ -164,8 +191,13 @@ export class CommissionCutsPage implements OnInit {
 
 			for (const p of payments) {
 				if (p.cancelled) continue;
+				// Siempre agregar al corte original (cutDate)
 				addToBucket(p, p.cutDate);
-				if (p.deferredToCutDate) addToBucket(p, p.deferredToCutDate);
+				const origSt = stateMap.get(`${p.cutDate}::${p.advisorUid}`) ?? null;
+				const secondCut = getUnpaidDeferredSecondCutDate(p, origSt);
+				if (secondCut != null && secondCut <= rangeEndCut) {
+					addToBucket(p, secondCut);
+				}
 			}
 
 			const result = Array.from(byCutAdvisor.values());
@@ -196,6 +228,15 @@ export class CommissionCutsPage implements OnInit {
 					const deferredFrom = s.payments.find((p) => p.deferredToCutDate === s.cutDate);
 					if (deferredFrom) state = stateMap.get(`${deferredFrom.cutDate}::${s.advisorUid}`) ?? null;
 				}
+				if (!state && s.payments.length) {
+					const rolled = s.payments.filter(
+						(p) => p.cutDate < s.cutDate && !p.paid && !p.paidAt && !p.cancelled,
+					);
+					if (rolled.length) {
+						const earliestOrig = Math.min(...rolled.map((p) => p.cutDate));
+						state = stateMap.get(`${earliestOrig}::${s.advisorUid}`) ?? null;
+					}
+				}
 				if (!state) state = null;
 				const invoiceDeadline = state?.breakdownSentAt
 					? getInvoiceDeadline(state.breakdownSentAt)
@@ -203,16 +244,22 @@ export class CommissionCutsPage implements OnInit {
 				const paymentDeadline = state?.invoiceSentAt ? getPaymentDeadline(state.invoiceSentAt) : undefined;
 				const invOverdue = invoiceDeadline ? isInvoiceOverdue(state?.invoiceSentAt, invoiceDeadline) : false;
 				const payOverdue = paymentDeadline ? isPaymentOverdue(state?.receiptSentAt, paymentDeadline) : false;
-				const hasLateReasons = (state?.lateReasons?.length ?? 0) > 0;
+				const hasLateReasons = normalizeLateReasons(state?.lateReasons).length > 0;
 				const isDeferred = !!(state?.movedToNextCut || state?.originalCutDate);
 				const isOverdue =
 					(s.pendingAmount > 0 && (invOverdue || payOverdue)) ||
 					(s.pendingAmount > 0 && hasLateReasons) ||
 					(s.pendingAmount > 0 && isDeferred);
 
+				const paymentDeferralStates = new Map<string, CommissionCutAdvisorState | null>();
+				for (const p of s.payments) {
+					paymentDeferralStates.set(p.uid, stateMap.get(`${p.cutDate}::${p.advisorUid}`) ?? null);
+				}
+
 				return {
 					...s,
 					state,
+					paymentDeferralStates,
 					invoiceDeadline,
 					paymentDeadline,
 					isOverdue,
@@ -223,7 +270,7 @@ export class CommissionCutsPage implements OnInit {
 			if (viewMode === 'noncompliance') {
 				result = result.filter((r) => r.isOverdue);
 			} else if (viewMode === 'paidLate') {
-				result = result.filter((r) => r.state?.paidLate);
+				result = result.filter((r) => this.summaryHasAnyPaidLateStrip(r));
 			}
 
 			return result;
@@ -235,7 +282,7 @@ export class CommissionCutsPage implements OnInit {
 	);
 
 	paidLateCount$ = this.advisorSummariesWithState$.pipe(
-		map((summaries) => summaries.filter((s) => s.state?.paidLate).length)
+		map((summaries) => summaries.filter((s) => this.summaryHasAnyPaidLateStrip(s)).length)
 	);
 
 	/** Misma data que `advisorSummariesWithState$`, ordenada por corte y agrupada para separadores en UI. */
@@ -282,6 +329,9 @@ export class CommissionCutsPage implements OnInit {
 
 	private persistedLateReasonKeys = new Set<string>();
 
+	/** UIDs de comisiones diferidas seleccionadas para procesar (Path 2). */
+	selectedDeferredIds = new Set<string>();
+
 	constructor(
 		private destroyRef: DestroyRef,
 		private commissionPaymentFacade: CommissionPaymentFacade,
@@ -290,7 +340,9 @@ export class CommissionCutsPage implements OnInit {
 		private stateService: CommissionCutStateFirestoreService,
 		private attachmentService: CommissionCutAttachmentService,
 		private pdfService: CommissionCutsPdfService,
-		private paymentFirestore: CommissionPaymentFirestoreService
+		private paymentFirestore: CommissionPaymentFirestoreService,
+		private modalCtrl: ModalController,
+		private store: Store
 	) {}
 
 	private openIonSelect(selectRef?: ElementRef) {
@@ -313,10 +365,13 @@ export class CommissionCutsPage implements OnInit {
 	ngOnInit() {
 		this.advisorFacade.loadAdvisors();
 		this.contractFacade.loadContracts();
-		const { startCutDate, endCutDate } = getDefaultCutDateRange();
-		this.commissionPaymentFacade.loadCommissionPaymentsForCuts(startCutDate, endCutDate);
-		this.loadStates(startCutDate, endCutDate);
+		this.refreshCutData(true);
 		this.persistLateReasonsWhenNeeded();
+	}
+
+	/** Recarga comisiones y estados al entrar a la página (p. ej. al volver desde detalle de contrato). */
+	ionViewWillEnter() {
+		this.refreshCutData(true);
 	}
 
 	/** Persiste lateReasons cuando desglose no enviado a tiempo (lazy, una vez por sesión por clave). */
@@ -327,7 +382,7 @@ export class CommissionCutsPage implements OnInit {
 				for (const s of summaries) {
 					const key = `${s.cutDate}::${s.advisorUid}`;
 					if (this.persistedLateReasonKeys.has(key)) continue;
-					const hasStoredReason = (s.state?.lateReasons?.length ?? 0) > 0;
+					const hasStoredReason = normalizeLateReasons(s.state?.lateReasons).length > 0;
 					if (hasStoredReason) {
 						this.persistedLateReasonKeys.add(key);
 						continue;
@@ -338,10 +393,13 @@ export class CommissionCutsPage implements OnInit {
 						isInvoiceOverdue(s.state?.invoiceSentAt, s.invoiceDeadline);
 					if (!isPendingPastDeadline) continue;
 					this.persistedLateReasonKeys.add(key);
-					const { startCutDate, endCutDate } = getDefaultCutDateRange();
+					const entry: LateReasonEntry = {
+						step: 'DESGLOSE',
+						reason: 'DESGLOSE_NO_ENVIADO_A_TIEMPO',
+					};
 					this.stateService
-						.addLateReason(s.cutDate, s.advisorUid, 'DESGLOSE_NO_ENVIADO_A_TIEMPO')
-						.then(() => this.loadStates(startCutDate, endCutDate))
+						.addLateReason(s.cutDate, s.advisorUid, entry)
+						.then(() => this.loadStates())
 						.catch(() => {});
 				}
 			});
@@ -432,6 +490,176 @@ export class CommissionCutsPage implements OnInit {
 		return this.expandedContractKeys.has(key);
 	}
 
+	/**
+	 * Esta fila es el **segundo** corte (arrastre desde el original). Solo entonces se muestra “Corte orig.”.
+	 */
+	paymentRolledIntoSummaryCut(
+		pay: CommissionPayment,
+		summaryCutDate: number,
+		originalCutAdvisorState: CommissionCutAdvisorState | null | undefined,
+	): boolean {
+		if (pay.cancelled || pay.paid || pay.paidAt) return false;
+		if (summaryCutDate <= pay.cutDate) return false;
+		const second = getUnpaidDeferredSecondCutDate(pay, originalCutAdvisorState ?? null);
+		return second != null && summaryCutDate === second;
+	}
+
+	/** Origen “Diferida”: arrastre al siguiente corte, o en corte original si aplica segundo corte / motivo de fondeo. */
+	paymentShowsDeferredOriginInSummary(
+		pay: CommissionPayment,
+		summaryCutDate: number,
+		originalCutAdvisorState: CommissionCutAdvisorState | null | undefined,
+	): boolean {
+		const st = originalCutAdvisorState ?? null;
+		if (this.paymentRolledIntoSummaryCut(pay, summaryCutDate, st)) return true;
+		if (pay.cancelled || pay.paid || pay.paidAt) return false;
+		if (summaryCutDate !== pay.cutDate) return false;
+		if (pay.fundingDeferralReasonCode) return true;
+		return getUnpaidDeferredSecondCutDate(pay, st) != null;
+	}
+
+	/** Pagos diferidos explícitos (Path 2 / checkbox): solo con deferredToCutDate en Firestore. */
+	getDeferredUnpaidPayments(s: AdvisorCutSummaryWithState): CommissionPayment[] {
+		return s.payments.filter(
+			(p) => p.deferredToCutDate === s.cutDate && !p.paid && !p.paidAt && !p.cancelled
+		);
+	}
+
+	/** Selecciones que pertenecen a este resumen. */
+	getSelectedDeferredForSummary(s: AdvisorCutSummaryWithState): CommissionPayment[] {
+		const deferred = this.getDeferredUnpaidPayments(s);
+		return deferred.filter((p) => this.selectedDeferredIds.has(p.uid));
+	}
+
+	hasDeferredUnpaid(s: AdvisorCutSummaryWithState): boolean {
+		return this.getDeferredUnpaidPayments(s).length > 0;
+	}
+
+	toggleDeferredSelection(pay: CommissionPayment, s: AdvisorCutSummaryWithState) {
+		if (pay.deferredToCutDate !== s.cutDate || pay.paid || pay.paidAt) return;
+		if (this.selectedDeferredIds.has(pay.uid)) {
+			this.selectedDeferredIds.delete(pay.uid);
+		} else {
+			this.selectedDeferredIds.add(pay.uid);
+		}
+		this.selectedDeferredIds = new Set(this.selectedDeferredIds);
+	}
+
+	isDeferredSelected(pay: CommissionPayment): boolean {
+		return this.selectedDeferredIds.has(pay.uid);
+	}
+
+	async processSelectedDeferred(s: AdvisorCutSummaryWithState) {
+		const selected = this.getSelectedDeferredForSummary(s);
+		if (selected.length === 0) return;
+		const totalAmount = selected.reduce((a, p) => a + (p.amount ?? 0), 0);
+		const deferredCutDate = s.cutDate; // corte donde están diferidas
+		const originalCutDate = selected[0].cutDate;
+
+		const modal = await this.modalCtrl.create({
+			component: ProcessDeferredModalComponent,
+			componentProps: {
+				count: selected.length,
+				totalAmount,
+				deferredCutDate,
+			},
+		});
+		await modal.present();
+		const { data, role } = await modal.onWillDismiss<ProcessDeferredResult>();
+		if (role !== 'ok' || !data) return;
+
+		const { breakdownSentAt, invoiceSentAt, receiptSentAt } = data;
+
+		// ¿Desglose antes del corte diferido? → mover al corte ≤ desglose (por grupo se calcula tgt)
+		// ¿Alguna fecha superó el plazo? → naranja (paidLate)
+		const breakdownDeadline = addBusinessDays(originalCutDate, 2);
+		const invoiceDeadline = addBusinessDays(breakdownSentAt, 2);
+		const paymentDeadline = addBusinessDays(invoiceSentAt, 2);
+		const wasBreakdownLate = isAfterMexicoDate(breakdownSentAt, breakdownDeadline);
+		const wasInvoiceLate = isAfterMexicoDate(invoiceSentAt, invoiceDeadline);
+		const wasPaymentLate = isAfterMexicoDate(receiptSentAt, paymentDeadline);
+		const paidLate = wasBreakdownLate || wasInvoiceLate || wasPaymentLate;
+
+		const cutForUploads = deferredCutDate;
+		const invoiceUrl = await this.attachmentService.uploadAttachment(
+			cutForUploads,
+			s.advisorUid,
+			'invoice',
+			data.invoiceFile
+		);
+		const receiptUrl = await this.attachmentService.uploadAttachment(
+			cutForUploads,
+			s.advisorUid,
+			'receipt',
+			data.receiptFile
+		);
+
+		const lateEntry: LateReasonEntry = {
+			step: 'PAGO',
+			reason: data.reason,
+			text: data.text,
+			at: receiptSentAt,
+		};
+		if (paidLate) {
+			await this.stateService.addLateReason(cutForUploads, s.advisorUid, lateEntry);
+		}
+
+		const paidAt = receiptSentAt;
+		const byOriginalCut = new Map<number, CommissionPayment[]>();
+		for (const p of selected) {
+			const orig = p.cutDate;
+			if (!byOriginalCut.has(orig)) byOriginalCut.set(orig, []);
+			byOriginalCut.get(orig)!.push(p);
+		}
+
+		const distinctTargets = new Set<number>();
+		for (const [origCut, payments] of byOriginalCut) {
+			const uids = payments.map((p) => p.uid);
+			let tgt: number;
+			if (breakdownSentAt < deferredCutDate) {
+				const candidate = getLastCutDateOnOrBefore(breakdownSentAt);
+				const minValid = getMinValidTargetCut(origCut, deferredCutDate);
+				tgt = candidate >= minValid ? candidate : minValid;
+			} else {
+				tgt = deferredCutDate;
+			}
+			distinctTargets.add(tgt);
+			await this.paymentFirestore.markCommissionPaymentsPaidByUids(uids, paidAt, {
+				targetCutDate: tgt,
+				originalCutDate: origCut,
+			});
+			this.store.dispatch(
+				CommissionPaymentActions.markCommissionPaymentsPaidByUidsSuccess({
+					paymentUids: uids,
+					paidAt,
+					updatedCount: uids.length,
+					targetCutDate: tgt,
+					originalCutDate: origCut,
+				})
+			);
+		}
+
+		for (const cut of distinctTargets) {
+			await this.stateService.upsert({
+				cutDate: cut,
+				advisorUid: s.advisorUid,
+				state: 'PAID',
+				breakdownSentAt,
+				invoiceSentAt,
+				invoiceUrl: invoiceUrl!,
+				receiptSentAt,
+				receiptUrl: receiptUrl!,
+				paidLate,
+			});
+		}
+
+		const paymentUids = selected.map((p) => p.uid);
+		this.selectedDeferredIds = new Set(
+			Array.from(this.selectedDeferredIds).filter((id) => !paymentUids.includes(id))
+		);
+		this.refreshCutData(true);
+	}
+
 	commissionVersionLabel(p: CommissionPayment): string {
 		switch (p.paymentType) {
 			case 'IMMEDIATE':
@@ -473,19 +701,18 @@ export class CommissionCutsPage implements OnInit {
 		return this.paymentTypeLabel(p.paymentType);
 	}
 
-	loadStates(startCutDate: number, endCutDate: number) {
-		this.stateService.getByCutDateRange(startCutDate, endCutDate).then((states) => {
+	loadStates() {
+		this.stateService.getAllActive().then((states) => {
 			this.stateStates$.next(states);
 		});
 	}
 
-	/** Recarga estados y opcionalmente pagos del rango por defecto */
+	/** Recarga estados y opcionalmente todas las comisiones activas (histórico de cortes). */
 	private refreshCutData(reloadPayments = false) {
-		const { startCutDate, endCutDate } = getDefaultCutDateRange();
 		if (reloadPayments) {
-			this.commissionPaymentFacade.loadCommissionPaymentsForCuts(startCutDate, endCutDate);
+			this.commissionPaymentFacade.loadCommissionPaymentsForCuts();
 		}
-		this.loadStates(startCutDate, endCutDate);
+		this.loadStates();
 	}
 
 	setFilterCut(cutDate: number | null) {
@@ -515,12 +742,71 @@ export class CommissionCutsPage implements OnInit {
 		return !!(s.state?.deferredToCutDate && s.cutDate === s.state?.cutDate);
 	}
 
-	/** Motivos de atraso efectivos (persistidos o computados). */
-	getEffectiveLateReasons(s: AdvisorCutSummaryWithState): string[] {
-		if (s.state?.lateReasons?.length) return s.state.lateReasons;
-		// Desglose no enviado a tiempo: PENDING + pasado el plazo
+	/** Motivos de atraso a nivel asesora+corte del resumen (cabecera; puede mezclar cortes — preferir por línea). */
+	getEffectiveLateReasons(s: AdvisorCutSummaryWithState): LateReasonEntry[] {
+		const normalized = normalizeLateReasons(s.state?.lateReasons);
+		if (normalized.length) return normalized;
 		if (s.state?.state === 'PENDING' && s.invoiceDeadline && isInvoiceOverdue(undefined, s.invoiceDeadline)) {
-			return ['DESGLOSE_NO_ENVIADO_A_TIEMPO'];
+			return [{ step: 'DESGLOSE', reason: 'DESGLOSE_NO_ENVIADO_A_TIEMPO' }];
+		}
+		return [];
+	}
+
+	/** Al menos una comisión pagada con franja “tarde” (cualquier paso fuera de plazo), o flag legacy en estado. */
+	summaryHasAnyPaidLateStrip(s: AdvisorCutSummaryWithState): boolean {
+		if (s.state?.paidLate) return true;
+		for (const c of s.contractBreakdown) {
+			for (const p of c.payments) {
+				if (p.cancelled || (!p.paid && !p.paidAt)) continue;
+				if (this.getPaymentStripStatus(s, p) === 'paidLate') return true;
+			}
+		}
+		return false;
+	}
+
+	/** Estado persistido del corte **de esa comisión** (no el “prestado” de otro corte por arrastre). */
+	getAdvisorStateForCut(advisorUid: string, cutDate: number): CommissionCutAdvisorState | null {
+		return this.stateStates$.value.find((st) => st.cutDate === cutDate && st.advisorUid === advisorUid) ?? null;
+	}
+
+	/**
+	 * Doc de estado con timestamps del flujo (pago cerrado puede estar en otro `cutDate`, p. ej. Path 2).
+	 */
+	private getFlowStateForPayment(s: AdvisorCutSummaryWithState, pay: CommissionPayment): CommissionCutAdvisorState | null {
+		const orig = this.getAdvisorStateForCut(s.advisorUid, pay.cutDate);
+		if (!pay.paid && !pay.paidAt) return orig;
+		if (orig?.state === 'PAID' && orig.receiptSentAt != null) return orig;
+		const paidAt = pay.paidAt;
+		if (paidAt) {
+			const candidates = this.stateStates$.value.filter(
+				(st) =>
+					st.advisorUid === pay.advisorUid &&
+					st.state === 'PAID' &&
+					st.receiptSentAt != null &&
+					Math.abs((st.receiptSentAt ?? 0) - paidAt) <= 86400000 * 3
+			);
+			if (candidates.length === 1) return candidates[0];
+			if (candidates.length > 1) {
+				return candidates.reduce((best, cur) =>
+					Math.abs((cur.receiptSentAt ?? 0) - paidAt) < Math.abs((best.receiptSentAt ?? 0) - paidAt)
+						? cur
+						: best
+				);
+			}
+		}
+		return orig;
+	}
+
+	/** Motivos de atraso / desglose solo para esta línea (mismo `pay.cutDate` que el estado). */
+	getEffectiveLateReasonsForPayment(s: AdvisorCutSummaryWithState, pay: CommissionPayment): LateReasonEntry[] {
+		const st = this.getAdvisorStateForCut(s.advisorUid, pay.cutDate);
+		const normalized = normalizeLateReasons(st?.lateReasons);
+		if (normalized.length) return normalized;
+		const invoiceDeadline = st?.breakdownSentAt
+			? getInvoiceDeadline(st.breakdownSentAt)
+			: getBreakdownDeadline(pay.cutDate);
+		if (st?.state === 'PENDING' && invoiceDeadline && isInvoiceOverdue(undefined, invoiceDeadline)) {
+			return [{ step: 'DESGLOSE', reason: 'DESGLOSE_NO_ENVIADO_A_TIEMPO' }];
 		}
 		return [];
 	}
@@ -529,9 +815,104 @@ export class CommissionCutsPage implements OnInit {
 		return getLateReasonLabel(code);
 	}
 
-	/** Motivos de atraso como string unido por comas. */
+	/** Motivos de atraso como string (solo línea). */
+	getLateReasonsLabelForPayment(s: AdvisorCutSummaryWithState, pay: CommissionPayment): string {
+		return this.getEffectiveLateReasonsForPayment(s, pay)
+			.map((e) => (e.text ? `${getLateReasonLabel(e.reason)}: ${e.text}` : getLateReasonLabel(e.reason)))
+			.join(', ');
+	}
+
+	/** Texto unificado: motivo de fondeo (si existe) + atrasos de flujo para esa comisión. */
+	getPaymentMotivoDisplay(s: AdvisorCutSummaryWithState, pay: CommissionPayment): string {
+		const parts: string[] = [];
+		if (pay.fundingDeferralReasonCode) {
+			const label = getLateReasonLabel(pay.fundingDeferralReasonCode);
+			parts.push(pay.fundingDeferralReasonText?.trim() ? `${label}: ${pay.fundingDeferralReasonText.trim()}` : label);
+		}
+		const late = this.getLateReasonsLabelForPayment(s, pay);
+		if (late) parts.push(late);
+		return parts.join(' · ');
+	}
+
+	/**
+	 * Franja por comisión: pagada a tiempo = verde; pagada con algún paso tarde = naranja;
+	 * pendiente en plazo = amarillo; atraso activo = rojo.
+	 */
+	getPaymentStripStatus(
+		s: AdvisorCutSummaryWithState,
+		pay: CommissionPayment
+	): 'paid' | 'paidLate' | 'overdue' | 'pending' {
+		if (pay.cancelled) return 'pending';
+		if (pay.paid || pay.paidAt) {
+			const flowSt = this.getFlowStateForPayment(s, pay);
+			return paymentFlowHasAnyLateStep(pay.cutDate, flowSt) ? 'paidLate' : 'paid';
+		}
+		const st = this.getAdvisorStateForCut(s.advisorUid, pay.cutDate);
+		const invoiceDeadline = st?.breakdownSentAt
+			? getInvoiceDeadline(st.breakdownSentAt)
+			: getBreakdownDeadline(pay.cutDate);
+		const paymentDeadline = st?.invoiceSentAt ? getPaymentDeadline(st.invoiceSentAt) : undefined;
+		const invOverdue = invoiceDeadline ? isInvoiceOverdue(st?.invoiceSentAt, invoiceDeadline) : false;
+		const payOverdue = paymentDeadline ? isPaymentOverdue(st?.receiptSentAt, paymentDeadline) : false;
+		const hasLate = normalizeLateReasons(st?.lateReasons).length > 0;
+		const desgloseOverdueSinEnviar =
+			(st?.state === 'PENDING' || !st) &&
+			!!invoiceDeadline &&
+			isInvoiceOverdue(undefined, invoiceDeadline);
+		if (invOverdue || payOverdue || hasLate || desgloseOverdueSinEnviar) return 'overdue';
+		return 'pending';
+	}
+
+	/** Borde de tarjeta asesora: rojo > amarillo/naranja > verde (según peor comisión). */
+	getSummaryCardBorderSeverity(s: AdvisorCutSummaryWithState): 'danger' | 'warning' | 'success' | 'neutral' {
+		let anyOverdue = false;
+		let anyPendingUnpaid = false;
+		let anyPaidLate = false;
+		let anyPaidOnTime = false;
+		for (const c of s.contractBreakdown) {
+			for (const pay of c.payments) {
+				if (pay.cancelled) continue;
+				const strip = this.getPaymentStripStatus(s, pay);
+				if (strip === 'overdue') anyOverdue = true;
+				else if (strip === 'pending') anyPendingUnpaid = true;
+				else if (strip === 'paidLate') anyPaidLate = true;
+				else anyPaidOnTime = true;
+			}
+		}
+		if (anyOverdue) return 'danger';
+		if (anyPendingUnpaid || anyPaidLate) return 'warning';
+		if (anyPaidOnTime && !anyPendingUnpaid) return 'success';
+		return 'neutral';
+	}
+
+	/** Borde del bloque contrato (misma prioridad, solo pagos de ese contrato). */
+	getContractGroupBorderSeverity(
+		s: AdvisorCutSummaryWithState,
+		c: AdvisorCutSummaryWithState['contractBreakdown'][0]
+	): 'danger' | 'warning' | 'success' | 'neutral' {
+		let anyOverdue = false;
+		let anyPendingUnpaid = false;
+		let anyPaidLate = false;
+		let anyPaidOnTime = false;
+		for (const pay of c.payments) {
+			if (pay.cancelled) continue;
+			const strip = this.getPaymentStripStatus(s, pay);
+			if (strip === 'overdue') anyOverdue = true;
+			else if (strip === 'pending') anyPendingUnpaid = true;
+			else if (strip === 'paidLate') anyPaidLate = true;
+			else anyPaidOnTime = true;
+		}
+		if (anyOverdue) return 'danger';
+		if (anyPendingUnpaid || anyPaidLate) return 'warning';
+		if (anyPaidOnTime && !anyPendingUnpaid) return 'success';
+		return 'neutral';
+	}
+
+	/** Motivos de atraso como string unido por comas (resumen; legacy). */
 	getLateReasonsLabel(s: AdvisorCutSummaryWithState): string {
-		return this.getEffectiveLateReasons(s).map((r) => this.getLateReasonLabel(r)).join(', ');
+		return this.getEffectiveLateReasons(s)
+			.map((e) => (e.text ? `${getLateReasonLabel(e.reason)}: ${e.text}` : getLateReasonLabel(e.reason)))
+			.join(', ');
 	}
 
 	stateLabel(state: string): string {
@@ -581,49 +962,109 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	/** stateCutDate: corte donde está el estado (puede ser original si es diferida). summaryCutDate: corte del resumen (para pagos). */
-	markBreakdownSent(advisorUid: string, stateCutDate: number) {
-		this.stateService.markBreakdownSent(stateCutDate, advisorUid).then(() => this.refreshCutData());
+	async markBreakdownSent(advisorUid: string, stateCutDate: number, s?: AdvisorCutSummaryWithState) {
+		const deadline = getBreakdownDeadline(stateCutDate);
+		const now = Date.now();
+		const wasLate = now > deadline; // pasó el plazo para desglose
+		let lateEntry: LateReasonEntry | undefined;
+		if (wasLate) {
+			const result = await this.openLateReasonModal('DESGLOSE', s, 'Se superó el plazo para enviar el desglose. Indica el motivo antes de continuar.');
+			if (!result) return;
+			lateEntry = { step: 'DESGLOSE', reason: result.reason, text: result.text };
+		}
+		await this.stateService.markBreakdownSent(stateCutDate, advisorUid, lateEntry);
+		this.refreshCutData();
 	}
 
-	async markInvoiceSent(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File) {
+	async markInvoiceSent(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File, s?: AdvisorCutSummaryWithState) {
+		const wouldBeLate = !!(s?.invoiceDeadline && Date.now() > s.invoiceDeadline);
+		const isDeferred = !!(s?.state?.movedToNextCut || s?.state?.originalCutDate);
+		const needsReason = wouldBeLate || isDeferred;
+
+		let lateEntry: LateReasonEntry | undefined;
+		if (needsReason) {
+			const result = await this.openLateReasonModal(
+				'FACTURA',
+				s,
+				isDeferred ? 'Hay comisiones diferidas. Indica el motivo antes de enviar la factura.' : 'Se superó el plazo. Indica el motivo antes de continuar.'
+			);
+			if (!result) return;
+			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
+		}
+
 		const invoiceUrl = file ? await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'invoice', file) : undefined;
-		const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl);
-		const invoiceDeadline = state.breakdownSentAt ? getInvoiceDeadline(state.breakdownSentAt) : 0;
-		const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadline));
+		const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl, lateEntry);
+		const invoiceDeadlineForCheck = state.breakdownSentAt ? getInvoiceDeadline(state.breakdownSentAt) : getBreakdownDeadline(stateCutDate);
+		const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadlineForCheck));
 		if (invoiceWasLate) {
 			const nextCutDate = getNextCutDate(stateCutDate);
 			await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, advisorUid, nextCutDate);
 			await this.stateService.moveStateToNextCut(stateCutDate, advisorUid);
-			await this.stateService.addLateReason(stateCutDate, advisorUid, 'FACTURA_NO_RECIBIDA_A_TIEMPO');
+			if (!lateEntry) {
+				await this.stateService.addLateReason(stateCutDate, advisorUid, { step: 'FACTURA', reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO' });
+			}
 		}
 		this.refreshCutData(invoiceWasLate);
 	}
 
-	async markPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File) {
+	async markPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File, s?: AdvisorCutSummaryWithState) {
+		const paymentWouldBeLate = !!(s?.paymentDeadline && Date.now() > s.paymentDeadline);
+		const isDeferred = !!(s?.state?.movedToNextCut || s?.state?.originalCutDate);
+		const needsReason = paymentWouldBeLate || isDeferred;
+
+		let lateEntry: LateReasonEntry | undefined;
+		if (needsReason) {
+			const result = await this.openLateReasonModal(
+				'PAGO',
+				s,
+				isDeferred ? 'Hay comisiones diferidas. Indica el motivo antes de marcar pagado.' : 'Se superó el plazo de pago. Indica el motivo antes de continuar.'
+			);
+			if (!result) return;
+			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
+		}
+
 		const receiptUrl = file ? await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'receipt', file) : undefined;
-		await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl);
+		await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl, lateEntry);
 		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, Date.now());
 		this.refreshCutData();
 	}
 
-	markAdvisorCutAsPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number) {
-		this.markPaid(advisorUid, stateCutDate, summaryCutDate);
+	/** Abre el modal de motivo de atraso. Retorna el resultado o undefined si canceló. */
+	private async openLateReasonModal(
+		step: 'DESGLOSE' | 'FACTURA' | 'PAGO',
+		s?: AdvisorCutSummaryWithState,
+		subtitle?: string
+	): Promise<{ reason: string; text?: string } | undefined> {
+		const modal = await this.modalCtrl.create({
+			component: LateReasonModalComponent,
+			componentProps: {
+				step,
+				subtitle: subtitle ?? `Indica el motivo de atraso para el paso ${step}.`,
+			},
+		});
+		await modal.present();
+		const { data, role } = await modal.onWillDismiss();
+		return role === 'ok' ? data : undefined;
 	}
 
-	onInvoiceFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number) {
+	markAdvisorCutAsPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number, s?: AdvisorCutSummaryWithState) {
+		this.markPaid(advisorUid, stateCutDate, summaryCutDate, undefined, s);
+	}
+
+	onInvoiceFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number, s?: AdvisorCutSummaryWithState) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file) {
-			this.markInvoiceSent(advisorUid, stateCutDate, summaryCutDate, file);
+			this.markInvoiceSent(advisorUid, stateCutDate, summaryCutDate, file, s);
 		}
 		input.value = '';
 	}
 
-	onReceiptFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number) {
+	onReceiptFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number, s?: AdvisorCutSummaryWithState) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file) {
-			this.markPaid(advisorUid, stateCutDate, summaryCutDate, file);
+			this.markPaid(advisorUid, stateCutDate, summaryCutDate, file, s);
 		}
 		input.value = '';
 	}

@@ -1,0 +1,39 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-title>{{ title ?? 'Motivo de atraso' }}</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="cancel()">Cancelar</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+</ion-header>
+<ion-content class="ion-padding">
+	@if (subtitle) {
+		<p class="subtitle">{{ subtitle }}</p>
+	}
+	<ion-item lines="full">
+		<ion-label position="stacked">Motivo (requerido)</ion-label>
+		<ion-select
+			label="Motivo"
+			interface="popover"
+			[value]="reason"
+			(ionChange)="reason = $any($event).detail.value"
+			placeholder="Selecciona un motivo"
+		>
+			@for (opt of options; track opt.value) {
+				<ion-select-option [value]="opt.value">{{ opt.label }}</ion-select-option>
+			}
+		</ion-select>
+	</ion-item>
+	<ion-item lines="none">
+		<ion-label position="stacked">Texto adicional (opcional)</ion-label>
+		<ion-textarea
+			[value]="text"
+			(ionInput)="text = $any($event).detail?.value ?? ''"
+			placeholder="Explicación adicional..."
+			rows="3"
+		></ion-textarea>
+	</ion-item>
+	<ion-button expand="block" (click)="submit()" [disabled]="!reason?.trim()">
+		Continuar
+	</ion-button>
+</ion-content>

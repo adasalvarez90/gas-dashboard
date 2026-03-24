@@ -17,8 +17,6 @@ import * as CommissionConfigActions from '../commission-config/commission-config
 import * as CommissionPolicyActions from '../commission-policy/commission-policy.actions';
 import * as CommissionPaymentActions from '../commission-payment/commission-payment.actions';
 
-import { getDefaultCutDateRange } from '../../domain/commission-cut/commission-cut-deadlines.util';
-
 @Injectable()
 export class UtilEffects {
 
@@ -27,20 +25,21 @@ export class UtilEffects {
         private router: Router,
     ) {}
 
+    /** Carga inicial tras login/restore: despacha cada loader por separado para garantizar que corran. */
     loadAfterAuth$ = createEffect(() =>
         this.actions$.pipe(
             ofType(UtilActions.loadAfterAuth),
-            switchMap(() => {
-                const { startCutDate, endCutDate } = getDefaultCutDateRange();
-                return [
+            mergeMap(() => {
+                console.log('[UtilEffects] loadAfterAuth disparado');
+                return from([
                     UserActions.loadUsers(),
                     InviteActions.loadInvites(),
                     AdvisorActions.loadAdvisors(),
                     ContractActions.loadContracts(),
                     CommissionConfigActions.loadCommissionConfigs(),
                     CommissionPolicyActions.loadCommissionPolicies(),
-                    CommissionPaymentActions.loadCommissionPaymentsForCuts({ startCutDate, endCutDate }),
-                ];
+                    CommissionPaymentActions.loadCommissionPaymentsForCuts({}),
+                ]);
             })
         )
     );
@@ -49,19 +48,17 @@ export class UtilEffects {
     loadCommissionPaymentsOnNavigateToCuts$ = createEffect(() =>
         this.actions$.pipe(
             ofType(routerNavigatedAction),
-            filter((a) => {
-                const fromRouter = this.router.url || '';
-                const fromPayload = (a as any)?.payload?.routerState?.url || '';
-                const url = fromRouter || fromPayload;
-                return url.includes('commission-cuts');
+            filter(() => {
+                const ok = (this.router.url || '').includes('commission-cuts');
+                if (ok) console.log('[UtilEffects] loadCommissionPaymentsOnNavigateToCuts: URL=', this.router.url);
+                return ok;
             }),
-            switchMap(() => {
-                const { startCutDate, endCutDate } = getDefaultCutDateRange();
-                return [
+            mergeMap(() =>
+                from([
                     AdvisorActions.loadAdvisors(),
-                    CommissionPaymentActions.loadCommissionPaymentsForCuts({ startCutDate, endCutDate }),
-                ];
-            }),
+                    CommissionPaymentActions.loadCommissionPaymentsForCuts({}),
+                ]),
+            ),
         )
     );
 }

@@ -28,8 +28,8 @@ export class CommissionPaymentFacade {
 		this.store.dispatch(CommissionPaymentActions.loadCommissionPaymentsByCutDate({ cutDate }));
 	}
 
-	loadCommissionPaymentsForCuts(startCutDate: number, endCutDate: number) {
-		this.store.dispatch(CommissionPaymentActions.loadCommissionPaymentsForCuts({ startCutDate, endCutDate }));
+	loadCommissionPaymentsForCuts() {
+		this.store.dispatch(CommissionPaymentActions.loadCommissionPaymentsForCuts({}));
 	}
 
 	selectCommissionPayment(commissionPayment: CommissionPayment) {
@@ -42,6 +42,10 @@ export class CommissionPaymentFacade {
 
 	markPaidByCutDateAndAdvisor(cutDate: number, advisorUid: string, paidAt?: number) {
 		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentsPaidByCutDateAndAdvisor({ cutDate, advisorUid, paidAt }));
+	}
+
+	markPaidByUids(paymentUids: string[], paidAt?: number) {
+		this.store.dispatch(CommissionPaymentActions.markCommissionPaymentsPaidByUids({ paymentUids, paidAt }));
 	}
 
 	markPaidByTrancheAndAdvisor(trancheUid: string, advisorUid: string, paidAt?: number) {

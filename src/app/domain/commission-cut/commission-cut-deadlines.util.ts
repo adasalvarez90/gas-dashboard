@@ -4,13 +4,20 @@ import {
 	mexicoDateKeyFromTimestamp,
 	mexicoDateKeyToCanonicalTimestamp,
 } from 'src/app/domain/time/mexico-time.util';
+import type { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
+import { normalizeLateReasons } from 'src/app/models/commission-cut-late-reason.model';
+
+function pad2(n: number): string {
+	return n < 10 ? `0${n}` : `${n}`;
+}
 
 /**
  * Utilidades para plazos de comisión:
- * - Desglose: día 7 o 21 del mes
+ * - Desglose: 2 días hábiles desde la fecha de corte
  * - Factura: 2 días hábiles desde desglose enviado
- * - Pago: 2 días hábiles desde factura enviada
- * - Regla: si no se envía factura a tiempo → comisión pasa al siguiente corte
+ * - Pago / comprobante: 2 días hábiles desde factura recibida
+ * - Arrastre al siguiente corte (implícito): cualquier tipo de comisión, solo si ya cayó el corte original
+ *   y el flujo (por timestamps de estado o falta de documento de estado) tiene un paso vencido.
  */
 
 /** Añade N días hábiles a una fecha */
@@ -56,6 +63,7 @@ export function isPaymentOverdue(receiptSentAt: number | undefined, paymentDeadl
 	return isAfterMexicoDate(Date.now(), paymentDeadline);
 }
 
+
 /** Rango por defecto para cortes: últimos 12 meses (días 7 y 21). Usado en loadAfterAuth y Commission Cuts. */
 /** Usa formato canónico (12:00 UTC) igual que getCutDateForDueDateMexico para que la query incluya los documentos. */
 export function getDefaultCutDateRange(): { startCutDate: number; endCutDate: number } {
@@ -82,13 +90,173 @@ export function getDefaultCutDateRange(): { startCutDate: number; endCutDate: nu
 }
 
 /**
- * Retorna el siguiente corte: mismo día (7 o 21) del mes siguiente.
- * Regla factura tardía: si no se envía factura a tiempo, la comisión pasa
- * al mismo día del mes siguiente (ej. 7 mar → 7 abr, 21 jun → 21 jul).
+ * Siguiente corte de negocio (factura tardía / vista diferida): mismo día de corte (7 u 21)
+ * en el **mes calendario siguiente** (ej. 7 mar → 7 abr; 21 jun → 21 jul).
+ * No es el siguiente 7/21 en la secuencia del mismo mes (eso sería 7 mar → 21 mar).
  * @see docs/domain/commission-cuts.md
  */
 export function getNextCutDate(cutDate: number): number {
 	const key = mexicoDateKeyFromTimestamp(cutDate);
-	const [year, month, day] = key.split('-').map((x) => parseInt(x, 10));
-	return Date.UTC(year, month, day, 12, 0, 0, 0);
+	const [y, m, d] = key.split('-').map((x) => parseInt(x, 10));
+	const month = m || 1;
+	const day = d || 7;
+	const nextMonth = month === 12 ? 1 : month + 1;
+	const nextYear = month === 12 ? y + 1 : y;
+	const nextKey = `${nextYear}-${pad2(nextMonth)}-${pad2(day)}`;
+	return mexicoDateKeyToCanonicalTimestamp(nextKey);
+}
+
+/**
+ * El día de corte original ya ocurrió (fecha México); no mostrar arrastre desde cortes “futuros”.
+ */
+export function isOriginalBusinessCutDayReached(cutDate: number): boolean {
+	return mexicoDateKeyFromTimestamp(cutDate) <= mexicoDateKeyFromTimestamp(Date.now());
+}
+
+/**
+ * Hay incumplimiento en la cadena desglose → factura → comprobante según timestamps (o sin estado = pendiente de desglose).
+ * Misma regla para IMMEDIATE, RECURRING, FINAL y ADJUSTMENT.
+ */
+/**
+ * Pagada en tiempo “estricto”: ningún paso del flujo superó su plazo de 2 días hábiles (por fechas guardadas).
+ * Si hay motivos de atraso persistidos o `paidLate`, cuenta como tarde aunque las fechas parezcan sanas.
+ * No compara con el siguiente corte: un comprobante “a tiempo” respecto al plazo de factura no borra un desglose tarde.
+ */
+export function paymentFlowHasAnyLateStep(
+	originalCutDate: number,
+	st: CommissionCutAdvisorState | null | undefined,
+): boolean {
+	if (!st) return false;
+	if (st.paidLate) return true;
+	if (normalizeLateReasons(st.lateReasons).length > 0) return true;
+	const breakdownDl = getBreakdownDeadline(originalCutDate);
+	if (st.breakdownSentAt && isAfterMexicoDate(st.breakdownSentAt, breakdownDl)) return true;
+	if (st.invoiceSentAt && st.breakdownSentAt) {
+		const invDl = getInvoiceDeadline(st.breakdownSentAt);
+		if (isInvoiceLate(st.invoiceSentAt, invDl)) return true;
+	}
+	if (st.receiptSentAt && st.invoiceSentAt) {
+		const payDl = getPaymentDeadline(st.invoiceSentAt);
+		if (isAfterMexicoDate(st.receiptSentAt, payDl)) return true;
+	}
+	return false;
+}
+
+export function isWorkflowOverdueForImplicitDeferral(
+	cutDate: number,
+	state: CommissionCutAdvisorState | null | undefined,
+): boolean {
+	if (!state?.breakdownSentAt) {
+		return isInvoiceOverdue(undefined, getBreakdownDeadline(cutDate));
+	}
+	if (!state.invoiceSentAt) {
+		return isInvoiceOverdue(undefined, getInvoiceDeadline(state.breakdownSentAt));
+	}
+	if (!state.receiptSentAt) {
+		return isPaymentOverdue(undefined, getPaymentDeadline(state.invoiceSentAt));
+	}
+	return false;
+}
+
+export type PaymentLikeForDeferralDisplay = {
+	cutDate: number;
+	paymentType?: string;
+	deferredToCutDate?: number;
+	cancelled?: boolean;
+	paid?: boolean;
+	paidAt?: number;
+};
+
+/**
+ * Segundo corte donde un pago **impago** puede listarse (además del `cutDate`). `null` = solo en el original.
+ *
+ * - **Explícito** (`deferredToCutDate` ≠ `cutDate`, p. ej. factura tarde): siempre ese destino.
+ * - **Implícito**: impago, corte original ya ocurrido, cadena desglose→factura→comprobante vencida según estado
+ *   (`isWorkflowOverdueForImplicitDeferral`) → `getNextCutDate(cutDate)`. Aplica a **todos** los `paymentType`.
+ *
+ * Como mucho **dos** cortes en pantalla (original + este), nunca cadena may→jun→jul…
+ */
+export function getUnpaidDeferredSecondCutDate(
+	p: PaymentLikeForDeferralDisplay,
+	originalCutAdvisorState?: CommissionCutAdvisorState | null,
+): number | null {
+	if (p.cancelled || p.paid || p.paidAt) return null;
+	if (p.deferredToCutDate != null && p.deferredToCutDate !== p.cutDate) {
+		return p.deferredToCutDate;
+	}
+	if (!isOriginalBusinessCutDayReached(p.cutDate)) return null;
+	if (!isWorkflowOverdueForImplicitDeferral(p.cutDate, originalCutAdvisorState ?? null)) return null;
+	return getNextCutDate(p.cutDate);
+}
+
+/**
+ * Fin del horizonte para diferidas implícitas: último corte visto en datos o el fin del rango por defecto (el mayor).
+ */
+export function getDeferralEndCutDate(payments: { cutDate?: number; deferredToCutDate?: number }[]): number {
+	const { endCutDate } = getDefaultCutDateRange();
+	let max = endCutDate;
+	for (const p of payments) {
+		if (p.cutDate) max = Math.max(max, p.cutDate);
+		if (p.deferredToCutDate) max = Math.max(max, p.deferredToCutDate);
+	}
+	return max;
+}
+
+/**
+ * Cortes estrictamente **posteriores** a `fromCut` hasta `endInclusive` (cadena `getNextCutDate`).
+ * No incluye `fromCut`.
+ */
+export function subsequentCutsInRange(fromCut: number, endInclusive: number): number[] {
+	const out: number[] = [];
+	let next = getNextCutDate(fromCut);
+	while (next <= endInclusive) {
+		out.push(next);
+		next = getNextCutDate(next);
+	}
+	return out;
+}
+
+/**
+ * Retorna el corte (7 o 21) más reciente que es menor o igual a la fecha dada.
+ * Usado cuando el usuario indica que el desglose fue antes del corte diferido.
+ */
+export function getLastCutDateOnOrBefore(ts: number): number {
+	const key = mexicoDateKeyFromTimestamp(ts);
+	const [y, m, d] = key.split('-').map((x) => parseInt(x, 10));
+	const day = d || 1;
+	if (day >= 21) return mexicoDateKeyToCanonicalTimestamp(`${y}-${String(m).padStart(2, '0')}-21`);
+	if (day >= 7) return mexicoDateKeyToCanonicalTimestamp(`${y}-${String(m).padStart(2, '0')}-07`);
+	const prevM = m === 1 ? 12 : m - 1;
+	const prevY = m === 1 ? y - 1 : y;
+	return mexicoDateKeyToCanonicalTimestamp(`${prevY}-${String(prevM).padStart(2, '0')}-21`);
+}
+
+/** Retorna el corte inmediatamente anterior en la secuencia 7/21. */
+export function getPreviousCutDate(cutDate: number): number {
+	const key = mexicoDateKeyFromTimestamp(cutDate);
+	const [y, m, d] = key.split('-').map((x) => parseInt(x, 10));
+	const day = d || 1;
+	if (day === 7) {
+		const prevM = m === 1 ? 12 : m - 1;
+		const prevY = m === 1 ? y - 1 : y;
+		return mexicoDateKeyToCanonicalTimestamp(`${prevY}-${String(prevM).padStart(2, '0')}-21`);
+	}
+	return mexicoDateKeyToCanonicalTimestamp(`${y}-${String(m).padStart(2, '0')}-07`);
+}
+
+/**
+ * Mínimo corte válido al que puede asignarse una comisión diferida.
+ * Una comisión diferida no puede asignarse a un corte anterior al primer corte
+ * en que fue diferida (p. ej. 7 feb → 7 mar → 21 mar: no puede ir a 21 feb).
+ */
+export function getMinValidTargetCut(originalCutDate: number, deferredCutDate: number): number {
+	const origDay = getBreakdownDeadlineDay(originalCutDate);
+	let cur = deferredCutDate;
+	let minSameDay = deferredCutDate;
+	while (cur > originalCutDate) {
+		const curDay = getBreakdownDeadlineDay(cur);
+		if (curDay === origDay && cur >= originalCutDate) minSameDay = cur;
+		cur = getPreviousCutDate(cur);
+	}
+	return minSameDay >= originalCutDate ? minSameDay : originalCutDate;
 }

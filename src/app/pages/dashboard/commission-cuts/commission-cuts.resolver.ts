@@ -5,8 +5,6 @@ import { combineLatest, filter, map, take, timeout, catchError, of } from 'rxjs'
 
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
-import { getDefaultCutDateRange } from 'src/app/domain/commission-cut/commission-cut-deadlines.util';
-
 /**
  * Resolver que fuerza la carga de advisors y commission payments antes de mostrar
  * la página Cortes de comisión. Evita que llegues a la pantalla sin datos.
@@ -19,9 +17,8 @@ export class CommissionCutsResolver implements Resolve<boolean> {
 	) {}
 
 	resolve(_route: ActivatedRouteSnapshot, _state: RouterStateSnapshot): Observable<boolean> {
-		const { startCutDate, endCutDate } = getDefaultCutDateRange();
 		this.advisorFacade.loadAdvisors();
-		this.commissionPaymentFacade.loadCommissionPaymentsForCuts(startCutDate, endCutDate);
+		this.commissionPaymentFacade.loadCommissionPaymentsForCuts();
 
 		return combineLatest([
 			this.commissionPaymentFacade.loading$,

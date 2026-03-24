@@ -14,7 +14,7 @@ import { PipesModule } from 'src/app/pipes/pipes.module';
 import { ContractsListComponent } from './components/contracts-list/contracts-list.component';
 import { ContractPanelComponent } from './components/contract-panel/contract-panel.component';
 import { ContractInfoComponent } from './components/contract-info/contract-info.component';
-
+import { ContractSeedModalComponent } from 'src/app/components/contract-seed-modal/contract-seed-modal.component';
 
 @NgModule({
   imports: [
@@ -23,6 +23,7 @@ import { ContractInfoComponent } from './components/contract-info/contract-info.
     ContractsListComponent,
     ContractPanelComponent,
     ContractInfoComponent,
+    ContractSeedModalComponent,
     PipesModule,
     IonicModule,
     ContractsPageRoutingModule

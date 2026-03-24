@@ -3,8 +3,9 @@ import { createFeatureSelector, createSelector } from '@ngrx/store';
 import { RouterStateUrl, RouterState } from './router.state';
 import { Params } from '@angular/router';
 //
+const defaultRoute: RouterStateUrl = { url: '', data: {}, params: {}, queryParams: {} };
 export const selectRouter = createFeatureSelector<RouterState>('router');
-export const selectRouterState = createSelector(selectRouter, (routerState: RouterState) => routerState.state);
+export const selectRouterState = createSelector(selectRouter, (routerState: RouterState) => routerState?.state ?? defaultRoute);
 //
 export const selectQueryParams = createSelector(selectRouterState, (route: RouterStateUrl) => route.queryParams);
 export const selectRouteParams = createSelector(selectRouterState, (route: RouterStateUrl) => route.params);

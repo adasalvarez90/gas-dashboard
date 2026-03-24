@@ -115,14 +115,13 @@
 									<div
 										class="summary-card"
 										[class.summary-card--open]="isSummaryExpanded(s)"
-										[class.summary-card--overdue]="s.isOverdue"
-										[class.summary-card--warning]="s.pendingAmount > 0 && !s.isOverdue"
-										[class.summary-card--paid-late]="s.state?.paidLate"
+										[class.summary-card--border-danger]="getSummaryCardBorderSeverity(s) === 'danger'"
+										[class.summary-card--border-warning]="getSummaryCardBorderSeverity(s) === 'warning'"
+										[class.summary-card--border-success]="getSummaryCardBorderSeverity(s) === 'success'"
+										[class.summary-card--paid-late]="summaryHasAnyPaidLateStrip(s)"
 									>
 										<div
 											class="summary-card-header"
-											[class.overdue]="s.isOverdue"
-											[class.warning-pending]="s.pendingAmount > 0 && !s.isOverdue"
 											(click)="toggleSummaryExpanded(s)"
 										>
 											<div class="summary-card-left">
@@ -147,10 +146,7 @@
 													{{ stateLabel(s.state?.state ?? 'PENDING') }}
 												</span>
 												@if (s.state?.paidLate) {
-													<ion-badge color="warning" class="badge-outline badge-outline--warning">Pagada atrasada</ion-badge>
-												}
-												@for (reason of getEffectiveLateReasons(s); track reason) {
-													<ion-badge color="danger" class="badge-outline badge-outline--danger">{{ getLateReasonLabel(reason) }}</ion-badge>
+													<ion-badge class="badge-outline badge-outline--orange">Pagada atrasada</ion-badge>
 												}
 
 												<div class="summary-kpis">
@@ -200,21 +196,21 @@
 																class="action-btn"
 																color="primary"
 																fill="outline"
-																(click)="$event.stopPropagation(); markBreakdownSent(s.advisorUid, getStateCutDate(s))"
+																(click)="$event.stopPropagation(); markBreakdownSent(s.advisorUid, getStateCutDate(s), s)"
 															>
 																Desglose enviado
 															</ion-button>
 														}
 														@case ('BREAKDOWN_SENT') {
 															<label class="upload-label" (click)="$event.stopPropagation()">
-																<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceFileSelected($event, s.advisorUid, getStateCutDate(s), s.cutDate)" hidden>
+																<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceFileSelected($event, s.advisorUid, getStateCutDate(s), s.cutDate, s)" hidden>
 																<ion-button size="small" class="action-btn" color="primary" fill="outline">Enviar factura</ion-button>
 															</label>
 														}
 														@case ('SENT_TO_PAYMENT') {
 															@if (s.pendingAmount > 0) {
 																<label class="upload-label" (click)="$event.stopPropagation()">
-																	<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptFileSelected($event, s.advisorUid, getStateCutDate(s), s.cutDate)" hidden>
+																	<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptFileSelected($event, s.advisorUid, getStateCutDate(s), s.cutDate, s)" hidden>
 																	<ion-button size="small" class="action-btn" color="warning" fill="outline">Comprobante</ion-button>
 																</label>
 																<ion-button
@@ -222,7 +218,7 @@
 																	class="action-btn"
 																	color="success"
 																	fill="outline"
-																	(click)="$event.stopPropagation(); markPaid(s.advisorUid, getStateCutDate(s), s.cutDate)"
+																	(click)="$event.stopPropagation(); markPaid(s.advisorUid, getStateCutDate(s), s.cutDate, undefined, s)"
 																>
 																	Marcar pagado
 																</ion-button>
@@ -235,7 +231,7 @@
 																	class="action-btn"
 																	color="success"
 																	fill="outline"
-																	(click)="$event.stopPropagation(); markAdvisorCutAsPaid(s.advisorUid, getStateCutDate(s), s.cutDate)"
+																	(click)="$event.stopPropagation(); markAdvisorCutAsPaid(s.advisorUid, getStateCutDate(s), s.cutDate, s)"
 																>
 																	Marcar pagado
 																</ion-button>
@@ -252,11 +248,24 @@
 
 										@if (isSummaryExpanded(s)) {
 											<div class="summary-card-body" (click)="$event.stopPropagation()">
+												@if (hasDeferredUnpaid(s) && getSelectedDeferredForSummary(s).length > 0) {
+													<div class="process-selected-row">
+														<ion-button size="small" color="primary" fill="outline" (click)="processSelectedDeferred(s)">
+															Procesar {{ getSelectedDeferredForSummary(s).length }} seleccionada(s)
+														</ion-button>
+													</div>
+												}
 												<div class="section-title">Contratos</div>
 												<div class="contracts-groups">
 													@for (c of s.contractBreakdown; track c.contractUid) {
 														<div class="contract-group">
-															<ion-list lines="full" class="contracts-ion-list">
+															<ion-list
+																lines="full"
+																class="contracts-ion-list"
+																[class.contracts-ion-list--border-danger]="getContractGroupBorderSeverity(s, c) === 'danger'"
+																[class.contracts-ion-list--border-warning]="getContractGroupBorderSeverity(s, c) === 'warning'"
+																[class.contracts-ion-list--border-success]="getContractGroupBorderSeverity(s, c) === 'success'"
+															>
 																<ion-item lines="full" class="contract-header-item">
 																	<ion-label>
 																		<h3 class="contract-investor-name">{{ c.investorName }}</h3>
@@ -274,21 +283,32 @@
 																	</ion-badge>
 																</ion-item>
 																@for (pay of c.payments; track pay.uid) {
-																	<ion-item [lines]="c.payments.length > 1 && c.payments.indexOf(pay) !== c.payments.length - 1 ? 'inset' : 'none'" class="contract-payment-item" [class.is-paid-row]="!!pay.paidAt || pay.paid">
+																	<ion-item
+																		[lines]="c.payments.length > 1 && c.payments.indexOf(pay) !== c.payments.length - 1 ? 'inset' : 'none'"
+																		class="contract-payment-item"
+																		[class.is-paid-row]="!!pay.paidAt || pay.paid"
+																		[class.payment-strip--overdue]="getPaymentStripStatus(s, pay) === 'overdue'"
+																		[class.payment-strip--pending]="getPaymentStripStatus(s, pay) === 'pending'"
+																		[class.payment-strip--paid]="getPaymentStripStatus(s, pay) === 'paid'"
+																		[class.payment-strip--paid-late]="getPaymentStripStatus(s, pay) === 'paidLate'"
+																	>
+																		@if (pay.deferredToCutDate === s.cutDate && !pay.paidAt && !pay.paid) {
+																			<ion-checkbox slot="start" [checked]="isDeferredSelected(pay)" (ionChange)="toggleDeferredSelection(pay, s)"></ion-checkbox>
+																		}
 																		<ion-label class="ion-text-wrap payment-inline-label">
 																			<div class="payment-inline">
-																				<span class="pi" [class.pi--deferred]="!!pay.deferredToCutDate"><span class="pi-label">Origen</span>{{ pay.deferredToCutDate ? 'Diferida' : 'Regular' }}</span>
-																				@if (pay.deferredToCutDate) {
+																				<span class="pi" [class.pi--deferred]="paymentShowsDeferredOriginInSummary(pay, s.cutDate, s.paymentDeferralStates?.get(pay.uid))"><span class="pi-label">Origen</span>{{ paymentShowsDeferredOriginInSummary(pay, s.cutDate, s.paymentDeferralStates?.get(pay.uid)) ? 'Diferida' : 'Regular' }}</span>
+																				@if (paymentRolledIntoSummaryCut(pay, s.cutDate, s.paymentDeferralStates?.get(pay.uid))) {
 																					<span class="pi"><span class="pi-label">Corte orig.</span>{{ pay.cutDate | date:'d/M' }}</span>
 																				}
 																				<span class="pi"><span class="pi-label">Tipo</span>{{ paymentTypeUiLabel(pay.paymentType) }}</span>
 																				<span class="pi"><span class="pi-label">Rol</span>{{ roleLabel(pay.role) }}</span>
 																				<span class="pi pi-grow"><span class="pi-label">Esquema</span>{{ commissionReasonLabel(pay) }}</span>
 																				<span class="pi pi-amount"><span class="pi-label">Monto</span>{{ pay.amount | currency:'MXN':'symbol-narrow' }}</span>
-																				@if (getEffectiveLateReasons(s).length) {
-																					<span class="pi"><span class="pi-label">Motivo</span>{{ getLateReasonsLabel(s) }}</span>
-																				}
 																			</div>
+																			@if (getPaymentMotivoDisplay(s, pay)) {
+																				<div class="payment-motivo-line">{{ getPaymentMotivoDisplay(s, pay) }}</div>
+																			}
 																		</ion-label>
 																	</ion-item>
 																}

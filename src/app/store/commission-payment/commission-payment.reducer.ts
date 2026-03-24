@@ -56,6 +56,20 @@ export const commissionPaymentReducer = createReducer(
 	}),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByCutDateAndAdvisorFailure, (state, { error }) => ({ ...state, loading: false, error })),
 
+	// Mark paid by UIDs (selección de diferidas)
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByUids, (state) => ({ ...state, loading: true, error: null })),
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByUidsSuccess, (state, { paymentUids, paidAt, targetCutDate, originalCutDate }) => {
+		const changes: Record<string, unknown> = { paid: true, paidAt };
+		if (targetCutDate != null && originalCutDate != null) {
+			changes['deferredToCutDate'] = targetCutDate === originalCutDate ? undefined : targetCutDate;
+		} else {
+			changes['deferredToCutDate'] = undefined;
+		}
+		const updates = paymentUids.map((id) => ({ id, changes }));
+		return adapter.updateMany(updates, { ...state, loading: false });
+	}),
+	on(CommissionPaymentsActions.markCommissionPaymentsPaidByUidsFailure, (state, { error }) => ({ ...state, loading: false, error })),
+
 	// Mark paid by tranche + advisor
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisor, (state) => ({ ...state, loading: true, error: null })),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisorSuccess, (state, { trancheUid, advisorUid, paidAt }) => {

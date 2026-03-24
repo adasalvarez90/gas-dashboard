@@ -51,6 +51,13 @@ export class CommissionPaymentFirestoreService {
 		return snap.docs.map(d => d.data() as CommissionPayment);
 	}
 
+	/** Todas las comisiones activas (Cortes de comisión: histórico completo, no solo últimos 12 meses). */
+	async getAllActiveCommissionPayments(): Promise<CommissionPayment[]> {
+		const ref = collection(this.firestore, this.collectionName);
+		const snap = await getDocs(query(ref, where('_on', '==', true)));
+		return snap.docs.map((d) => d.data() as CommissionPayment);
+	}
+
 	// ===== GET BY CUT DATE RANGE (for Commission Cuts page). Incluye pagos con cutDate en rango O deferredToCutDate en rango. =====
 	async getCommissionPaymentsByCutDateRange(startCutDate: number, endCutDate: number): Promise<CommissionPayment[]> {
 		const ref = collection(this.firestore, this.collectionName);
@@ -109,6 +116,38 @@ export class CommissionPaymentFirestoreService {
 		});
 		await batch.commit();
 		return snap.size;
+	}
+
+	// ===== MARK PAID BY UIDS (procesar solo los seleccionados, ej. diferidas) =====
+	/**
+	 * @param opts.targetCutDate Corte donde se procesó (≤ fecha desglose).
+	 * @param opts.originalCutDate Corte original de la comisión.
+	 * Si targetCutDate === originalCutDate → se quita deferredToCutDate (pagada en original).
+	 * Si targetCutDate !== originalCutDate → se actualiza deferredToCutDate = targetCutDate (aún diferida, pagada en ese corte).
+	 */
+	async markCommissionPaymentsPaidByUids(
+		paymentUids: string[],
+		paidAt: number = Date.now(),
+		opts?: { targetCutDate?: number; originalCutDate?: number }
+	): Promise<number> {
+		if (paymentUids.length === 0) return 0;
+		const batch = writeBatch(this.firestore);
+		const updates: Record<string, unknown> = { paid: true, paidAt, _update: paidAt };
+		if (opts?.targetCutDate != null && opts?.originalCutDate != null) {
+			if (opts.targetCutDate === opts.originalCutDate) {
+				(updates as any).deferredToCutDate = deleteField();
+			} else {
+				(updates as any).deferredToCutDate = opts.targetCutDate;
+			}
+		} else {
+			(updates as any).deferredToCutDate = deleteField();
+		}
+		for (const uid of paymentUids) {
+			const ref = doc(this.firestore, this.collectionName, uid);
+			batch.update(ref, updates);
+		}
+		await batch.commit();
+		return paymentUids.length;
 	}
 
 	// ===== MARK PAID BY CUT DATE + ADVISOR (incluye pagos con cutDate o deferredToCutDate = cutDate) =====
@@ -238,6 +277,21 @@ export class CommissionPaymentFirestoreService {
 		await setDoc(ref, cleanedPayment as any);
 
 		return cleanedPayment;
+	}
+
+	/** Motivo de diferimiento por fondeo anterior al corte (catálogo + texto). */
+	async updateFundingDeferralReason(
+		uid: string,
+		fundingDeferralReasonCode: string,
+		fundingDeferralReasonText: string,
+	): Promise<void> {
+		const ref = doc(this.firestore, this.collectionName, uid);
+		const now = Date.now();
+		await updateDoc(ref, {
+			fundingDeferralReasonCode,
+			fundingDeferralReasonText: fundingDeferralReasonText?.trim() ?? '',
+			_update: now,
+		});
 	}
 
 	private getCutDateForDueDate(dueDate: number): number {

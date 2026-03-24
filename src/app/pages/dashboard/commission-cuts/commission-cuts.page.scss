@@ -107,6 +107,10 @@
 	ion-badge.badge-outline.badge-outline--danger {
 		color: var(--ion-color-danger);
 	}
+	ion-badge.badge-outline.badge-outline--orange {
+		color: rgb(255, 152, 0);
+		border-color: rgba(255, 152, 0, 0.5);
+	}
 
 	/* Bloques separados por fecha de corte */
 	.summary-by-cut {
@@ -185,52 +189,27 @@
 		background: rgba(var(--ion-color-primary-rgb), 0.08);
 	}
 
-	/* Pendiente de pago (aún no liquidada) — warning; el rojo de incumplimiento gana con .summary-card--overdue */
-	.summary-card--warning:not(.summary-card--overdue) {
-		border-color: rgba(var(--ion-color-warning-rgb), 0.42);
-		background: rgba(var(--ion-color-warning-rgb), 0.07);
-
-		.summary-card-body {
-			background: rgba(var(--ion-color-warning-rgb), 0.05);
-		}
-
-		.contract-header-item {
-			--background: rgba(var(--ion-color-warning-rgb), 0.06);
-		}
-
-		.contract-payment-item {
-			--background: rgba(var(--ion-color-warning-rgb), 0.045);
-		}
+	/* Borde de tarjeta asesora: prioridad rojo > amarillo > verde (sin pintar todo el fondo) */
+	.summary-card--border-danger {
+		border-color: rgba(var(--ion-color-danger-rgb), 0.55);
+		border-width: 2px;
 	}
 
-	/* Incumplimiento: pintar toda la tarjeta/accordion en rojo */
-	.summary-card--overdue {
-		border-color: rgba(var(--ion-color-danger-rgb), 0.45);
-		background: rgba(var(--ion-color-danger-rgb), 0.08);
-
-		.summary-card-header {
-			&.overdue {
-				border-color: rgba(var(--ion-color-danger-rgb), 0.65);
-			}
-		}
-
-		.summary-card-body {
-			background: rgba(var(--ion-color-danger-rgb), 0.06);
-		}
-
-		.contract-header-item {
-			--background: rgba(var(--ion-color-danger-rgb), 0.07);
-		}
-
-		.contract-payment-item {
-			--background: rgba(var(--ion-color-danger-rgb), 0.055);
-		}
+	.summary-card--border-warning {
+		border-color: rgba(var(--ion-color-warning-rgb), 0.5);
+		border-width: 2px;
 	}
 
-	/* Pagada atrasada (excepción): mantiene color de auditoría */
+	.summary-card--border-success {
+		border-color: rgba(var(--ion-color-success-rgb), 0.45);
+		border-width: 2px;
+	}
+
+	/* Pagada atrasada (naranja): pagó después de la fecha original */
 	.summary-card--paid-late {
-		border-color: rgba(var(--ion-color-warning-rgb), 0.4);
-		background: rgba(var(--ion-color-warning-rgb), 0.06);
+		--paid-late-rgb: 255, 152, 0; /* naranja */
+		border-color: rgba(var(--paid-late-rgb), 0.45);
+		background: rgba(var(--paid-late-rgb), 0.08);
 	}
 
 	.summary-card-header {
@@ -247,13 +226,6 @@
 			background: rgba(var(--ion-color-primary-rgb), 0.04);
 		}
 
-		&.overdue {
-			border-color: rgba(var(--ion-color-danger-rgb), 0.35);
-		}
-
-		&.warning-pending {
-			border-color: rgba(var(--ion-color-warning-rgb), 0.32);
-		}
 	}
 
 	.summary-card-left {
@@ -407,13 +379,18 @@
 		border-top: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
 		background: rgba(var(--ion-color-primary-rgb), 0.03);
 
-		.section-title {
-			font-size: 16px;
-			letter-spacing: 0.06em;
-			font-weight: 900;
-			margin-bottom: 12px;
-		}
+	.process-selected-row {
+		margin-bottom: 12px;
+		padding: 10px 0;
+		border-bottom: 1px dashed rgba(var(--ion-color-medium-rgb), 0.2);
 	}
+	.section-title {
+		font-size: 16px;
+		letter-spacing: 0.06em;
+		font-weight: 900;
+		margin-bottom: 12px;
+	}
+}
 
 	.contracts-groups {
 		display: flex;
@@ -459,15 +436,62 @@
 		opacity: 0.9;
 	}
 
+	.contracts-ion-list--border-danger {
+		border: 2px solid rgba(var(--ion-color-danger-rgb), 0.45) !important;
+	}
+
+	.contracts-ion-list--border-warning {
+		border: 2px solid rgba(var(--ion-color-warning-rgb), 0.42) !important;
+	}
+
+	.contracts-ion-list--border-success {
+		border: 2px solid rgba(var(--ion-color-success-rgb), 0.38) !important;
+	}
+
 	.contract-payment-item {
 		--background: rgba(0, 0, 0, 0.12);
 		--padding-start: 14px;
 		--padding-end: 14px;
 		--min-height: 52px;
+		position: relative;
+	}
+
+	/* Franja de estado solo en la fila de la comisión */
+	.contract-payment-item.payment-strip--overdue {
+		--background: rgba(var(--ion-color-danger-rgb), 0.14);
+		box-shadow: inset 4px 0 0 0 rgba(var(--ion-color-danger-rgb), 0.85);
+	}
+
+	.contract-payment-item.payment-strip--pending {
+		--background: rgba(var(--ion-color-warning-rgb), 0.12);
+		box-shadow: inset 4px 0 0 0 rgba(var(--ion-color-warning-rgb), 0.9);
+	}
+
+	.contract-payment-item.payment-strip--paid {
+		--background: rgba(var(--ion-color-success-rgb), 0.1);
+		box-shadow: inset 4px 0 0 0 rgba(var(--ion-color-success-rgb), 0.75);
+	}
+
+	/* Pagada pero algún paso del flujo fue tarde (no depende del corte siguiente) */
+	.contract-payment-item.payment-strip--paid-late {
+		--background: rgba(var(--ion-color-warning-rgb), 0.16);
+		box-shadow: inset 4px 0 0 0 rgba(255, 149, 0, 0.95);
 	}
 
 	.contract-payment-item.is-paid-row {
-		opacity: 0.78;
+		opacity: 0.88;
+	}
+
+	.payment-motivo-line {
+		margin-top: 10px;
+		padding: 8px 10px;
+		border-radius: 8px;
+		font-size: 13px;
+		line-height: 1.35;
+		background: rgba(0, 0, 0, 0.2);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		grid-column: 1 / -1;
+		word-break: break-word;
 	}
 
 	.payment-inline-label {

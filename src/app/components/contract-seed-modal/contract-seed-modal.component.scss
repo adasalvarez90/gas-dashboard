@@ -1,0 +1,7 @@
+ion-item {
+	--padding-start: 0;
+}
+ion-input[type="number"],
+ion-input[type="date"] {
+	--padding-start: 12px;
+}

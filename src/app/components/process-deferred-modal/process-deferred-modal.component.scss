@@ -1,0 +1,27 @@
+.subtitle {
+	margin-bottom: 8px;
+	opacity: 0.9;
+	font-size: 14px;
+}
+.date-hint {
+	margin-bottom: 16px;
+	font-size: 12px;
+	opacity: 0.75;
+}
+
+.file-upload-label {
+	display: block;
+	margin: 12px 0;
+	padding: 12px;
+	border: 1px dashed rgba(var(--ion-color-medium-rgb), 0.4);
+	border-radius: 8px;
+	cursor: pointer;
+	background: rgba(var(--ion-color-light-rgb), 0.3);
+}
+.file-upload-label input {
+	display: none;
+}
+.file-upload-text {
+	font-size: 14px;
+	opacity: 0.9;
+}

@@ -1,0 +1,62 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-title>Procesar comisiones diferidas</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="cancel()">Cancelar</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+</ion-header>
+<ion-content class="ion-padding">
+	<p class="subtitle">Se procesarán {{ count }} comisión(es) por {{ totalAmount | currency:'MXN':'symbol-narrow' }}.</p>
+	<p class="date-hint">Indica las fechas en que ocurrió cada paso. Si el desglose fue antes del corte diferido, las comisiones se moverán a ese corte.</p>
+
+	<ion-item lines="full">
+		<ion-label position="stacked">Fecha desglose enviado</ion-label>
+		<ion-input type="date" [value]="breakdownDate" (ionInput)="breakdownDate = $any($event).detail?.value ?? ''"></ion-input>
+	</ion-item>
+	<ion-item lines="full">
+		<ion-label position="stacked">Fecha factura recibida</ion-label>
+		<ion-input type="date" [value]="invoiceDate" (ionInput)="invoiceDate = $any($event).detail?.value ?? ''"></ion-input>
+	</ion-item>
+	<ion-item lines="full">
+		<ion-label position="stacked">Fecha comprobante de pago</ion-label>
+		<ion-input type="date" [value]="receiptDate" (ionInput)="receiptDate = $any($event).detail?.value ?? ''"></ion-input>
+	</ion-item>
+
+	<ion-item lines="full">
+		<ion-label position="stacked">Motivo (requerido)</ion-label>
+		<ion-select
+			label="Motivo"
+			interface="popover"
+			[value]="reason"
+			(ionChange)="reason = $any($event).detail.value"
+			placeholder="Selecciona un motivo"
+		>
+			@for (opt of options; track opt.value) {
+				<ion-select-option [value]="opt.value">{{ opt.label }}</ion-select-option>
+			}
+		</ion-select>
+	</ion-item>
+	<ion-item lines="none">
+		<ion-label position="stacked">Texto adicional (opcional)</ion-label>
+		<ion-textarea
+			[value]="text"
+			(ionInput)="text = $any($event).detail?.value ?? ''"
+			placeholder="Explicación adicional..."
+			rows="2"
+		></ion-textarea>
+	</ion-item>
+
+	<label class="file-upload-label">
+		<span class="file-upload-text">Factura (requerido) — {{ invoiceFile?.name ?? 'Seleccionar archivo' }}</span>
+		<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceSelected($event)">
+	</label>
+	<label class="file-upload-label">
+		<span class="file-upload-text">Comprobante de pago (requerido) — {{ receiptFile?.name ?? 'Seleccionar archivo' }}</span>
+		<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptSelected($event)">
+	</label>
+
+	<ion-button expand="block" (click)="submit()" [disabled]="!reason?.trim() || !invoiceFile || !receiptFile">
+		Procesar
+	</ion-button>
+</ion-content>

@@ -1,0 +1,62 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-title>Crear contrato de prueba</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="cancel()">Cerrar</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+	<ion-list lines="full">
+		<ion-item>
+			<ion-label position="stacked">Monto inicial (capital del tranche)</ion-label>
+			<ion-input type="number" [(ngModel)]="initialAmount" min="1" placeholder="100000"></ion-input>
+		</ion-item>
+
+		<ion-item>
+			<ion-label position="stacked">Cantidad de depósitos</ion-label>
+			<ion-input type="number" [(ngModel)]="numDeposits" min="1" placeholder="3"></ion-input>
+		</ion-item>
+
+		<ion-item>
+			<ion-label position="stacked">Monto por depósito (opcional, vacío = repartir igual)</ion-label>
+			<ion-input type="number" [(ngModel)]="depositAmount" min="0" placeholder="0"></ion-input>
+		</ion-item>
+
+		<ion-item>
+			<ion-label position="stacked">Fecha de firma</ion-label>
+			<ion-input type="date" [(ngModel)]="signatureDate"></ion-input>
+		</ion-item>
+
+		<ion-item>
+			<ion-label position="stacked">Fecha del tranche (opcional, default = fecha firma)</ion-label>
+			<ion-input type="date" [(ngModel)]="trancheDate" [placeholder]="signatureDate"></ion-input>
+		</ion-item>
+
+		<ion-item>
+			<ion-label position="stacked">Fecha del primer depósito</ion-label>
+			<ion-input type="date" [(ngModel)]="firstDepositDate"></ion-input>
+		</ion-item>
+
+		<ion-item>
+			<ion-label position="stacked">Días entre depósitos (0 = mismo día todos)</ion-label>
+			<ion-input type="number" [(ngModel)]="daysBetweenDeposits" min="0" placeholder="0"></ion-input>
+		</ion-item>
+
+		<ion-item>
+			<ion-label position="stacked">Asesora (consultora principal). Otros roles: según tags/cargo</ion-label>
+			<ion-select [(ngModel)]="advisorUid" placeholder="Seleccionar asesora">
+				@for (a of advisors$ | async; track a.uid) {
+					<ion-select-option [value]="a.uid">{{ a.name }}</ion-select-option>
+				}
+			</ion-select>
+		</ion-item>
+	</ion-list>
+
+	<div class="ion-padding">
+		<ion-button expand="block" (click)="submit()" [disabled]="initialAmount <= 0 || numDeposits < 1">
+			Crear contrato y depósitos
+		</ion-button>
+	</div>
+</ion-content>

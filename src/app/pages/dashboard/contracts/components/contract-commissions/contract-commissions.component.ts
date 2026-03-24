@@ -193,6 +193,10 @@ export class ContractCommissionsComponent implements OnInit, OnChanges {
 
 	ngOnChanges(changes: SimpleChanges) {
 		if (changes['contract'] && this.contract?.uid) {
+			this.selectedTrancheUid = null;
+			this.selectedTrancheUid$.next(null);
+			this.expandedGroupKeys = new Set();
+			this.trancheFacade.loadTranches(this.contract.uid);
 			this.commissionPaymentFacade.loadCommissionPaymentsByContract(this.contract.uid);
 		}
 	}

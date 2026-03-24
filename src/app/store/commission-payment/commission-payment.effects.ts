@@ -2,18 +2,19 @@ import { Injectable } from '@angular/core';
 import { LoadingController, ToastController } from '@ionic/angular';
 //NgRx
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { exhaustMap, switchMap, withLatestFrom } from 'rxjs/operators';
+import { exhaustMap, filter, map, switchMap, withLatestFrom } from 'rxjs/operators';
 // Actions
 import * as CommissionPaymentActions from './commission-payment.actions';
 // Services
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
 import { CommissionPayment } from './commission-payment.model';
-
+import { Router } from '@angular/router';
 @Injectable()
 export class CommissionPaymentEffects {
 	constructor(
 		private actions$: Actions,
+		private router: Router,
 		private commissionPaymentFS: CommissionPaymentFirestoreService,
 		private authFacade: AuthFacade,
 		private loadingCtrl: LoadingController,
@@ -65,15 +66,30 @@ export class CommissionPaymentEffects {
 	// 🔎 Load commissionPayments for cuts (date range)
 	// Sin withLatestFrom(user$): la ruta Commission Cuts pasa guards, ya hay usuario.
 	// withLatestFrom bloqueaba si user$ no emitía a tiempo (p. ej. lazy load).
+	/** Cortes de comisión: carga histórico completo de comisiones activas (no solo 12 meses). */
 	loadCommissionPaymentsForCuts$ = createEffect(() =>
 		this.actions$.pipe(
 			ofType(CommissionPaymentActions.loadCommissionPaymentsForCuts),
-			switchMap(({ startCutDate, endCutDate }) =>
-				this.commissionPaymentFS.getCommissionPaymentsByCutDateRange(startCutDate, endCutDate).then(
-					commissionPayments => CommissionPaymentActions.loadCommissionPaymentsForCutsSuccess({ commissionPayments }),
-					err => CommissionPaymentActions.loadCommissionPaymentsForCutsFailure({ error: err.message }),
+			switchMap(() =>
+				this.commissionPaymentFS.getAllActiveCommissionPayments().then(
+					(commissionPayments) =>
+						CommissionPaymentActions.loadCommissionPaymentsForCutsSuccess({ commissionPayments }),
+					(err) => CommissionPaymentActions.loadCommissionPaymentsForCutsFailure({ error: err.message }),
 				),
 			),
+		),
+	);
+
+	/** Si estamos en commission-cuts y llegó un Success de loadByContract o loadByTranche,
+	 * restauramos los datos de todos los contratos (evita que el store quede con solo un contrato). */
+	restoreCommissionPaymentsForCutsWhenOnPage$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(
+				CommissionPaymentActions.loadCommissionPaymentsByContractSuccess,
+				CommissionPaymentActions.loadCommissionPaymentsSuccess,
+			),
+			filter(() => (this.router.url || '').includes('commission-cuts')),
+			map(() => CommissionPaymentActions.loadCommissionPaymentsForCuts({})),
 		),
 	);
 
@@ -161,6 +177,49 @@ export class CommissionPaymentEffects {
 						});
 						await toast.present();
 						return CommissionPaymentActions.markCommissionPaymentsPaidByCutDateAndAdvisorFailure({ error: err.message });
+					},
+				);
+			}),
+		),
+	);
+
+	// ✅ Mark as paid by UIDs (selección de diferidas)
+	markCommissionPaymentsPaidByUids$ = createEffect(() =>
+		this.actions$.pipe(
+			ofType(CommissionPaymentActions.markCommissionPaymentsPaidByUids),
+			exhaustMap(async ({ paymentUids, paidAt }) => {
+				const resolvedPaidAt = paidAt ?? Date.now();
+				const loading = await this.loadingCtrl.create({
+					cssClass: 'my-custom-class',
+					message: 'Procesando comisiones seleccionadas…',
+				});
+				await loading.present();
+				return this.commissionPaymentFS.markCommissionPaymentsPaidByUids(paymentUids, resolvedPaidAt).then(
+					async (updatedCount) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'primary',
+							message: `Se marcaron ${updatedCount} comisión(es) como pagadas.`,
+							duration: 3000,
+							position: 'middle',
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByUidsSuccess({
+							paymentUids,
+							paidAt: resolvedPaidAt,
+							updatedCount,
+						});
+					},
+					async (err) => {
+						await loading.dismiss();
+						const toast = await this.toastCtrl.create({
+							color: 'danger',
+							message: `Error: ${err.message}`,
+							duration: 3000,
+							position: 'middle',
+						});
+						await toast.present();
+						return CommissionPaymentActions.markCommissionPaymentsPaidByUidsFailure({ error: err.message });
 					},
 				);
 			}),
