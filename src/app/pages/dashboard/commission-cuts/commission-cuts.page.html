@@ -75,7 +75,7 @@
 							<ion-label>Requieren acción</ion-label>
 							@if ((nonComplianceCount$ | async); as cnt) {
 								@if (cnt > 0) {
-									<ion-badge color="danger" class="badge-outline badge-outline--danger">{{ cnt }}</ion-badge>
+									<ion-badge color="danger" >{{ cnt }}</ion-badge>
 								}
 							}
 						</ion-segment-button>
@@ -83,7 +83,7 @@
 							<ion-label>Pagadas con retraso</ion-label>
 							@if ((paidLateCount$ | async); as cnt) {
 								@if (cnt > 0) {
-									<ion-badge color="warning" class="badge-outline badge-outline--warning">{{ cnt }}</ion-badge>
+									<ion-badge color="warning">{{ cnt }}</ion-badge>
 								}
 							}
 						</ion-segment-button>
