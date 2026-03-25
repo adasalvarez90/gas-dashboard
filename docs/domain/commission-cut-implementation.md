@@ -103,11 +103,9 @@ When a commission is **deferred** to the next cut:
 Una misma línea de pago **solo puede listarse en dos cortes a la vez** (como mucho):
 
 1. **Corte original** (`cutDate`).
-2. **Un único corte destino** cuando aplique:
-   - **Explícito:** `deferredToCutDate` ≠ `cutDate` (p. ej. factura tarde) e impaga → ese destino.
-   - **Implícito:** cualquier `paymentType` impago, corte original ya ocurrido, y cadena desglose → factura → comprobante vencida (`isWorkflowOverdueForImplicitDeferral` + estado por `cutDate`+`advisorUid`) → también en `getNextCutDate(cutDate)`.
+2. **Un único corte destino “actual”** cuando aplique: el pago se encadena mes a mes si cada corte intermedio también vence el mismo flujo (2 hábiles desglose desde el corte, etc.); **no** se listan en febrero y marzo a la vez: solo **original + último destino** (ej. ene atrasada + mar diferida). `deferredToCutDate` en Firestore puede quedar desfasado; la UI usa `getEffectiveDeferredDisplayCut` + mapa de estados por corte.
 
-Implementación: `getUnpaidDeferredSecondCutDate(p, originalCutAdvisorState)` + `addToBucket`; `paymentDeferralStates` en el resumen para etiquetar cada línea con el estado de **su** corte original; `paymentRolledIntoSummaryCut` solo si ese segundo corte existe.
+Implementación: `getEffectiveDeferredDisplayCut` + `getDeferralHorizonCutDate` + `addToBucket`; `paymentRolledIntoSummaryCut` compara el resumen con ese destino efectivo.
 
 ## Path 2: markCommissionPaymentsPaidByUids (selección de diferidas)
 

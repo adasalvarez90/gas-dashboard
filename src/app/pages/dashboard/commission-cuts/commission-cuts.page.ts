@@ -23,8 +23,8 @@ import { CommissionCutsPdfService } from 'src/app/services/commission-cuts-pdf.s
 import {
 	addBusinessDays,
 	getBreakdownDeadline,
-	getDeferralEndCutDate,
-	getUnpaidDeferredSecondCutDate,
+	getDeferralHorizonCutDate,
+	getEffectiveDeferredDisplayCut,
 	getInvoiceDeadline,
 	getLastCutDateOnOrBefore,
 	getMinValidTargetCut,
@@ -94,14 +94,14 @@ export class CommissionCutsPage implements OnInit {
 		map(([payments, states]) => {
 			const stateMap = new Map<string, CommissionCutAdvisorState>();
 			states.forEach((st) => stateMap.set(`${st.cutDate}::${st.advisorUid}`, st));
+			const getSt = (cd: number, adv: string) => stateMap.get(`${cd}::${adv}`) ?? null;
+			const horizon = getDeferralHorizonCutDate(payments, getSt);
 			const set = new Set<number>();
-			const endCutDate = getDeferralEndCutDate(payments);
 			payments.forEach((p) => {
 				if (p.cutDate) set.add(p.cutDate);
 				if (p.deferredToCutDate) set.add(p.deferredToCutDate);
-				const origSt = stateMap.get(`${p.cutDate}::${p.advisorUid}`) ?? null;
-				const second = getUnpaidDeferredSecondCutDate(p, origSt);
-				if (second != null && second <= endCutDate) set.add(second);
+				const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => getSt(cd, p.advisorUid));
+				if (eff != null && eff <= horizon) set.add(eff);
 			});
 			return Array.from(set).sort((a, b) => a - b);
 		})
@@ -128,7 +128,8 @@ export class CommissionCutsPage implements OnInit {
 		map(([payments, advisorsDic, filterCut, filterAdvisor, states]) => {
 			const stateMap = new Map<string, CommissionCutAdvisorState>();
 			states.forEach((st) => stateMap.set(`${st.cutDate}::${st.advisorUid}`, st));
-			const rangeEndCut = getDeferralEndCutDate(payments);
+			const getSt = (cd: number, adv: string) => stateMap.get(`${cd}::${adv}`) ?? null;
+			const horizon = getDeferralHorizonCutDate(payments, getSt);
 			const byCutAdvisor = new Map<string, AdvisorCutSummary>();
 
 			const addToBucket = (p: CommissionPayment, effectiveCutDate: number) => {
@@ -191,13 +192,9 @@ export class CommissionCutsPage implements OnInit {
 
 			for (const p of payments) {
 				if (p.cancelled) continue;
-				// Siempre agregar al corte original (cutDate)
 				addToBucket(p, p.cutDate);
-				const origSt = stateMap.get(`${p.cutDate}::${p.advisorUid}`) ?? null;
-				const secondCut = getUnpaidDeferredSecondCutDate(p, origSt);
-				if (secondCut != null && secondCut <= rangeEndCut) {
-					addToBucket(p, secondCut);
-				}
+				const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => getSt(cd, p.advisorUid));
+				if (eff != null && eff <= horizon) addToBucket(p, eff);
 			}
 
 			const result = Array.from(byCutAdvisor.values());
@@ -490,32 +487,32 @@ export class CommissionCutsPage implements OnInit {
 		return this.expandedContractKeys.has(key);
 	}
 
+	/** Corte destino actual de la diferida (encadenada mes a mes según plazos). */
+	private effectiveDeferredCut(p: CommissionPayment): number | null {
+		const sm = new Map<string, CommissionCutAdvisorState>();
+		for (const st of this.stateStates$.getValue()) {
+			sm.set(`${st.cutDate}::${st.advisorUid}`, st);
+		}
+		return getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => sm.get(`${cd}::${p.advisorUid}`) ?? null);
+	}
+
 	/**
 	 * Esta fila es el **segundo** corte (arrastre desde el original). Solo entonces se muestra “Corte orig.”.
 	 */
-	paymentRolledIntoSummaryCut(
-		pay: CommissionPayment,
-		summaryCutDate: number,
-		originalCutAdvisorState: CommissionCutAdvisorState | null | undefined,
-	): boolean {
+	paymentRolledIntoSummaryCut(pay: CommissionPayment, summaryCutDate: number): boolean {
 		if (pay.cancelled || pay.paid || pay.paidAt) return false;
 		if (summaryCutDate <= pay.cutDate) return false;
-		const second = getUnpaidDeferredSecondCutDate(pay, originalCutAdvisorState ?? null);
+		const second = this.effectiveDeferredCut(pay);
 		return second != null && summaryCutDate === second;
 	}
 
 	/** Origen “Diferida”: arrastre al siguiente corte, o en corte original si aplica segundo corte / motivo de fondeo. */
-	paymentShowsDeferredOriginInSummary(
-		pay: CommissionPayment,
-		summaryCutDate: number,
-		originalCutAdvisorState: CommissionCutAdvisorState | null | undefined,
-	): boolean {
-		const st = originalCutAdvisorState ?? null;
-		if (this.paymentRolledIntoSummaryCut(pay, summaryCutDate, st)) return true;
+	paymentShowsDeferredOriginInSummary(pay: CommissionPayment, summaryCutDate: number): boolean {
+		if (this.paymentRolledIntoSummaryCut(pay, summaryCutDate)) return true;
 		if (pay.cancelled || pay.paid || pay.paidAt) return false;
 		if (summaryCutDate !== pay.cutDate) return false;
 		if (pay.fundingDeferralReasonCode) return true;
-		return getUnpaidDeferredSecondCutDate(pay, st) != null;
+		return this.effectiveDeferredCut(pay) != null;
 	}
 
 	/** Pagos diferidos explícitos (Path 2 / checkbox): solo con deferredToCutDate en Firestore. */

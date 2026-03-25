@@ -167,26 +167,75 @@ export type PaymentLikeForDeferralDisplay = {
 	paidAt?: number;
 };
 
-/**
- * Segundo corte donde un pago **impago** puede listarse (además del `cutDate`). `null` = solo en el original.
- *
- * - **Explícito** (`deferredToCutDate` ≠ `cutDate`, p. ej. factura tarde): siempre ese destino.
- * - **Implícito**: impago, corte original ya ocurrido, cadena desglose→factura→comprobante vencida según estado
- *   (`isWorkflowOverdueForImplicitDeferral`) → `getNextCutDate(cutDate)`. Aplica a **todos** los `paymentType`.
- *
- * Como mucho **dos** cortes en pantalla (original + este), nunca cadena may→jun→jul…
- */
-export function getUnpaidDeferredSecondCutDate(
+/** ¿El pago impago califica para aparecer también en un corte de “diferida” (además del original)? */
+function qualifiesForDeferralDisplay(
 	p: PaymentLikeForDeferralDisplay,
-	originalCutAdvisorState?: CommissionCutAdvisorState | null,
+	originalCutAdvisorState: CommissionCutAdvisorState | null | undefined,
+): boolean {
+	if (p.cancelled || p.paid || p.paidAt) return false;
+	if (!isOriginalBusinessCutDayReached(p.cutDate)) return false;
+	const explicit = p.deferredToCutDate != null && p.deferredToCutDate !== p.cutDate;
+	const implicit = isWorkflowOverdueForImplicitDeferral(p.cutDate, originalCutAdvisorState ?? null);
+	return implicit || explicit;
+}
+
+/**
+ * Corte único (además del original) donde la UI debe mostrar la comisión como diferida.
+ *
+ * Regla de negocio: si en el corte original no se cumple el flujo a tiempo (desglose en 2 hábiles
+ * desde el corte, factura en 2 hábiles desde el desglose, comprobante en 2 hábiles desde la factura),
+ * la comisión pasa al **siguiente** corte de negocio (7/21 del mes siguiente). Si en **ese** corte
+ * vuelve a incurrirse en el mismo tipo de incumplimiento, avanza al siguiente, y así sucesivamente.
+ *
+ * En pantalla solo hay **dos** lugares: corte original (atrasada) + **un** corte destino actual (diferida).
+ * No se duplica en ene + feb + mar; cuando feb también vence, el destino pasa a mar, etc.
+ *
+ * `deferredToCutDate` en Firestore puede quedar desactualizado (ej. sigue en feb); aquí se recalcula
+ * encadenando con las mismas reglas hasta la fecha efectiva según hoy.
+ *
+ * @param getStateForCut - estado del flujo para `(cutDate, asesora)`. Para cada corte intermedio, si no
+ *   hay documento, se asume sin avance en ese corte (plazo de desglose desde ese `cutDate`).
+ */
+export function getEffectiveDeferredDisplayCut(
+	p: PaymentLikeForDeferralDisplay,
+	advisorUid: string,
+	getStateForCut: (cutDate: number) => CommissionCutAdvisorState | null,
 ): number | null {
-	if (p.cancelled || p.paid || p.paidAt) return null;
-	if (p.deferredToCutDate != null && p.deferredToCutDate !== p.cutDate) {
-		return p.deferredToCutDate;
+	const origSt = getStateForCut(p.cutDate);
+	if (!qualifiesForDeferralDisplay(p, origSt)) return null;
+
+	let D =
+		p.deferredToCutDate != null && p.deferredToCutDate !== p.cutDate
+			? p.deferredToCutDate
+			: getNextCutDate(p.cutDate);
+
+	let steps = 0;
+	while (steps++ < 120) {
+		const stD = getStateForCut(D);
+		const missedAtD =
+			isOriginalBusinessCutDayReached(D) && isWorkflowOverdueForImplicitDeferral(D, stD);
+		if (!missedAtD) break;
+		const nextD = getNextCutDate(D);
+		if (nextD <= D) break;
+		D = nextD;
 	}
-	if (!isOriginalBusinessCutDayReached(p.cutDate)) return null;
-	if (!isWorkflowOverdueForImplicitDeferral(p.cutDate, originalCutAdvisorState ?? null)) return null;
-	return getNextCutDate(p.cutDate);
+	return D;
+}
+
+/**
+ * Tope de horizonte para listados (dropdown / cap): incluye cortes hasta el destino efectivo de diferidas.
+ */
+export function getDeferralHorizonCutDate(
+	payments: (PaymentLikeForDeferralDisplay & { advisorUid: string; cancelled?: boolean })[],
+	getStateForCut: (cutDate: number, advisorUid: string) => CommissionCutAdvisorState | null,
+): number {
+	let max = getDeferralEndCutDate(payments);
+	for (const p of payments) {
+		if (p.cancelled || p.paid || p.paidAt) continue;
+		const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => getStateForCut(cd, p.advisorUid));
+		if (eff != null) max = Math.max(max, eff);
+	}
+	return max;
 }
 
 /**

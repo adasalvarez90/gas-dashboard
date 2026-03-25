@@ -297,8 +297,8 @@
 																		}
 																		<ion-label class="ion-text-wrap payment-inline-label">
 																			<div class="payment-inline">
-																				<span class="pi" [class.pi--deferred]="paymentShowsDeferredOriginInSummary(pay, s.cutDate, s.paymentDeferralStates?.get(pay.uid))"><span class="pi-label">Origen</span>{{ paymentShowsDeferredOriginInSummary(pay, s.cutDate, s.paymentDeferralStates?.get(pay.uid)) ? 'Diferida' : 'Regular' }}</span>
-																				@if (paymentRolledIntoSummaryCut(pay, s.cutDate, s.paymentDeferralStates?.get(pay.uid))) {
+																				<span class="pi" [class.pi--deferred]="paymentShowsDeferredOriginInSummary(pay, s.cutDate)"><span class="pi-label">Origen</span>{{ paymentShowsDeferredOriginInSummary(pay, s.cutDate) ? 'Diferida' : 'Regular' }}</span>
+																				@if (paymentRolledIntoSummaryCut(pay, s.cutDate)) {
 																					<span class="pi"><span class="pi-label">Corte orig.</span>{{ pay.cutDate | date:'d/M' }}</span>
 																				}
 																				<span class="pi"><span class="pi-label">Tipo</span>{{ paymentTypeUiLabel(pay.paymentType) }}</span>
