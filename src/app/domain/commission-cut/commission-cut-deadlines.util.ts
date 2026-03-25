@@ -223,19 +223,32 @@ export function getEffectiveDeferredDisplayCut(
 }
 
 /**
- * Tope de horizonte para listados (dropdown / cap): incluye cortes hasta el destino efectivo de diferidas.
+ * Una sola pasada: horizon + mapa uid → corte diferido efectivo (evita llamar getEffectiveDeferredDisplayCut dos veces por pago).
  */
+export function computeDeferralDisplayIndex(
+	payments: (PaymentLikeForDeferralDisplay & { advisorUid: string; uid: string; cancelled?: boolean; paid?: boolean; paidAt?: number })[],
+	getStateForCut: (cutDate: number, advisorUid: string) => CommissionCutAdvisorState | null,
+): { horizon: number; effectiveByUid: Map<string, number | null> } {
+	const effectiveByUid = new Map<string, number | null>();
+	let horizon = getDeferralEndCutDate(payments);
+	for (const p of payments) {
+		if (p.cancelled || p.paid || p.paidAt) {
+			effectiveByUid.set(p.uid, null);
+			continue;
+		}
+		const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => getStateForCut(cd, p.advisorUid));
+		effectiveByUid.set(p.uid, eff);
+		if (eff != null) horizon = Math.max(horizon, eff);
+	}
+	return { horizon, effectiveByUid };
+}
+
+/** Tope de horizonte (dropdown / cap) reutilizando el índice si ya lo tienes. */
 export function getDeferralHorizonCutDate(
-	payments: (PaymentLikeForDeferralDisplay & { advisorUid: string; cancelled?: boolean })[],
+	payments: (PaymentLikeForDeferralDisplay & { advisorUid: string; uid: string; cancelled?: boolean; paid?: boolean; paidAt?: number })[],
 	getStateForCut: (cutDate: number, advisorUid: string) => CommissionCutAdvisorState | null,
 ): number {
-	let max = getDeferralEndCutDate(payments);
-	for (const p of payments) {
-		if (p.cancelled || p.paid || p.paidAt) continue;
-		const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => getStateForCut(cd, p.advisorUid));
-		if (eff != null) max = Math.max(max, eff);
-	}
-	return max;
+	return computeDeferralDisplayIndex(payments, getStateForCut).horizon;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { Component, DestroyRef, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, map, BehaviorSubject, take } from 'rxjs';
+import { debounceTime, shareReplay } from 'rxjs/operators';
 
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
@@ -23,7 +24,7 @@ import { CommissionCutsPdfService } from 'src/app/services/commission-cuts-pdf.s
 import {
 	addBusinessDays,
 	getBreakdownDeadline,
-	getDeferralHorizonCutDate,
+	computeDeferralDisplayIndex,
 	getEffectiveDeferredDisplayCut,
 	getInvoiceDeadline,
 	getLastCutDateOnOrBefore,
@@ -90,21 +91,30 @@ export class CommissionCutsPage implements OnInit {
 
 	stateStates$ = new BehaviorSubject<CommissionCutAdvisorState[]>([]);
 
-	cutDates$ = combineLatest([this.commissionPayments$, this.stateStates$]).pipe(
+	/** Pagos + índice de diferidas: un cómputo por emisión (shareReplay) para cutDates$ y advisorSummaries$. */
+	private readonly cutsDeferralIndex$ = combineLatest([this.commissionPayments$, this.stateStates$]).pipe(
 		map(([payments, states]) => {
 			const stateMap = new Map<string, CommissionCutAdvisorState>();
 			states.forEach((st) => stateMap.set(`${st.cutDate}::${st.advisorUid}`, st));
 			const getSt = (cd: number, adv: string) => stateMap.get(`${cd}::${adv}`) ?? null;
-			const horizon = getDeferralHorizonCutDate(payments, getSt);
+			const { horizon, effectiveByUid } = computeDeferralDisplayIndex(payments, getSt);
+			return { payments, horizon, effectiveByUid };
+		}),
+		shareReplay({ bufferSize: 1, refCount: true }),
+	);
+
+	cutDates$ = this.cutsDeferralIndex$.pipe(
+		map(({ payments, horizon, effectiveByUid }) => {
 			const set = new Set<number>();
-			payments.forEach((p) => {
+			for (const p of payments) {
 				if (p.cutDate) set.add(p.cutDate);
 				if (p.deferredToCutDate) set.add(p.deferredToCutDate);
-				const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => getSt(cd, p.advisorUid));
+			}
+			for (const eff of effectiveByUid.values()) {
 				if (eff != null && eff <= horizon) set.add(eff);
-			});
+			}
 			return Array.from(set).sort((a, b) => a - b);
-		})
+		}),
 	);
 
 	/** Todas las asesoras para el filtro (entities$ = diccionario por uid) */
@@ -119,17 +129,13 @@ export class CommissionCutsPage implements OnInit {
 	);
 
 	advisorSummaries$ = combineLatest([
-		this.commissionPayments$,
+		this.cutsDeferralIndex$,
 		this.advisors$,
 		this.filterCutDate$,
 		this.filterAdvisorUid$,
-		this.stateStates$,
 	]).pipe(
-		map(([payments, advisorsDic, filterCut, filterAdvisor, states]) => {
-			const stateMap = new Map<string, CommissionCutAdvisorState>();
-			states.forEach((st) => stateMap.set(`${st.cutDate}::${st.advisorUid}`, st));
-			const getSt = (cd: number, adv: string) => stateMap.get(`${cd}::${adv}`) ?? null;
-			const horizon = getDeferralHorizonCutDate(payments, getSt);
+		map(([idx, advisorsDic, filterCut, filterAdvisor]) => {
+			const { payments, horizon, effectiveByUid } = idx;
 			const byCutAdvisor = new Map<string, AdvisorCutSummary>();
 
 			const addToBucket = (p: CommissionPayment, effectiveCutDate: number) => {
@@ -193,7 +199,7 @@ export class CommissionCutsPage implements OnInit {
 			for (const p of payments) {
 				if (p.cancelled) continue;
 				addToBucket(p, p.cutDate);
-				const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => getSt(cd, p.advisorUid));
+				const eff = effectiveByUid.get(p.uid) ?? null;
 				if (eff != null && eff <= horizon) addToBucket(p, eff);
 			}
 
@@ -360,21 +366,29 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	ngOnInit() {
-		this.advisorFacade.loadAdvisors();
-		this.contractFacade.loadContracts();
-		this.refreshCutData(true);
 		this.persistLateReasonsWhenNeeded();
+		this.ensureContractsLoadedIfEmpty();
 	}
 
-	/** Recarga comisiones y estados al entrar a la página (p. ej. al volver desde detalle de contrato). */
+	/**
+	 * Asesoras y comisiones: ya las cargó el resolver (o loadAfterAuth). Aquí solo estados de corte (1 lectura),
+	 * que es lo que cambia más al operar el flujo sin re-listar toda la colección de payments.
+	 */
 	ionViewWillEnter() {
-		this.refreshCutData(true);
+		this.loadStates();
+	}
+
+	/** Contratos solo si el store está vacío (p. ej. acceso directo sin pasar por login completo). */
+	private ensureContractsLoadedIfEmpty() {
+		this.contractFacade.total$.pipe(take(1)).subscribe((n) => {
+			if (n === 0) this.contractFacade.loadContracts();
+		});
 	}
 
 	/** Persiste lateReasons cuando desglose no enviado a tiempo (lazy, una vez por sesión por clave). */
 	private persistLateReasonsWhenNeeded() {
 		this.advisorSummariesWithState$
-			.pipe(takeUntilDestroyed(this.destroyRef))
+			.pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
 			.subscribe((summaries) => {
 				for (const s of summaries) {
 					const key = `${s.cutDate}::${s.advisorUid}`;

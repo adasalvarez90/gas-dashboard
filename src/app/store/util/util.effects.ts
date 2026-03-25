@@ -1,10 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { routerNavigatedAction } from '@ngrx/router-store';
 
-//RxJs
-import { switchMap, filter, map, mergeMap } from 'rxjs/operators';
+import { mergeMap } from 'rxjs/operators';
 import { from } from 'rxjs';
 
 // Feature actions
@@ -20,18 +17,14 @@ import * as CommissionPaymentActions from '../commission-payment/commission-paym
 @Injectable()
 export class UtilEffects {
 
-    constructor(
-        private actions$: Actions,
-        private router: Router,
-    ) {}
+    constructor(private actions$: Actions) {}
 
     /** Carga inicial tras login/restore: despacha cada loader por separado para garantizar que corran. */
     loadAfterAuth$ = createEffect(() =>
         this.actions$.pipe(
             ofType(UtilActions.loadAfterAuth),
-            mergeMap(() => {
-                console.log('[UtilEffects] loadAfterAuth disparado');
-                return from([
+            mergeMap(() =>
+                from([
                     UserActions.loadUsers(),
                     InviteActions.loadInvites(),
                     AdvisorActions.loadAdvisors(),
@@ -39,26 +32,8 @@ export class UtilEffects {
                     CommissionConfigActions.loadCommissionConfigs(),
                     CommissionPolicyActions.loadCommissionPolicies(),
                     CommissionPaymentActions.loadCommissionPaymentsForCuts({}),
-                ]);
-            })
-        )
-    );
-
-    /** Recarga comisiones y advisors al entrar a Cortes de comisión */
-    loadCommissionPaymentsOnNavigateToCuts$ = createEffect(() =>
-        this.actions$.pipe(
-            ofType(routerNavigatedAction),
-            filter(() => {
-                const ok = (this.router.url || '').includes('commission-cuts');
-                if (ok) console.log('[UtilEffects] loadCommissionPaymentsOnNavigateToCuts: URL=', this.router.url);
-                return ok;
-            }),
-            mergeMap(() =>
-                from([
-                    AdvisorActions.loadAdvisors(),
-                    CommissionPaymentActions.loadCommissionPaymentsForCuts({}),
                 ]),
             ),
-        )
+        ),
     );
 }

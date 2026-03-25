@@ -100,7 +100,6 @@ export class AuthEffects {
 			this.actions$.pipe(
 				ofType(AuthActions.loginSuccess),
 				tap(() => {
-					console.log('[AuthEffects] loginSuccess -> dispara loadAfterAuth');
 					this.store.dispatch(UtilActions.loadAfterAuth());
 					this.router.navigate(['/dashboard']);
 				}),
@@ -136,21 +135,17 @@ export class AuthEffects {
 		this.actions$.pipe(
 			ofType(AuthActions.restoreSession),
 			exhaustMap(() => {
-				console.log('[AuthEffects] restoreSession iniciado');
 				return this.authService.authState$().pipe(
 					take(1),
 					exhaustMap(async (fbUser) => {
 						if (!fbUser) {
-							console.log('[AuthEffects] restoreSession: sin fbUser -> failure');
 							return AuthActions.restoreSessionFailure();
 						}
 						try {
 							const user = await this.userFS.getUser(fbUser.uid);
 							if (!user) {
-								console.log('[AuthEffects] restoreSession: user no encontrado -> failure');
 								return AuthActions.restoreSessionFailure();
 							}
-							console.log('[AuthEffects] restoreSession: éxito -> loadAfterAuth');
 							return AuthActions.restoreSessionSuccess({ user });
 						} catch (error) {
 							console.error('[AuthEffects] restoreSession error:', error);
@@ -166,7 +161,6 @@ export class AuthEffects {
 		this.actions$.pipe(
 			ofType(AuthActions.restoreSessionSuccess),
 			map(() => {
-				console.log('[AuthEffects] restoreSessionSuccess -> dispara loadAfterAuth');
 				return UtilActions.loadAfterAuth();
 			}),
 		),
