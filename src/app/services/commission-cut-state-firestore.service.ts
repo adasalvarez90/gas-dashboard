@@ -11,7 +11,11 @@ import {
 } from '@angular/fire/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { CommissionCutAdvisorState } from '../models/commission-cut-state.model';
-import type { LateReasonEntry } from '../models/commission-cut-late-reason.model';
+import {
+	type LateReasonEntry,
+	type LateReasonStep,
+	normalizeLateReasons,
+} from '../models/commission-cut-late-reason.model';
 import {
 	getBreakdownDeadline,
 	getInvoiceDeadline,
@@ -99,6 +103,26 @@ export class CommissionCutStateFirestoreService {
 		}
 	}
 
+	/** Quita motivos previos de ese paso y guarda uno nuevo (p. ej. sustituye el automático por el del usuario). */
+	async replaceLateReasonForStep(
+		cutDate: number,
+		advisorUid: string,
+		step: LateReasonStep,
+		entry: LateReasonEntry
+	): Promise<CommissionCutAdvisorState> {
+		const existing = await this.getByCutAndAdvisor(cutDate, advisorUid);
+		const reasons = normalizeLateReasons(existing?.lateReasons);
+		const filtered = reasons.filter((r) => r.step !== step);
+		const merged: LateReasonEntry = { ...entry, step, at: Date.now() };
+		const newReasons = [...filtered, merged];
+		return this.upsert({
+			cutDate,
+			advisorUid,
+			state: existing?.state ?? 'PENDING',
+			lateReasons: newReasons,
+		});
+	}
+
 	/** Añade un motivo de atraso con step, reason (catálogo) y texto opcional. Crea el doc si no existe. */
 	async addLateReason(
 		cutDate: number,
@@ -119,42 +143,43 @@ export class CommissionCutStateFirestoreService {
 		});
 	}
 
-	/** Marca desglose enviado. Si ya pasó el plazo, debe pasarse lateEntry para registrar motivo. */
+	/** Marca informe de cálculo / desglose enviado. `breakdownSentAt` = fecha declarada del paso. */
 	async markBreakdownSent(
 		cutDate: number,
 		advisorUid: string,
-		lateEntry?: LateReasonEntry
+		opts?: { breakdownSentAt?: number; lateEntry?: LateReasonEntry }
 	): Promise<CommissionCutAdvisorState> {
-		const now = Date.now();
+		const at = opts?.breakdownSentAt ?? Date.now();
 		const state = await this.upsert({
 			cutDate,
 			advisorUid,
 			state: 'BREAKDOWN_SENT',
-			breakdownSentAt: now,
+			breakdownSentAt: at,
 		});
-		if (lateEntry) {
-			return this.addLateReason(cutDate, advisorUid, lateEntry);
+		if (opts?.lateEntry) {
+			return this.replaceLateReasonForStep(cutDate, advisorUid, 'DESGLOSE', opts.lateEntry);
 		}
 		return state;
 	}
 
-	/** Marca factura enviada. Si pasó el plazo, debe pasarse lateEntry. Si factura tardía, mueve al siguiente corte. */
+	/** Marca factura enviada. `invoiceSentAt` = fecha declarada. Si factura tardía, mueve al siguiente corte (lógica en la página). */
 	async markInvoiceSent(
 		cutDate: number,
 		advisorUid: string,
 		invoiceUrl?: string,
-		lateEntry?: LateReasonEntry
+		lateEntry?: LateReasonEntry,
+		invoiceSentAt?: number
 	): Promise<CommissionCutAdvisorState> {
-		const now = Date.now();
+		const at = invoiceSentAt ?? Date.now();
 		const state = await this.upsert({
 			cutDate,
 			advisorUid,
 			state: 'SENT_TO_PAYMENT',
-			invoiceSentAt: now,
+			invoiceSentAt: at,
 			invoiceUrl,
 		});
 		if (lateEntry) {
-			return this.addLateReason(cutDate, advisorUid, lateEntry);
+			return this.replaceLateReasonForStep(cutDate, advisorUid, 'FACTURA', { ...lateEntry, step: 'FACTURA' });
 		}
 		return state;
 	}
@@ -164,9 +189,10 @@ export class CommissionCutStateFirestoreService {
 		cutDate: number,
 		advisorUid: string,
 		receiptUrl?: string,
-		lateEntry?: LateReasonEntry
+		lateEntry?: LateReasonEntry,
+		receiptSentAt?: number
 	): Promise<CommissionCutAdvisorState> {
-		const now = Date.now();
+		const at = receiptSentAt ?? Date.now();
 		const existing = await this.getByCutAndAdvisor(cutDate, advisorUid);
 		const wasDeferred = !!(existing?.movedToNextCut || existing?.originalCutDate);
 		const breakdownDl = getBreakdownDeadline(cutDate);
@@ -180,19 +206,19 @@ export class CommissionCutStateFirestoreService {
 			existing?.invoiceSentAt && isInvoiceLate(existing.invoiceSentAt, invoiceDlForCheck)
 		);
 		const paymentDl = existing?.invoiceSentAt ? getPaymentDeadline(existing.invoiceSentAt) : undefined;
-		const wasPaymentLate = paymentDl ? isAfterMexicoDate(now, paymentDl) : false;
+		const wasPaymentLate = paymentDl ? isAfterMexicoDate(at, paymentDl) : false;
 		const paidLate =
 			wasDeferred || !!lateEntry || wasBreakdownLate || wasInvoiceLate || wasPaymentLate;
 		const state = await this.upsert({
 			cutDate,
 			advisorUid,
 			state: 'PAID',
-			receiptSentAt: now,
+			receiptSentAt: at,
 			receiptUrl,
 			paidLate,
 		});
 		if (lateEntry) {
-			return this.addLateReason(cutDate, advisorUid, lateEntry);
+			return this.replaceLateReasonForStep(cutDate, advisorUid, 'PAGO', { ...lateEntry, step: 'PAGO' });
 		}
 		return state;
 	}

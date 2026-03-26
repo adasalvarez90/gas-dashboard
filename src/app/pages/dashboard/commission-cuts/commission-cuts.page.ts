@@ -37,9 +37,13 @@ import {
 	isPaymentOverdue,
 	paymentFlowHasAnyLateStep,
 } from 'src/app/domain/commission-cut/commission-cut-deadlines.util';
-import { isAfterMexicoDate } from 'src/app/domain/time/mexico-time.util';
+import {
+	isAfterMexicoDate,
+	toCanonicalMexicoDateTimestamp,
+	toMexicoDateInputValue,
+} from 'src/app/domain/time/mexico-time.util';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
-import { ModalController } from '@ionic/angular';
+import { AlertController, ModalController } from '@ionic/angular';
 import { Store } from '@ngrx/store';
 import * as CommissionPaymentActions from 'src/app/store/commission-payment/commission-payment.actions';
 
@@ -340,6 +344,16 @@ export class CommissionCutsPage implements OnInit {
 	/** UIDs de comisiones diferidas seleccionadas para procesar (Path 2). */
 	selectedDeferredIds = new Set<string>();
 
+	/** Tras elegir fecha, abre el input de archivo oculto. */
+	private pendingFileAttach: {
+		kind: 'invoice' | 'receipt';
+		advisorUid: string;
+		stateCutDate: number;
+		summaryCutDate: number;
+		at: number;
+		s: AdvisorCutSummaryWithState;
+	} | null = null;
+
 	constructor(
 		private destroyRef: DestroyRef,
 		private commissionPaymentFacade: CommissionPaymentFacade,
@@ -350,6 +364,7 @@ export class CommissionCutsPage implements OnInit {
 		private pdfService: CommissionCutsPdfService,
 		private paymentFirestore: CommissionPaymentFirestoreService,
 		private modalCtrl: ModalController,
+		private alertCtrl: AlertController,
 		private store: Store
 	) {}
 
@@ -1027,7 +1042,7 @@ export class CommissionCutsPage implements OnInit {
 		const state = s.state?.state ?? 'PENDING';
 		if (state === 'PENDING') {
 			const deadline = getBreakdownDeadline(s.cutDate);
-			return `Factura: hasta ${new Date(deadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+			return `Informe / desglose: hasta ${new Date(deadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 		}
 		if (state === 'BREAKDOWN_SENT' && s.invoiceDeadline) return `Factura: hasta ${new Date(s.invoiceDeadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 		if (state === 'SENT_TO_PAYMENT' && s.paymentDeadline) return `Pago: hasta ${new Date(s.paymentDeadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
@@ -1035,24 +1050,113 @@ export class CommissionCutsPage implements OnInit {
 		return '—';
 	}
 
-	/** stateCutDate: corte donde está el estado (puede ser original si es diferida). summaryCutDate: corte del resumen (para pagos). */
-	async markBreakdownSent(advisorUid: string, stateCutDate: number, s?: AdvisorCutSummaryWithState) {
+	private async promptStepActionDate(message: string): Promise<number | undefined> {
+		const defaultDay = toMexicoDateInputValue(Date.now()) ?? '';
+		return new Promise((resolve) => {
+			void this.alertCtrl
+				.create({
+					header: 'Fecha de la acción',
+					message,
+					inputs: [
+						{
+							name: 'actionDate',
+							type: 'date',
+							value: defaultDay,
+						},
+					],
+					buttons: [
+						{
+							text: 'Cancelar',
+							role: 'cancel',
+							handler: () => {
+								resolve(undefined);
+							},
+						},
+						{
+							text: 'Continuar',
+							handler: (data: Record<string, unknown>) => {
+								const raw = data?.['actionDate'];
+								const ts =
+									typeof raw === 'string'
+										? toCanonicalMexicoDateTimestamp(raw)
+										: raw != null
+											? toCanonicalMexicoDateTimestamp(String(raw))
+											: undefined;
+								if (ts === undefined) return false;
+								resolve(ts);
+								return true;
+							},
+						},
+					],
+				})
+				.then((a) => a.present());
+		});
+	}
+
+	/**
+	 * Pide la fecha del informe; solo si confirma (y motivo si aplica) descarga el PDF y marca BREAKDOWN_SENT.
+	 */
+	async downloadCalculationAndMarkBreakdown(s: AdvisorCutSummaryWithState) {
+		const stateCutDate = this.getStateCutDate(s);
+		const at = await this.promptStepActionDate(
+			'¿En qué fecha se envió el informe de cálculo (desglose) a la asesora?'
+		);
+		if (at === undefined) return;
 		const deadline = getBreakdownDeadline(stateCutDate);
-		const now = Date.now();
-		const wasLate = now > deadline; // pasó el plazo para desglose
+		const wasLate = at > deadline;
 		let lateEntry: LateReasonEntry | undefined;
 		if (wasLate) {
-			const result = await this.openLateReasonModal('DESGLOSE', s, 'Se superó el plazo para enviar el desglose. Indica el motivo antes de continuar.');
+			const result = await this.openLateReasonModal(
+				'DESGLOSE',
+				s,
+				'Se superó el plazo para el informe de cálculo. Indica el motivo (reemplaza el registrado automáticamente si aplica).'
+			);
 			if (!result) return;
 			lateEntry = { step: 'DESGLOSE', reason: result.reason, text: result.text };
 		}
-		await this.stateService.markBreakdownSent(stateCutDate, advisorUid, lateEntry);
+		this.pdfService.exportAdvisorCutCalculation(s);
+		await this.stateService.markBreakdownSent(stateCutDate, s.advisorUid, {
+			breakdownSentAt: at,
+			lateEntry,
+		});
 		this.refreshCutData();
 	}
 
-	async markInvoiceSent(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File, s?: AdvisorCutSummaryWithState) {
-		const wouldBeLate = !!(s?.invoiceDeadline && Date.now() > s.invoiceDeadline);
-		const isDeferred = !!(s?.state?.movedToNextCut || s?.state?.originalCutDate);
+	async beginInvoiceAttach(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
+		const at = await this.promptStepActionDate('¿En qué fecha la asesora envió su factura?');
+		if (at === undefined) return;
+		this.pendingFileAttach = {
+			kind: 'invoice',
+			advisorUid: s.advisorUid,
+			stateCutDate: this.getStateCutDate(s),
+			summaryCutDate: s.cutDate,
+			at,
+			s,
+		};
+		setTimeout(() => fileInput.click(), 0);
+	}
+
+	async beginReceiptAttach(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
+		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
+		if (at === undefined) return;
+		this.pendingFileAttach = {
+			kind: 'receipt',
+			advisorUid: s.advisorUid,
+			stateCutDate: this.getStateCutDate(s),
+			summaryCutDate: s.cutDate,
+			at,
+			s,
+		};
+		setTimeout(() => fileInput.click(), 0);
+	}
+
+	private async finishInvoiceWithFile(file: File) {
+		const p = this.pendingFileAttach;
+		if (!p || p.kind !== 'invoice') return;
+		this.pendingFileAttach = null;
+		const { advisorUid, stateCutDate, summaryCutDate, at, s } = p;
+		const wouldBeLate = !!(s.invoiceDeadline && at > s.invoiceDeadline);
+		const isDeferred = !!(s.state?.movedToNextCut || s.state?.originalCutDate);
 		const needsReason = wouldBeLate || isDeferred;
 
 		let lateEntry: LateReasonEntry | undefined;
@@ -1060,30 +1164,41 @@ export class CommissionCutsPage implements OnInit {
 			const result = await this.openLateReasonModal(
 				'FACTURA',
 				s,
-				isDeferred ? 'Hay comisiones diferidas. Indica el motivo antes de enviar la factura.' : 'Se superó el plazo. Indica el motivo antes de continuar.'
+				isDeferred
+					? 'Hay comisiones diferidas. Indica el motivo antes de registrar la factura (reemplaza el automático si aplica).'
+					: 'Se superó el plazo de factura. Indica el motivo (reemplaza el registrado automáticamente si aplica).'
 			);
 			if (!result) return;
 			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
 		}
 
-		const invoiceUrl = file ? await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'invoice', file) : undefined;
-		const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl, lateEntry);
-		const invoiceDeadlineForCheck = state.breakdownSentAt ? getInvoiceDeadline(state.breakdownSentAt) : getBreakdownDeadline(stateCutDate);
+		const invoiceUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'invoice', file);
+		const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl, lateEntry, at);
+		const invoiceDeadlineForCheck = state.breakdownSentAt
+			? getInvoiceDeadline(state.breakdownSentAt)
+			: getBreakdownDeadline(stateCutDate);
 		const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadlineForCheck));
 		if (invoiceWasLate) {
 			const nextCutDate = getNextCutDate(stateCutDate);
 			await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, advisorUid, nextCutDate);
 			await this.stateService.moveStateToNextCut(stateCutDate, advisorUid);
 			if (!lateEntry) {
-				await this.stateService.addLateReason(stateCutDate, advisorUid, { step: 'FACTURA', reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO' });
+				await this.stateService.addLateReason(stateCutDate, advisorUid, {
+					step: 'FACTURA',
+					reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
+				});
 			}
 		}
 		this.refreshCutData(invoiceWasLate);
 	}
 
-	async markPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number, file?: File, s?: AdvisorCutSummaryWithState) {
-		const paymentWouldBeLate = !!(s?.paymentDeadline && Date.now() > s.paymentDeadline);
-		const isDeferred = !!(s?.state?.movedToNextCut || s?.state?.originalCutDate);
+	private async finishReceiptWithFile(file: File) {
+		const p = this.pendingFileAttach;
+		if (!p || p.kind !== 'receipt') return;
+		this.pendingFileAttach = null;
+		const { advisorUid, stateCutDate, summaryCutDate, at, s } = p;
+		const paymentWouldBeLate = !!(s.paymentDeadline && at > s.paymentDeadline);
+		const isDeferred = !!(s.state?.movedToNextCut || s.state?.originalCutDate);
 		const needsReason = paymentWouldBeLate || isDeferred;
 
 		let lateEntry: LateReasonEntry | undefined;
@@ -1091,15 +1206,17 @@ export class CommissionCutsPage implements OnInit {
 			const result = await this.openLateReasonModal(
 				'PAGO',
 				s,
-				isDeferred ? 'Hay comisiones diferidas. Indica el motivo antes de marcar pagado.' : 'Se superó el plazo de pago. Indica el motivo antes de continuar.'
+				isDeferred
+					? 'Hay comisiones diferidas. Indica el motivo antes de registrar el pago (reemplaza el automático si aplica).'
+					: 'Se superó el plazo de pago. Indica el motivo (reemplaza el registrado automáticamente si aplica).'
 			);
 			if (!result) return;
 			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
 		}
 
-		const receiptUrl = file ? await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'receipt', file) : undefined;
-		await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl, lateEntry);
-		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, Date.now());
+		const receiptUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'receipt', file);
+		await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl, lateEntry, at);
+		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
 		this.refreshCutData();
 	}
 
@@ -1121,26 +1238,20 @@ export class CommissionCutsPage implements OnInit {
 		return role === 'ok' ? data : undefined;
 	}
 
-	markAdvisorCutAsPaid(advisorUid: string, stateCutDate: number, summaryCutDate: number, s?: AdvisorCutSummaryWithState) {
-		this.markPaid(advisorUid, stateCutDate, summaryCutDate, undefined, s);
-	}
-
-	onInvoiceFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number, s?: AdvisorCutSummaryWithState) {
+	onInvoiceFilePicked(event: Event) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
-		if (file) {
-			this.markInvoiceSent(advisorUid, stateCutDate, summaryCutDate, file, s);
-		}
 		input.value = '';
+		if (file) void this.finishInvoiceWithFile(file);
+		else if (this.pendingFileAttach?.kind === 'invoice') this.pendingFileAttach = null;
 	}
 
-	onReceiptFileSelected(event: Event, advisorUid: string, stateCutDate: number, summaryCutDate: number, s?: AdvisorCutSummaryWithState) {
+	onReceiptFilePicked(event: Event) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
-		if (file) {
-			this.markPaid(advisorUid, stateCutDate, summaryCutDate, file, s);
-		}
 		input.value = '';
+		if (file) void this.finishReceiptWithFile(file);
+		else if (this.pendingFileAttach?.kind === 'receipt') this.pendingFileAttach = null;
 	}
 
 	exportPdfGeneral(summaries?: AdvisorCutSummaryWithState[], cutDateLabel?: string) {

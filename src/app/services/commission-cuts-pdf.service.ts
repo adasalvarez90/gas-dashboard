@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
 import { AdvisorCutSummary } from '../models/commission-cuts-summary.model';
 import { CommissionCutAdvisorState } from '../models/commission-cut-state.model';
+import { mexicoDateKeyFromTimestamp } from '../domain/time/mexico-time.util';
 
 export type SummaryForPdf = AdvisorCutSummary & { state?: CommissionCutAdvisorState | null };
 
@@ -63,7 +64,8 @@ export class CommissionCutsPdfService {
 		summaries: SummaryForPdf[],
 		totalAmount: number,
 		pendingAmount: number,
-		paidAmount: number
+		paidAmount: number,
+		fileName?: string
 	): void {
 		const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 		doc.setFontSize(16);
@@ -108,7 +110,18 @@ export class CommissionCutsPdfService {
 			y += rowHeight;
 		});
 
-		doc.save(`comision-${advisorName.replace(/\s+/g, '-')}-${Date.now()}.pdf`);
+		doc.save(fileName ?? `comision-${advisorName.replace(/\s+/g, '-')}-${Date.now()}.pdf`);
+	}
+
+	/**
+	 * PDF del cálculo para un corte y asesora (paso “Descargar cálculo” / enviar informe).
+	 * Misma tabla que export por asesora pero un solo corte.
+	 */
+	exportAdvisorCutCalculation(s: SummaryForPdf): void {
+		const cutKey = mexicoDateKeyFromTimestamp(s.cutDate);
+		const safeName = s.advisorName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '');
+		const fileName = `calculo-${safeName}-${cutKey}.pdf`;
+		this.exportByAdvisor(s.advisorName, [s], s.totalAmount, s.pendingAmount, s.paidAmount, fileName);
 	}
 
 	private formatCurrency(amount: number): string {
