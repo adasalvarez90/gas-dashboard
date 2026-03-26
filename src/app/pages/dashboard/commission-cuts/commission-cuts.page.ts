@@ -13,6 +13,7 @@ import { AdvisorCutSummary } from 'src/app/models/commission-cuts-summary.model'
 import { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
 import {
 	type LateReasonEntry,
+	type LateReasonStep,
 	getLateReasonLabel,
 	normalizeLateReasons,
 } from 'src/app/models/commission-cut-late-reason.model';
@@ -330,7 +331,11 @@ export class CommissionCutsPage implements OnInit {
 		referral: 'Referido',
 	};
 
-	private persistedLateReasonKeys = new Set<string>();
+	private static readonly LATE_STEP_ORDER: Record<LateReasonStep, number> = {
+		DESGLOSE: 0,
+		FACTURA: 1,
+		PAGO: 2,
+	};
 
 	/** UIDs de comisiones diferidas seleccionadas para procesar (Path 2). */
 	selectedDeferredIds = new Set<string>();
@@ -385,34 +390,77 @@ export class CommissionCutsPage implements OnInit {
 		});
 	}
 
-	/** Persiste lateReasons cuando desglose no enviado a tiempo (lazy, una vez por sesión por clave). */
+	/** Orden fijo del flujo: desglose → factura → pago. */
+	private sortLateReasonEntriesByFlowOrder(entries: LateReasonEntry[]): LateReasonEntry[] {
+		return [...entries].sort(
+			(a, b) =>
+				(CommissionCutsPage.LATE_STEP_ORDER[a.step] ?? 99) - (CommissionCutsPage.LATE_STEP_ORDER[b.step] ?? 99),
+		);
+	}
+
+	/**
+	 * Motivos que el sistema registra / muestra cuando ya venció el plazo y no hay avance en ese paso
+	 * (sin texto: solo catálogo). Orden: desglose, factura, pago.
+	 */
+	private computeAutoLateReasonEntries(
+		state: CommissionCutAdvisorState | null,
+		cutDate: number,
+	): LateReasonEntry[] {
+		const st = state;
+		const entries: LateReasonEntry[] = [];
+		const breakdownDl = getBreakdownDeadline(cutDate);
+
+		const pendingOrMissing = st?.state === 'PENDING' || !st;
+		if (pendingOrMissing && !st?.breakdownSentAt && isInvoiceOverdue(undefined, breakdownDl)) {
+			entries.push({ step: 'DESGLOSE', reason: 'DESGLOSE_NO_ENVIADO_A_TIEMPO' });
+		}
+
+		if (st?.breakdownSentAt && !st.invoiceSentAt) {
+			const invDl = getInvoiceDeadline(st.breakdownSentAt);
+			if (isInvoiceOverdue(undefined, invDl)) {
+				entries.push({ step: 'FACTURA', reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO' });
+			}
+		}
+
+		if (st?.invoiceSentAt && st.state !== 'PAID' && !st.receiptSentAt) {
+			const payDl = getPaymentDeadline(st.invoiceSentAt);
+			if (isPaymentOverdue(undefined, payDl)) {
+				entries.push({ step: 'PAGO', reason: 'PAGO_NO_REALIZADO_A_TIEMPO' });
+			}
+		}
+
+		return entries;
+	}
+
+	/**
+	 * Persiste en Firestore los motivos automáticos que apliquen (plazo vencido sin acción en ese paso).
+	 * `addLateReason` evita duplicados por step+reason.
+	 */
 	private persistLateReasonsWhenNeeded() {
 		this.advisorSummariesWithState$
 			.pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
 			.subscribe((summaries) => {
-				for (const s of summaries) {
-					const key = `${s.cutDate}::${s.advisorUid}`;
-					if (this.persistedLateReasonKeys.has(key)) continue;
-					const hasStoredReason = normalizeLateReasons(s.state?.lateReasons).length > 0;
-					if (hasStoredReason) {
-						this.persistedLateReasonKeys.add(key);
-						continue;
+				void (async () => {
+					let mutated = false;
+					for (const s of summaries) {
+						const state = s.state;
+						const normalized = normalizeLateReasons(state?.lateReasons);
+						const working = [...normalized];
+						const toAdd = this.computeAutoLateReasonEntries(state, s.cutDate);
+						for (const entry of toAdd) {
+							const exists = working.some((r) => r.step === entry.step && r.reason === entry.reason);
+							if (exists) continue;
+							try {
+								await this.stateService.addLateReason(s.cutDate, s.advisorUid, entry);
+								working.push(entry);
+								mutated = true;
+							} catch {
+								/* siguiente resumen */
+							}
+						}
 					}
-					const isPendingPastDeadline =
-						(s.state?.state === 'PENDING' || !s.state) &&
-						s.invoiceDeadline &&
-						isInvoiceOverdue(s.state?.invoiceSentAt, s.invoiceDeadline);
-					if (!isPendingPastDeadline) continue;
-					this.persistedLateReasonKeys.add(key);
-					const entry: LateReasonEntry = {
-						step: 'DESGLOSE',
-						reason: 'DESGLOSE_NO_ENVIADO_A_TIEMPO',
-					};
-					this.stateService
-						.addLateReason(s.cutDate, s.advisorUid, entry)
-						.then(() => this.loadStates())
-						.catch(() => {});
-				}
+					if (mutated) this.loadStates();
+				})();
 			});
 	}
 
@@ -756,11 +804,8 @@ export class CommissionCutsPage implements OnInit {
 	/** Motivos de atraso a nivel asesora+corte del resumen (cabecera; puede mezclar cortes — preferir por línea). */
 	getEffectiveLateReasons(s: AdvisorCutSummaryWithState): LateReasonEntry[] {
 		const normalized = normalizeLateReasons(s.state?.lateReasons);
-		if (normalized.length) return normalized;
-		if (s.state?.state === 'PENDING' && s.invoiceDeadline && isInvoiceOverdue(undefined, s.invoiceDeadline)) {
-			return [{ step: 'DESGLOSE', reason: 'DESGLOSE_NO_ENVIADO_A_TIEMPO' }];
-		}
-		return [];
+		if (normalized.length) return this.sortLateReasonEntriesByFlowOrder(normalized);
+		return this.sortLateReasonEntriesByFlowOrder(this.computeAutoLateReasonEntries(s.state, s.cutDate));
 	}
 
 	/** Al menos una comisión pagada con franja “tarde” (cualquier paso fuera de plazo), o flag legacy en estado. */
@@ -812,37 +857,55 @@ export class CommissionCutsPage implements OnInit {
 	getEffectiveLateReasonsForPayment(s: AdvisorCutSummaryWithState, pay: CommissionPayment): LateReasonEntry[] {
 		const st = this.getAdvisorStateForCut(s.advisorUid, pay.cutDate);
 		const normalized = normalizeLateReasons(st?.lateReasons);
-		if (normalized.length) return normalized;
-		const invoiceDeadline = st?.breakdownSentAt
-			? getInvoiceDeadline(st.breakdownSentAt)
-			: getBreakdownDeadline(pay.cutDate);
-		if (st?.state === 'PENDING' && invoiceDeadline && isInvoiceOverdue(undefined, invoiceDeadline)) {
-			return [{ step: 'DESGLOSE', reason: 'DESGLOSE_NO_ENVIADO_A_TIEMPO' }];
-		}
-		return [];
+		if (normalized.length) return this.sortLateReasonEntriesByFlowOrder(normalized);
+		return this.sortLateReasonEntriesByFlowOrder(this.computeAutoLateReasonEntries(st, pay.cutDate));
 	}
 
 	getLateReasonLabel(code: string): string {
 		return getLateReasonLabel(code);
 	}
 
-	/** Motivos de atraso como string (solo línea). */
+	/** Motivos de atraso como string (solo línea; sin fondeo). */
 	getLateReasonsLabelForPayment(s: AdvisorCutSummaryWithState, pay: CommissionPayment): string {
 		return this.getEffectiveLateReasonsForPayment(s, pay)
-			.map((e) => (e.text ? `${getLateReasonLabel(e.reason)}: ${e.text}` : getLateReasonLabel(e.reason)))
+			.map((e) => (e.text?.trim() ? `${getLateReasonLabel(e.reason)}: ${e.text.trim()}` : getLateReasonLabel(e.reason)))
 			.join(', ');
 	}
 
-	/** Texto unificado: motivo de fondeo (si existe) + atrasos de flujo para esa comisión. */
-	getPaymentMotivoDisplay(s: AdvisorCutSummaryWithState, pay: CommissionPayment): string {
-		const parts: string[] = [];
+	/**
+	 * Líneas para la caja de motivos: `Motivo: comentario` (o solo motivo si no hay texto).
+	 * Unifica fondeo + lateReasons sin duplicar el mismo código de catálogo; varios textos se unen con "; ".
+	 */
+	getPaymentMotivoDisplayLines(s: AdvisorCutSummaryWithState, pay: CommissionPayment): string[] {
+		const orderedReasons: string[] = [];
+		const textsByReason = new Map<string, string[]>();
+
+		const add = (reason: string | undefined, rawText: string | undefined) => {
+			if (!reason) return;
+			const t = (rawText ?? '').trim();
+			if (!textsByReason.has(reason)) {
+				textsByReason.set(reason, []);
+				orderedReasons.push(reason);
+			}
+			if (t) {
+				const arr = textsByReason.get(reason)!;
+				if (!arr.includes(t)) arr.push(t);
+			}
+		};
+
 		if (pay.fundingDeferralReasonCode) {
-			const label = getLateReasonLabel(pay.fundingDeferralReasonCode);
-			parts.push(pay.fundingDeferralReasonText?.trim() ? `${label}: ${pay.fundingDeferralReasonText.trim()}` : label);
+			add(pay.fundingDeferralReasonCode, pay.fundingDeferralReasonText);
 		}
-		const late = this.getLateReasonsLabelForPayment(s, pay);
-		if (late) parts.push(late);
-		return parts.join(' · ');
+		for (const e of this.getEffectiveLateReasonsForPayment(s, pay)) {
+			add(e.reason, e.text);
+		}
+
+		return orderedReasons.map((reason) => {
+			const label = getLateReasonLabel(reason);
+			const texts = textsByReason.get(reason) ?? [];
+			const comment = texts.join('; ');
+			return comment ? `${label}: ${comment}` : label;
+		});
 	}
 
 	/**

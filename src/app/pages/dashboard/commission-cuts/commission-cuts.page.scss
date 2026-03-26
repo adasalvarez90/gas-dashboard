@@ -483,15 +483,38 @@
 	}
 
 	.payment-motivo-line {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
 		margin-top: 10px;
 		padding: 8px 10px;
 		border-radius: 8px;
 		font-size: 13px;
-		line-height: 1.35;
+		line-height: 1.45;
 		background: rgba(0, 0, 0, 0.2);
 		border: 1px solid rgba(255, 255, 255, 0.08);
 		grid-column: 1 / -1;
 		word-break: break-word;
+	}
+
+	.payment-motivo-rule {
+		border: none;
+		border-top: 1px solid rgba(255, 255, 255, 0.14);
+		margin: 0;
+		width: 100%;
+	}
+
+	.payment-motivo-item {
+		display: flex;
+		gap: 6px;
+		align-items: baseline;
+		padding: 0 2px;
+	}
+
+	.payment-motivo-bullet {
+		flex-shrink: 0;
+		opacity: 0.85;
+		font-weight: 700;
 	}
 
 	.payment-inline-label {
@@ -501,19 +524,20 @@
 		-webkit-overflow-scrolling: touch;
 	}
 
-	/* Grid fijo: mismas columnas en cada fila → alineación vertical entre comisiones */
+	/* Siempre 6 columnas (Corte orig. también en Regular con "—") → mismas líneas verticales entre filas */
 	.payment-inline {
 		display: grid;
-		grid-template-columns:
-			2.75rem /* cuota */
-			4.75rem /* tipo (Nueva / Antigua) */
-			minmax(6.75rem, 1.15fr) /* rol (p. ej. Consultor(a)) */
-			minmax(3rem, 1fr) /* esquema */
-			minmax(8.5rem, 8.5rem); /* monto fijo: importes alineados aunque cambie la longitud */
-		column-gap: 12px;
-		align-items: start;
 		width: 100%;
 		box-sizing: border-box;
+		column-gap: clamp(8px, 2vw, 14px);
+		align-items: start;
+		grid-template-columns:
+			minmax(4.5rem, 0.85fr) /* origen */
+			minmax(3.25rem, 0.65fr) /* corte orig. */
+			minmax(4.25rem, 0.75fr) /* tipo */
+			minmax(5.75rem, 1.15fr) /* rol */
+			minmax(2rem, 1.25fr) /* esquema (absorbe espacio) */
+			minmax(6.5rem, 0.95fr); /* monto alineado a la derecha */
 	}
 
 	.pi {
@@ -537,11 +561,30 @@
 		word-break: break-word;
 	}
 
+	/* Solo columnas cortas (no Rol ni Esquema) */
+	.payment-inline .pi-compact {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.payment-inline .pi--corte-placeholder {
+		opacity: 0.45;
+	}
+
 	.pi-amount {
 		font-weight: 800;
 		margin-left: 0;
+		justify-self: end;
 		text-align: right;
+		width: 100%;
+		max-width: 100%;
 		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	.payment-inline .pi-amount {
+		min-width: 0;
 	}
 
 	/* Shared UI bits used by summary cards */

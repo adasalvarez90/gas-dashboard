@@ -297,17 +297,30 @@
 																		}
 																		<ion-label class="ion-text-wrap payment-inline-label">
 																			<div class="payment-inline">
-																				<span class="pi" [class.pi--deferred]="paymentShowsDeferredOriginInSummary(pay, s.cutDate)"><span class="pi-label">Origen</span>{{ paymentShowsDeferredOriginInSummary(pay, s.cutDate) ? 'Diferida' : 'Regular' }}</span>
-																				@if (paymentRolledIntoSummaryCut(pay, s.cutDate)) {
-																					<span class="pi"><span class="pi-label">Corte orig.</span>{{ pay.cutDate | date:'d/M' }}</span>
-																				}
-																				<span class="pi"><span class="pi-label">Tipo</span>{{ paymentTypeUiLabel(pay.paymentType) }}</span>
+																				<span class="pi pi-compact" [class.pi--deferred]="paymentShowsDeferredOriginInSummary(pay, s.cutDate)"><span class="pi-label">Origen</span>{{ paymentShowsDeferredOriginInSummary(pay, s.cutDate) ? 'Diferida' : 'Regular' }}</span>
+																				<span
+																					class="pi pi-compact"
+																					[class.pi--corte-placeholder]="!paymentRolledIntoSummaryCut(pay, s.cutDate)"
+																				>
+																					<span class="pi-label">Corte orig.</span>
+																					@if (paymentRolledIntoSummaryCut(pay, s.cutDate)) {
+																						{{ pay.cutDate | date:'d/M' }}
+																					} @else {
+																						—
+																					}
+																				</span>
+																				<span class="pi pi-compact"><span class="pi-label">Tipo</span>{{ paymentTypeUiLabel(pay.paymentType) }}</span>
 																				<span class="pi"><span class="pi-label">Rol</span>{{ roleLabel(pay.role) }}</span>
 																				<span class="pi pi-grow"><span class="pi-label">Esquema</span>{{ commissionReasonLabel(pay) }}</span>
 																				<span class="pi pi-amount"><span class="pi-label">Monto</span>{{ pay.amount | currency:'MXN':'symbol-narrow' }}</span>
 																			</div>
-																			@if (getPaymentMotivoDisplay(s, pay)) {
-																				<div class="payment-motivo-line">{{ getPaymentMotivoDisplay(s, pay) }}</div>
+																			@let motivoLines = getPaymentMotivoDisplayLines(s, pay);
+																			@if (motivoLines.length > 0) {
+																				<div class="payment-motivo-line" aria-label="Motivos de atraso">
+																					@for (line of motivoLines; track $index) {
+																						<div class="payment-motivo-item"><span class="payment-motivo-bullet" aria-hidden="true">·</span> {{ line }}</div>
+																					}
+																				</div>
 																			}
 																		</ion-label>
 																	</ion-item>
