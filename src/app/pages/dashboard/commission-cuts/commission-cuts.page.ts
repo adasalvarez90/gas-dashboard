@@ -43,7 +43,7 @@ import {
 	toMexicoDateInputValue,
 } from 'src/app/domain/time/mexico-time.util';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
-import { AlertController, ModalController } from '@ionic/angular';
+import { AlertController, LoadingController, ModalController, ToastController } from '@ionic/angular';
 import { Store } from '@ngrx/store';
 import * as CommissionPaymentActions from 'src/app/store/commission-payment/commission-payment.actions';
 
@@ -365,8 +365,24 @@ export class CommissionCutsPage implements OnInit {
 		private paymentFirestore: CommissionPaymentFirestoreService,
 		private modalCtrl: ModalController,
 		private alertCtrl: AlertController,
+		private loadingCtrl: LoadingController,
+		private toastCtrl: ToastController,
 		private store: Store
 	) {}
+
+	/** Loading bloqueante mientras sube a Storage y guarda estado (evita doble clic). */
+	private async withUploadLoading<T>(message: string, fn: () => Promise<T>): Promise<T> {
+		const loading = await this.loadingCtrl.create({
+			message,
+			backdropDismiss: false,
+		});
+		await loading.present();
+		try {
+			return await fn();
+		} finally {
+			await loading.dismiss();
+		}
+	}
 
 	private openIonSelect(selectRef?: ElementRef) {
 		const el = selectRef?.nativeElement as any;
@@ -1172,24 +1188,36 @@ export class CommissionCutsPage implements OnInit {
 			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
 		}
 
-		const invoiceUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'invoice', file);
-		const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl, lateEntry, at);
-		const invoiceDeadlineForCheck = state.breakdownSentAt
-			? getInvoiceDeadline(state.breakdownSentAt)
-			: getBreakdownDeadline(stateCutDate);
-		const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadlineForCheck));
-		if (invoiceWasLate) {
-			const nextCutDate = getNextCutDate(stateCutDate);
-			await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, advisorUid, nextCutDate);
-			await this.stateService.moveStateToNextCut(stateCutDate, advisorUid);
-			if (!lateEntry) {
-				await this.stateService.addLateReason(stateCutDate, advisorUid, {
-					step: 'FACTURA',
-					reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
-				});
-			}
+		try {
+			await this.withUploadLoading('Subiendo factura…', async () => {
+				const invoiceUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'invoice', file);
+				const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl, lateEntry, at);
+				const invoiceDeadlineForCheck = state.breakdownSentAt
+					? getInvoiceDeadline(state.breakdownSentAt)
+					: getBreakdownDeadline(stateCutDate);
+				const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadlineForCheck));
+				if (invoiceWasLate) {
+					const nextCutDate = getNextCutDate(stateCutDate);
+					await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, advisorUid, nextCutDate);
+					await this.stateService.moveStateToNextCut(stateCutDate, advisorUid);
+					if (!lateEntry) {
+						await this.stateService.addLateReason(stateCutDate, advisorUid, {
+							step: 'FACTURA',
+							reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
+						});
+					}
+				}
+				this.refreshCutData(invoiceWasLate);
+			});
+		} catch {
+			const t = await this.toastCtrl.create({
+				message: 'No se pudo subir la factura. Intenta de nuevo.',
+				duration: 4000,
+				color: 'danger',
+				position: 'top',
+			});
+			await t.present();
 		}
-		this.refreshCutData(invoiceWasLate);
 	}
 
 	private async finishReceiptWithFile(file: File) {
@@ -1214,10 +1242,22 @@ export class CommissionCutsPage implements OnInit {
 			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
 		}
 
-		const receiptUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'receipt', file);
-		await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl, lateEntry, at);
-		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
-		this.refreshCutData();
+		try {
+			await this.withUploadLoading('Subiendo comprobante de pago…', async () => {
+				const receiptUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'receipt', file);
+				await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl, lateEntry, at);
+				this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
+				this.refreshCutData();
+			});
+		} catch {
+			const t = await this.toastCtrl.create({
+				message: 'No se pudo subir el comprobante. Intenta de nuevo.',
+				duration: 4000,
+				color: 'danger',
+				position: 'top',
+			});
+			await t.present();
+		}
 	}
 
 	/** Abre el modal de motivo de atraso. Retorna el resultado o undefined si canceló. */

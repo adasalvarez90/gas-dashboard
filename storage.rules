@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Cortes de comisión: facturas y comprobantes subidos desde el dashboard (Angular + Firebase Auth).
+// Ajusta la condición si solo ciertos roles deben subir (p. ej. custom claims).
+service firebase.storage {
+	match /b/{bucket}/o {
+		match /commission-cuts/{cutDate}/{advisorUid}/{fileName} {
+			allow read, write: if request.auth != null;
+		}
+	}
+}
