@@ -1,5 +1,12 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where, writeBatch } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, getDoc, doc, updateDoc, setDoc, query, where, writeBatch } from '@angular/fire/firestore';
+import {
+	computeDeferralDisplayIndexFromPayments,
+	normalizeDeferredToCutStored,
+	sameCanonicalCutDate,
+} from 'src/app/domain/commission-cut/commission-cut-deadlines.util';
+import type { LateReasonEntry } from 'src/app/models/commission-cut-late-reason.model';
+import { normalizeLateReasons } from 'src/app/models/commission-cut-late-reason.model';
 import { deleteField } from 'firebase/firestore';
 
 import * as _ from 'lodash';
@@ -89,7 +96,7 @@ export class CommissionPaymentFirestoreService {
 		const batch = writeBatch(this.firestore);
 
 		snap.docs.forEach(d => {
-			batch.update(d.ref, { paid: true, paidAt, _update: paidAt });
+			batch.update(d.ref, { paid: true, paidAt, receiptSentAt: paidAt, _update: paidAt });
 		});
 
 		await batch.commit();
@@ -111,11 +118,287 @@ export class CommissionPaymentFirestoreService {
 		snap.docs.forEach((d) => {
 			batch.update(d.ref, {
 				deferredToCutDate: nextCutDate,
+				movedToNextCut: true,
+				workflowOriginalCutDate: cutDate,
 				_update: now,
-			});
+			} as Record<string, unknown>);
 		});
 		await batch.commit();
 		return snap.size;
+	}
+
+	/** Quita `deferredToCutDate` en los pagos indicados (misma comisión, un solo doc). */
+	async clearDeferredToCutDateForPaymentUids(paymentUids: string[]): Promise<void> {
+		if (paymentUids.length === 0) return;
+		const now = Date.now();
+		const chunkSize = 400;
+		for (let i = 0; i < paymentUids.length; i += chunkSize) {
+			const batch = writeBatch(this.firestore);
+			for (const uid of paymentUids.slice(i, i + chunkSize)) {
+				batch.update(doc(this.firestore, this.collectionName, uid), {
+					deferredToCutDate: deleteField(),
+					_update: now,
+				} as Record<string, unknown>);
+			}
+			await batch.commit();
+		}
+	}
+
+	/**
+	 * Persiste `deferredToCutDate` según el destino efectivo (estado en cada `CommissionPayment`).
+	 * Idempotente: no escribe si ya coincide; limpia el campo si ya no aplica diferido.
+	 */
+	async reconcileDeferredToCutDates(payments: CommissionPayment[]): Promise<number> {
+		const { effectiveByUid } = computeDeferralDisplayIndexFromPayments(payments);
+		type Op = { ref: ReturnType<typeof doc>; payload: Record<string, unknown> };
+		const ops: Op[] = [];
+		const now = Date.now();
+
+		for (const p of payments) {
+			if (p.cancelled || p.paid || p.paidAt) continue;
+			const desired = effectiveByUid.get(p.uid) ?? null;
+			const cur = normalizeDeferredToCutStored(p);
+			const needClear = desired == null && cur != null;
+			const needSet =
+				desired != null && (cur == null || !sameCanonicalCutDate(desired, cur));
+			if (!needClear && !needSet) continue;
+
+			const ref = doc(this.firestore, this.collectionName, p.uid);
+			if (needClear) {
+				ops.push({
+					ref,
+					payload: { deferredToCutDate: deleteField(), _update: now } as Record<string, unknown>,
+				});
+			} else if (needSet && desired != null) {
+				ops.push({
+					ref,
+					payload: { deferredToCutDate: desired, _update: now },
+				});
+			}
+		}
+
+		const chunkSize = 400;
+		for (let i = 0; i < ops.length; i += chunkSize) {
+			const batch = writeBatch(this.firestore);
+			for (const op of ops.slice(i, i + chunkSize)) {
+				batch.update(op.ref, op.payload);
+			}
+			await batch.commit();
+		}
+		return ops.length;
+	}
+
+	private mergeLateReasonsOnPayment(
+		p: CommissionPayment,
+		step: LateReasonEntry['step'],
+		entry: LateReasonEntry,
+	): LateReasonEntry[] {
+		const base = normalizeLateReasons(p.lateReasons).filter((r) => r.step !== step);
+		const text = entry.text?.trim();
+		base.push({
+			step,
+			reason: entry.reason,
+			...(text ? { text } : {}),
+			at: entry.at ?? Date.now(),
+		});
+		return base;
+	}
+
+	async mergeLateReasonToPaymentUids(uids: string[], entry: LateReasonEntry): Promise<void> {
+		const now = Date.now();
+		const step = entry.step;
+		for (const uid of uids) {
+			const dref = doc(this.firestore, this.collectionName, uid);
+			const snap = await getDoc(dref);
+			if (!snap.exists()) continue;
+			const p = snap.data() as CommissionPayment;
+			const lateReasons = this.mergeLateReasonsOnPayment(p, step, { ...entry, step });
+			await updateDoc(dref, { lateReasons, _update: now } as Record<string, unknown>);
+		}
+	}
+
+	/** Pagos del corte (origen o diferido) para una asesora. */
+	async getPaymentUidsForCutAndAdvisor(cutDate: number, advisorUid: string, onlyUnpaid = false): Promise<string[]> {
+		const ref = collection(this.firestore, this.collectionName);
+		const [snapCut, snapDef] = await Promise.all([
+			getDocs(
+				query(
+					ref,
+					where('cutDate', '==', cutDate),
+					where('advisorUid', '==', advisorUid),
+					where('_on', '==', true),
+				),
+			),
+			getDocs(
+				query(
+					ref,
+					where('deferredToCutDate', '==', cutDate),
+					where('advisorUid', '==', advisorUid),
+					where('_on', '==', true),
+				),
+			),
+		]);
+		const seen = new Set<string>();
+		const uids: string[] = [];
+		for (const d of [...snapCut.docs, ...snapDef.docs]) {
+			const p = d.data() as CommissionPayment;
+			if (seen.has(p.uid)) continue;
+			if (onlyUnpaid && (p.paid || p.paidAt)) continue;
+			seen.add(p.uid);
+			uids.push(p.uid);
+		}
+		return uids;
+	}
+
+	async applyBreakdownSentToPaymentUids(
+		uids: string[],
+		opts: { breakdownSentAt: number; lateEntry?: LateReasonEntry },
+	): Promise<void> {
+		const now = Date.now();
+		for (const uid of uids) {
+			const dref = doc(this.firestore, this.collectionName, uid);
+			const snap = await getDoc(dref);
+			if (!snap.exists()) continue;
+			const p = snap.data() as CommissionPayment;
+			let lateReasons = normalizeLateReasons(p.lateReasons);
+			if (opts.lateEntry) {
+				lateReasons = this.mergeLateReasonsOnPayment(p, 'DESGLOSE', { ...opts.lateEntry, step: 'DESGLOSE' });
+			}
+			const raw = { breakdownSentAt: opts.breakdownSentAt, lateReasons, _update: now };
+			await updateDoc(dref, _.omitBy(raw, _.isUndefined) as Record<string, unknown>);
+		}
+	}
+
+	async applyInvoiceSentToPaymentUids(
+		uids: string[],
+		opts: { invoiceSentAt: number; invoiceUrl?: string; lateEntry?: LateReasonEntry },
+	): Promise<void> {
+		const now = Date.now();
+		for (const uid of uids) {
+			const dref = doc(this.firestore, this.collectionName, uid);
+			const snap = await getDoc(dref);
+			if (!snap.exists()) continue;
+			const p = snap.data() as CommissionPayment;
+			let lateReasons = normalizeLateReasons(p.lateReasons);
+			if (opts.lateEntry) {
+				lateReasons = this.mergeLateReasonsOnPayment(p, 'FACTURA', { ...opts.lateEntry, step: 'FACTURA' });
+			}
+			const raw = {
+				invoiceSentAt: opts.invoiceSentAt,
+				invoiceUrl: opts.invoiceUrl,
+				lateReasons,
+				_update: now,
+			};
+			await updateDoc(dref, _.omitBy(raw, _.isUndefined) as Record<string, unknown>);
+		}
+	}
+
+	async applyPaidToPaymentUids(
+		uids: string[],
+		opts: {
+			paidAt: number;
+			receiptUrl?: string;
+			paidLate?: boolean;
+			lateEntry?: LateReasonEntry;
+		},
+	): Promise<void> {
+		const now = Date.now();
+		for (const uid of uids) {
+			const dref = doc(this.firestore, this.collectionName, uid);
+			const snap = await getDoc(dref);
+			if (!snap.exists()) continue;
+			const p = snap.data() as CommissionPayment;
+			let lateReasons = normalizeLateReasons(p.lateReasons);
+			if (opts.lateEntry) {
+				lateReasons = this.mergeLateReasonsOnPayment(p, 'PAGO', { ...opts.lateEntry, step: 'PAGO' });
+			}
+			const raw = {
+				paid: true,
+				paidAt: opts.paidAt,
+				receiptSentAt: opts.paidAt,
+				receiptUrl: opts.receiptUrl,
+				paidLate: opts.paidLate ?? false,
+				lateReasons,
+				_update: now,
+			};
+			await updateDoc(dref, _.omitBy(raw, _.isUndefined) as Record<string, unknown>);
+		}
+	}
+
+	/**
+	 * Path 2 (diferidas): un solo update por comisión con desglose + factura + pago y destino de diferido.
+	 */
+	async completeDeferredPath2OnPaymentGroups(
+		groups: Array<{ uids: string[]; targetCutDate: number; originalCutDate: number }>,
+		common: {
+			breakdownSentAt: number;
+			invoiceSentAt: number;
+			invoiceUrl: string;
+			receiptSentAt: number;
+			receiptUrl: string;
+			paidLate: boolean;
+			pagoLateEntry?: LateReasonEntry;
+		},
+	): Promise<void> {
+		const now = Date.now();
+		for (const g of groups) {
+			for (const uid of g.uids) {
+				const dref = doc(this.firestore, this.collectionName, uid);
+				const snap = await getDoc(dref);
+				if (!snap.exists()) continue;
+				const p = snap.data() as CommissionPayment;
+				let lateReasons = normalizeLateReasons(p.lateReasons);
+				if (common.paidLate && common.pagoLateEntry) {
+					lateReasons = this.mergeLateReasonsOnPayment(p, 'PAGO', { ...common.pagoLateEntry, step: 'PAGO' });
+				}
+				const payload: Record<string, unknown> = {
+					breakdownSentAt: common.breakdownSentAt,
+					invoiceSentAt: common.invoiceSentAt,
+					invoiceUrl: common.invoiceUrl,
+					receiptSentAt: common.receiptSentAt,
+					receiptUrl: common.receiptUrl,
+					paid: true,
+					paidAt: common.receiptSentAt,
+					paidLate: common.paidLate,
+					lateReasons,
+					_update: now,
+				};
+				if (g.targetCutDate === g.originalCutDate) {
+					payload['deferredToCutDate'] = deleteField();
+				} else {
+					payload['deferredToCutDate'] = g.targetCutDate;
+				}
+				await updateDoc(dref, payload);
+			}
+		}
+	}
+
+	async patchInvoiceFieldsOnPaymentUids(
+		uids: string[],
+		opts: { invoiceUrl: string; invoiceSentAt: number },
+	): Promise<void> {
+		const now = Date.now();
+		for (const uid of uids) {
+			await updateDoc(doc(this.firestore, this.collectionName, uid), {
+				invoiceUrl: opts.invoiceUrl,
+				invoiceSentAt: opts.invoiceSentAt,
+				_update: now,
+			});
+		}
+	}
+
+	async patchReceiptFieldsOnPaymentUids(
+		uids: string[],
+		opts: { receiptUrl: string; receiptSentAt: number },
+	): Promise<void> {
+		const now = Date.now();
+		for (const uid of uids) {
+			await updateDoc(doc(this.firestore, this.collectionName, uid), {
+				receiptUrl: opts.receiptUrl,
+				receiptSentAt: opts.receiptSentAt,
+				_update: now,
+			});
+		}
 	}
 
 	// ===== MARK PAID BY UIDS (procesar solo los seleccionados, ej. diferidas) =====
@@ -132,7 +415,7 @@ export class CommissionPaymentFirestoreService {
 	): Promise<number> {
 		if (paymentUids.length === 0) return 0;
 		const batch = writeBatch(this.firestore);
-		const updates: Record<string, unknown> = { paid: true, paidAt, _update: paidAt };
+		const updates: Record<string, unknown> = { paid: true, paidAt, receiptSentAt: paidAt, _update: paidAt };
 		if (opts?.targetCutDate != null && opts?.originalCutDate != null) {
 			if (opts.targetCutDate === opts.originalCutDate) {
 				(updates as any).deferredToCutDate = deleteField();
@@ -164,7 +447,7 @@ export class CommissionPaymentFirestoreService {
 			if (!docIds.has(d.id)) {
 				docIds.add(d.id);
 				const p = d.data() as CommissionPayment;
-				const updates: Record<string, unknown> = { paid: true, paidAt, _update: paidAt };
+				const updates: Record<string, unknown> = { paid: true, paidAt, receiptSentAt: paidAt, _update: paidAt };
 				if (p.deferredToCutDate) (updates as any).deferredToCutDate = deleteField();
 				batch.update(d.ref, updates);
 			}

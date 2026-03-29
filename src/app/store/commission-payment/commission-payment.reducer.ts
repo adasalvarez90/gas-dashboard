@@ -50,7 +50,12 @@ export const commissionPaymentReducer = createReducer(
 			)
 			.map((p) => ({
 				id: p!.uid,
-				changes: { paid: true, paidAt, ...(p!.deferredToCutDate ? { deferredToCutDate: undefined } : {}) },
+				changes: {
+					paid: true,
+					paidAt,
+					receiptSentAt: paidAt,
+					...(p!.deferredToCutDate ? { deferredToCutDate: undefined } : {}),
+				},
 			}));
 		return adapter.updateMany(updates, { ...state, loading: false });
 	}),
@@ -59,7 +64,7 @@ export const commissionPaymentReducer = createReducer(
 	// Mark paid by UIDs (selección de diferidas)
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByUids, (state) => ({ ...state, loading: true, error: null })),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByUidsSuccess, (state, { paymentUids, paidAt, targetCutDate, originalCutDate }) => {
-		const changes: Record<string, unknown> = { paid: true, paidAt };
+		const changes: Record<string, unknown> = { paid: true, paidAt, receiptSentAt: paidAt };
 		if (targetCutDate != null && originalCutDate != null) {
 			changes['deferredToCutDate'] = targetCutDate === originalCutDate ? undefined : targetCutDate;
 		} else {
@@ -75,7 +80,7 @@ export const commissionPaymentReducer = createReducer(
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisorSuccess, (state, { trancheUid, advisorUid, paidAt }) => {
 		const updates = Object.values(state.entities)
 			.filter((p) => !!p && p.trancheUid === trancheUid && p.advisorUid === advisorUid && !p.paid && !p.cancelled)
-			.map((p) => ({ id: p!.uid, changes: { paid: true, paidAt } }));
+			.map((p) => ({ id: p!.uid, changes: { paid: true, paidAt, receiptSentAt: paidAt } }));
 		return adapter.updateMany(updates, { ...state, loading: false });
 	}),
 	on(CommissionPaymentsActions.markCommissionPaymentsPaidByTrancheAndAdvisorFailure, (state, { error }) => ({ ...state, loading: false, error })),

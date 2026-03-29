@@ -142,8 +142,8 @@
 											</div>
 
 											<div class="summary-card-mid">
-												<span class="state-badge" [class]="'state-' + (s.state?.state ?? 'PENDING')">
-													{{ stateLabel(s.state?.state ?? 'PENDING') }}
+												<span class="state-badge" [class]="'state-' + cardWorkflowUiKey(s)">
+													{{ stateLabel(cardWorkflowUiKey(s)) }}
 												</span>
 												@if (s.state?.paidLate) {
 													<ion-badge class="badge-outline badge-outline--orange">Pagada atrasada</ion-badge>
@@ -169,6 +169,20 @@
 												@if (isReadOnlyDeferred(s)) {
 													<span class="chip chip--deferred">Diferida al sig. corte</span>
 												}
+												<input
+													#invFileAdvisor
+													type="file"
+													accept="application/pdf,.pdf"
+													(change)="onInvoiceFilePicked($event)"
+													hidden
+												>
+												<input
+													#rcFileAdvisor
+													type="file"
+													accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
+													(change)="onReceiptFilePicked($event)"
+													hidden
+												>
 												<div class="summary-card-actions">
 													@if (s.state?.invoiceUrl) {
 														<a
@@ -189,7 +203,36 @@
 														>Comprobante</a>
 													}
 
-													@switch (s.state?.state ?? 'PENDING') {
+													@switch (cardWorkflowUiKey(s)) {
+														@case ('MIXED') {
+															<ion-button
+																size="small"
+																class="action-btn"
+																color="primary"
+																fill="outline"
+																(click)="$event.stopPropagation(); downloadCalculationAndMarkBreakdown(s)"
+															>
+																Desglose
+															</ion-button>
+															<ion-button
+																size="small"
+																class="action-btn"
+																color="primary"
+																fill="outline"
+																(click)="$event.stopPropagation(); markInvoiceStatusOnly(s)"
+															>
+																Factura
+															</ion-button>
+															<ion-button
+																size="small"
+																class="action-btn"
+																color="success"
+																fill="outline"
+																(click)="$event.stopPropagation(); markPaidStatusOnly(s)"
+															>
+																Pagada
+															</ion-button>
+														}
 														@case ('PENDING') {
 															<ion-button
 																size="small"
@@ -202,63 +245,40 @@
 															</ion-button>
 														}
 														@case ('BREAKDOWN_SENT') {
-															<input
-																#invFile
-																type="file"
-																accept="application/pdf,.pdf"
-																(change)="onInvoiceFilePicked($event)"
-																hidden
-															>
 															<ion-button
 																size="small"
 																class="action-btn"
 																color="primary"
 																fill="outline"
-																(click)="$event.stopPropagation(); beginInvoiceAttach(s, invFile)"
+																(click)="$event.stopPropagation(); markInvoiceStatusOnly(s)"
 															>
-																Adjuntar factura
+																Factura recibida
 															</ion-button>
 														}
 														@case ('SENT_TO_PAYMENT') {
-															@if (s.pendingAmount > 0) {
-																<input
-																	#rcFile
-																	type="file"
-																	accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
-																	(change)="onReceiptFilePicked($event)"
-																	hidden
-																>
-																<ion-button
-																	size="small"
-																	class="action-btn"
-																	color="primary"
-																	fill="outline"
-																	(click)="$event.stopPropagation(); beginReceiptAttach(s, rcFile)"
-																>
-																	Adjuntar pago
-																</ion-button>
-															}
+															<ion-button
+																size="small"
+																class="action-btn"
+																color="success"
+																fill="outline"
+																(click)="$event.stopPropagation(); markPaidStatusOnly(s)"
+															>
+																Pagada
+															</ion-button>
 														}
-														@default {
-															@if (s.pendingAmount > 0) {
-																<input
-																	#rcFileDef
-																	type="file"
-																	accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
-																	(change)="onReceiptFilePicked($event)"
-																	hidden
-																>
-																<ion-button
-																	size="small"
-																	class="action-btn"
-																	color="primary"
-																	fill="outline"
-																	(click)="$event.stopPropagation(); beginReceiptAttach(s, rcFileDef)"
-																>
-																	Adjuntar pago
-																</ion-button>
-															}
-														}
+														@default {}
+													}
+													@if (canShowAdvisorAttachmentActions(s)) {
+														<ion-button
+															size="small"
+															class="action-btn"
+															color="medium"
+															fill="clear"
+															(click)="$event.stopPropagation(); openAdvisorAttachmentActions(s, invFileAdvisor, rcFileAdvisor)"
+															aria-label="Adjuntar archivos de comisión"
+														>
+															<ion-icon name="ellipsis-horizontal"></ion-icon>
+														</ion-button>
 													}
 												</div>
 

@@ -610,6 +610,7 @@
 		&.state-BREAKDOWN_SENT { background: rgba(var(--ion-color-primary-rgb), 0.2); color: var(--ion-color-primary); }
 		&.state-SENT_TO_PAYMENT { background: rgba(var(--ion-color-warning-rgb), 0.3); color: var(--ion-color-warning-shade); }
 		&.state-PAID { background: rgba(var(--ion-color-success-rgb), 0.3); color: var(--ion-color-success-shade); }
+		&.state-MIXED { background: rgba(var(--ion-color-medium-rgb), 0.22); color: var(--ion-color-dark); }
 	}
 
 	.pill {
@@ -1010,6 +1011,7 @@
 			&.state-BREAKDOWN_SENT { background: rgba(var(--ion-color-primary-rgb), 0.2); color: var(--ion-color-primary); }
 			&.state-SENT_TO_PAYMENT { background: rgba(var(--ion-color-warning-rgb), 0.3); color: var(--ion-color-warning-shade); }
 			&.state-PAID { background: rgba(var(--ion-color-success-rgb), 0.3); color: var(--ion-color-success-shade); }
+			&.state-MIXED { background: rgba(var(--ion-color-medium-rgb), 0.22); color: var(--ion-color-dark); }
 		}
 
 		.badge {

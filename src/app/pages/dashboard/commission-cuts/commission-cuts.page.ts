@@ -1,7 +1,7 @@
 import { Component, DestroyRef, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, map, BehaviorSubject, take } from 'rxjs';
-import { debounceTime, shareReplay } from 'rxjs/operators';
+import { combineLatest, map, BehaviorSubject, firstValueFrom, take } from 'rxjs';
+import { shareReplay } from 'rxjs/operators';
 
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
@@ -19,13 +19,13 @@ import {
 } from 'src/app/models/commission-cut-late-reason.model';
 import { LateReasonModalComponent } from 'src/app/components/late-reason-modal/late-reason-modal.component';
 import { ProcessDeferredModalComponent, type ProcessDeferredResult } from 'src/app/components/process-deferred-modal/process-deferred-modal.component';
-import { CommissionCutStateFirestoreService } from 'src/app/services/commission-cut-state-firestore.service';
 import { CommissionCutAttachmentService } from 'src/app/services/commission-cut-attachment.service';
 import { CommissionCutsPdfService } from 'src/app/services/commission-cuts-pdf.service';
 import {
 	addBusinessDays,
+	classifyDeferralPaymentCase,
 	getBreakdownDeadline,
-	computeDeferralDisplayIndex,
+	computeDeferralDisplayIndexFromPayments,
 	getEffectiveDeferredDisplayCut,
 	getInvoiceDeadline,
 	getLastCutDateOnOrBefore,
@@ -36,19 +36,26 @@ import {
 	isInvoiceOverdue,
 	isPaymentOverdue,
 	paymentFlowHasAnyLateStep,
+	sameCanonicalCutDate,
 } from 'src/app/domain/commission-cut/commission-cut-deadlines.util';
+import {
+	commissionPaymentToSyntheticAdvisorState,
+	deriveAdvisorWorkflowFromPayments,
+	paymentWorkflowStateAtCut,
+	type DerivedAdvisorWorkflow,
+} from 'src/app/domain/commission-cut/commission-payment-workflow.util';
 import {
 	isAfterMexicoDate,
 	toCanonicalMexicoDateTimestamp,
 	toMexicoDateInputValue,
 } from 'src/app/domain/time/mexico-time.util';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
-import { AlertController, LoadingController, ModalController, ToastController } from '@ionic/angular';
-import { Store } from '@ngrx/store';
-import * as CommissionPaymentActions from 'src/app/store/commission-payment/commission-payment.actions';
+import { ActionSheetController, AlertController, LoadingController, ModalController, ToastController } from '@ionic/angular';
 
 export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
 	state: CommissionCutAdvisorState | null;
+	/** Agregado de líneas en la tarjeta (incluye MIXED). */
+	advisorWorkflowDerived?: DerivedAdvisorWorkflow;
 	/** Estado del flujo en el corte **original** de cada línea (uid de pago → estado). */
 	paymentDeferralStates?: Map<string, CommissionCutAdvisorState | null>;
 	invoiceDeadline?: number;
@@ -94,15 +101,13 @@ export class CommissionCutsPage implements OnInit {
 	@ViewChild('cutSelect', { read: ElementRef }) private cutSelectRef?: ElementRef;
 	@ViewChild('advisorSelect', { read: ElementRef }) private advisorSelectRef?: ElementRef;
 
-	stateStates$ = new BehaviorSubject<CommissionCutAdvisorState[]>([]);
+	/** Snapshot síncrono para getAdvisorStateForCut (mismo orden que el store). */
+	private latestPaymentsSnapshot: CommissionPayment[] = [];
 
-	/** Pagos + índice de diferidas: un cómputo por emisión (shareReplay) para cutDates$ y advisorSummaries$. */
-	private readonly cutsDeferralIndex$ = combineLatest([this.commissionPayments$, this.stateStates$]).pipe(
-		map(([payments, states]) => {
-			const stateMap = new Map<string, CommissionCutAdvisorState>();
-			states.forEach((st) => stateMap.set(`${st.cutDate}::${st.advisorUid}`, st));
-			const getSt = (cd: number, adv: string) => stateMap.get(`${cd}::${adv}`) ?? null;
-			const { horizon, effectiveByUid } = computeDeferralDisplayIndex(payments, getSt);
+	/** Pagos + índice de diferidas (estado solo en `CommissionPayment`). */
+	private readonly cutsDeferralIndex$ = this.commissionPayments$.pipe(
+		map((payments) => {
+			const { horizon, effectiveByUid } = computeDeferralDisplayIndexFromPayments(payments);
 			return { payments, horizon, effectiveByUid };
 		}),
 		shareReplay({ bufferSize: 1, refCount: true }),
@@ -218,34 +223,14 @@ export class CommissionCutsPage implements OnInit {
 	);
 
 	/** Resúmenes fusionados con estado y plazos */
-	advisorSummariesWithState$ = combineLatest([
-		this.advisorSummaries$,
-		this.contracts$,
-		this.stateStates$,
-		this.viewMode$,
-	]).pipe(
-		map(([summaries, contracts, states, viewMode]) => {
-			const stateMap = new Map<string, CommissionCutAdvisorState>();
-			states.forEach((s) => stateMap.set(`${s.cutDate}::${s.advisorUid}`, s));
+	advisorSummariesWithState$ = combineLatest([this.advisorSummaries$, this.contracts$, this.viewMode$]).pipe(
+		map(([summaries, contracts, viewMode]) => {
 			const contractMap = new Map<string, Contract>();
 			contracts.forEach((c) => contractMap.set(c.uid, c));
 
 			let result: AdvisorCutSummaryWithState[] = summaries.map((s) => {
-				let state = stateMap.get(`${s.cutDate}::${s.advisorUid}`);
-				if (!state && s.payments.length) {
-					const deferredFrom = s.payments.find((p) => p.deferredToCutDate === s.cutDate);
-					if (deferredFrom) state = stateMap.get(`${deferredFrom.cutDate}::${s.advisorUid}`) ?? null;
-				}
-				if (!state && s.payments.length) {
-					const rolled = s.payments.filter(
-						(p) => p.cutDate < s.cutDate && !p.paid && !p.paidAt && !p.cancelled,
-					);
-					if (rolled.length) {
-						const earliestOrig = Math.min(...rolled.map((p) => p.cutDate));
-						state = stateMap.get(`${earliestOrig}::${s.advisorUid}`) ?? null;
-					}
-				}
-				if (!state) state = null;
+				const { derived, mergedState } = deriveAdvisorWorkflowFromPayments(s.payments, s.cutDate);
+				const state = mergedState;
 				const invoiceDeadline = state?.breakdownSentAt
 					? getInvoiceDeadline(state.breakdownSentAt)
 					: getBreakdownDeadline(s.cutDate);
@@ -261,12 +246,13 @@ export class CommissionCutsPage implements OnInit {
 
 				const paymentDeferralStates = new Map<string, CommissionCutAdvisorState | null>();
 				for (const p of s.payments) {
-					paymentDeferralStates.set(p.uid, stateMap.get(`${p.cutDate}::${p.advisorUid}`) ?? null);
+					paymentDeferralStates.set(p.uid, paymentWorkflowStateAtCut(p, s.cutDate));
 				}
 
 				return {
 					...s,
 					state,
+					advisorWorkflowDerived: derived,
 					paymentDeferralStates,
 					invoiceDeadline,
 					paymentDeadline,
@@ -304,9 +290,10 @@ export class CommissionCutsPage implements OnInit {
 
 	readonly STATE_LABELS: Record<string, string> = {
 		PENDING: 'Pendiente',
-		BREAKDOWN_SENT: 'Desglose enviado',
+		BREAKDOWN_SENT: 'Desglose descargado',
 		SENT_TO_PAYMENT: 'Enviada a pago',
 		PAID: 'Pagada',
+		MIXED: 'En proceso (varias líneas)',
 	};
 
 	readonly PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -351,6 +338,7 @@ export class CommissionCutsPage implements OnInit {
 		stateCutDate: number;
 		summaryCutDate: number;
 		at: number;
+		lateEntry?: LateReasonEntry;
 		s: AdvisorCutSummaryWithState;
 	} | null = null;
 
@@ -359,16 +347,19 @@ export class CommissionCutsPage implements OnInit {
 		private commissionPaymentFacade: CommissionPaymentFacade,
 		private advisorFacade: AdvisorFacade,
 		private contractFacade: ContractFacade,
-		private stateService: CommissionCutStateFirestoreService,
 		private attachmentService: CommissionCutAttachmentService,
 		private pdfService: CommissionCutsPdfService,
 		private paymentFirestore: CommissionPaymentFirestoreService,
 		private modalCtrl: ModalController,
+		private actionSheetCtrl: ActionSheetController,
 		private alertCtrl: AlertController,
 		private loadingCtrl: LoadingController,
 		private toastCtrl: ToastController,
-		private store: Store
-	) {}
+	) {
+		this.commissionPayments$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((p) => {
+			this.latestPaymentsSnapshot = p ?? [];
+		});
+	}
 
 	/** Loading bloqueante mientras sube a Storage y guarda estado (evita doble clic). */
 	private async withUploadLoading<T>(message: string, fn: () => Promise<T>): Promise<T> {
@@ -402,16 +393,14 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	ngOnInit() {
-		this.persistLateReasonsWhenNeeded();
 		this.ensureContractsLoadedIfEmpty();
 	}
 
 	/**
-	 * Asesoras y comisiones: ya las cargó el resolver (o loadAfterAuth). Aquí solo estados de corte (1 lectura),
-	 * que es lo que cambia más al operar el flujo sin re-listar toda la colección de payments.
+	 * Reconcilia `deferredToCutDate` en pagos al entrar (idempotente).
 	 */
 	ionViewWillEnter() {
-		this.loadStates();
+		void this.enterCommissionCuts();
 	}
 
 	/** Contratos solo si el store está vacío (p. ej. acceso directo sin pasar por login completo). */
@@ -461,38 +450,6 @@ export class CommissionCutsPage implements OnInit {
 		}
 
 		return entries;
-	}
-
-	/**
-	 * Persiste en Firestore los motivos automáticos que apliquen (plazo vencido sin acción en ese paso).
-	 * `addLateReason` evita duplicados por step+reason.
-	 */
-	private persistLateReasonsWhenNeeded() {
-		this.advisorSummariesWithState$
-			.pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
-			.subscribe((summaries) => {
-				void (async () => {
-					let mutated = false;
-					for (const s of summaries) {
-						const state = s.state;
-						const normalized = normalizeLateReasons(state?.lateReasons);
-						const working = [...normalized];
-						const toAdd = this.computeAutoLateReasonEntries(state, s.cutDate);
-						for (const entry of toAdd) {
-							const exists = working.some((r) => r.step === entry.step && r.reason === entry.reason);
-							if (exists) continue;
-							try {
-								await this.stateService.addLateReason(s.cutDate, s.advisorUid, entry);
-								working.push(entry);
-								mutated = true;
-							} catch {
-								/* siguiente resumen */
-							}
-						}
-					}
-					if (mutated) this.loadStates();
-				})();
-			});
 	}
 
 	private groupPaymentsByContract(
@@ -582,11 +539,7 @@ export class CommissionCutsPage implements OnInit {
 
 	/** Corte destino actual de la diferida (encadenada mes a mes según plazos). */
 	private effectiveDeferredCut(p: CommissionPayment): number | null {
-		const sm = new Map<string, CommissionCutAdvisorState>();
-		for (const st of this.stateStates$.getValue()) {
-			sm.set(`${st.cutDate}::${st.advisorUid}`, st);
-		}
-		return getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => sm.get(`${cd}::${p.advisorUid}`) ?? null);
+		return getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => paymentWorkflowStateAtCut(p, cd));
 	}
 
 	/**
@@ -684,17 +637,13 @@ export class CommissionCutsPage implements OnInit {
 			data.receiptFile
 		);
 
-		const lateEntry: LateReasonEntry = {
+		const pagoLateEntry: LateReasonEntry = {
 			step: 'PAGO',
 			reason: data.reason,
 			text: data.text,
 			at: receiptSentAt,
 		};
-		if (paidLate) {
-			await this.stateService.addLateReason(cutForUploads, s.advisorUid, lateEntry);
-		}
 
-		const paidAt = receiptSentAt;
 		const byOriginalCut = new Map<number, CommissionPayment[]>();
 		for (const p of selected) {
 			const orig = p.cutDate;
@@ -702,7 +651,7 @@ export class CommissionCutsPage implements OnInit {
 			byOriginalCut.get(orig)!.push(p);
 		}
 
-		const distinctTargets = new Set<number>();
+		const groups: Array<{ uids: string[]; targetCutDate: number; originalCutDate: number }> = [];
 		for (const [origCut, payments] of byOriginalCut) {
 			const uids = payments.map((p) => p.uid);
 			let tgt: number;
@@ -713,35 +662,18 @@ export class CommissionCutsPage implements OnInit {
 			} else {
 				tgt = deferredCutDate;
 			}
-			distinctTargets.add(tgt);
-			await this.paymentFirestore.markCommissionPaymentsPaidByUids(uids, paidAt, {
-				targetCutDate: tgt,
-				originalCutDate: origCut,
-			});
-			this.store.dispatch(
-				CommissionPaymentActions.markCommissionPaymentsPaidByUidsSuccess({
-					paymentUids: uids,
-					paidAt,
-					updatedCount: uids.length,
-					targetCutDate: tgt,
-					originalCutDate: origCut,
-				})
-			);
+			groups.push({ uids, targetCutDate: tgt, originalCutDate: origCut });
 		}
 
-		for (const cut of distinctTargets) {
-			await this.stateService.upsert({
-				cutDate: cut,
-				advisorUid: s.advisorUid,
-				state: 'PAID',
-				breakdownSentAt,
-				invoiceSentAt,
-				invoiceUrl: invoiceUrl!,
-				receiptSentAt,
-				receiptUrl: receiptUrl!,
-				paidLate,
-			});
-		}
+		await this.paymentFirestore.completeDeferredPath2OnPaymentGroups(groups, {
+			breakdownSentAt,
+			invoiceSentAt,
+			invoiceUrl: invoiceUrl!,
+			receiptSentAt,
+			receiptUrl: receiptUrl!,
+			paidLate,
+			pagoLateEntry: paidLate ? pagoLateEntry : undefined,
+		});
 
 		const paymentUids = selected.map((p) => p.uid);
 		this.selectedDeferredIds = new Set(
@@ -791,18 +723,166 @@ export class CommissionCutsPage implements OnInit {
 		return this.paymentTypeLabel(p.paymentType);
 	}
 
-	loadStates() {
-		this.stateService.getAllActive().then((states) => {
-			this.stateStates$.next(states);
-		});
+	/** Reconciliar `deferredToCutDate` en pagos (idempotente). */
+	private async enterCommissionCuts() {
+		try {
+			const payments = await firstValueFrom(this.commissionPayments$.pipe(take(1)));
+			const updated = await this.paymentFirestore.reconcileDeferredToCutDates(payments);
+			if (updated > 0) {
+				this.commissionPaymentFacade.loadCommissionPaymentsForCuts();
+			}
+		} catch (err) {
+			console.error(err);
+			const t = await this.toastCtrl.create({
+				message: 'No se pudo alinear el diferido en comisiones. Revisa conexión o reglas.',
+				duration: 4000,
+				color: 'warning',
+			});
+			await t.present();
+		}
 	}
 
-	/** Recarga estados y opcionalmente todas las comisiones activas (histórico de cortes). */
+	/** Recarga comisiones (histórico de cortes) cuando hubo escrituras en Firestore. */
 	private refreshCutData(reloadPayments = false) {
 		if (reloadPayments) {
 			this.commissionPaymentFacade.loadCommissionPaymentsForCuts();
 		}
-		this.loadStates();
+	}
+
+	/** Líneas con `deferredToCutDate` = corte del resumen (vista diferida). */
+	private getDeferredPaymentsInSummary(s: AdvisorCutSummaryWithState): CommissionPayment[] {
+		const out: CommissionPayment[] = [];
+		for (const c of s.contractBreakdown) {
+			for (const p of c.payments) {
+				if (p.cancelled || p.paid || p.paidAt) continue;
+				if (p.deferredToCutDate === s.cutDate) out.push(p);
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * Factura: Caso 1/2 vs corte diferido. Sin diferidas en el resumen → `'use-legacy'`.
+	 */
+	private async applyDeferredCaseInvoiceFlow(
+		s: AdvisorCutSummaryWithState,
+		at: number,
+		lateEntry: LateReasonEntry | undefined,
+		invoiceUrl: string | undefined,
+	): Promise<'use-legacy' | { invoiceWasLateAny: boolean }> {
+		const deferredPays = this.getDeferredPaymentsInSummary(s);
+		if (deferredPays.length === 0) return 'use-legacy';
+
+		const defCut = s.cutDate;
+		const caseKind = classifyDeferralPaymentCase(defCut, [at]) ?? 'ON_OR_AFTER_DEFERRED_CUT';
+		const originals = [...new Set(deferredPays.map((p) => p.cutDate))];
+
+		const runLateMoves = async (invoiceWasLateAny: boolean) => {
+			if (!invoiceWasLateAny) return;
+			for (const orig of originals) {
+				const uidsAtOrig = await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(orig, s.advisorUid, true);
+				await this.paymentFirestore.movePaymentsToNextCut(orig, s.advisorUid, getNextCutDate(orig));
+				if (!lateEntry && uidsAtOrig.length) {
+					await this.paymentFirestore.mergeLateReasonToPaymentUids(uidsAtOrig, {
+						step: 'FACTURA',
+						reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
+						at: Date.now(),
+					});
+				}
+			}
+		};
+
+		const uidsForDeferredCut = (cd: number): string[] => {
+			if (cd === defCut) return deferredPays.map((p) => p.uid);
+			return deferredPays.filter((p) => p.cutDate === cd).map((p) => p.uid);
+		};
+
+		if (caseKind === 'BEFORE_DEFERRED_CUT') {
+			await this.paymentFirestore.clearDeferredToCutDateForPaymentUids(deferredPays.map((p) => p.uid));
+			let invoiceWasLateAny = false;
+			for (const orig of originals) {
+				const uids = uidsForDeferredCut(orig);
+				if (!uids.length) continue;
+				await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
+					invoiceSentAt: at,
+					invoiceUrl,
+					lateEntry,
+				});
+				const refPay = deferredPays.find((p) => p.uid === uids[0])!;
+				const syn = commissionPaymentToSyntheticAdvisorState(refPay);
+				const invoiceDeadlineForCheck = syn.breakdownSentAt
+					? getInvoiceDeadline(syn.breakdownSentAt)
+					: getBreakdownDeadline(orig);
+				if (isInvoiceLate(at, invoiceDeadlineForCheck)) invoiceWasLateAny = true;
+			}
+			await runLateMoves(invoiceWasLateAny);
+			return { invoiceWasLateAny };
+		}
+
+		const cuts = [...new Set([...originals, defCut])];
+		let invoiceWasLateAny = false;
+		for (const cd of cuts) {
+			const uids = uidsForDeferredCut(cd);
+			if (!uids.length) continue;
+			await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
+				invoiceSentAt: at,
+				invoiceUrl,
+				lateEntry,
+			});
+			const refPay = deferredPays.find((p) => p.uid === uids[0])!;
+			const syn = commissionPaymentToSyntheticAdvisorState(refPay);
+			const invoiceDeadlineForCheck = syn.breakdownSentAt
+				? getInvoiceDeadline(syn.breakdownSentAt)
+				: getBreakdownDeadline(refPay.cutDate);
+			if (isInvoiceLate(at, invoiceDeadlineForCheck)) invoiceWasLateAny = true;
+		}
+		await runLateMoves(invoiceWasLateAny);
+		return { invoiceWasLateAny };
+	}
+
+	/** Pago: Caso 1/2 vs corte diferido. */
+	private async applyDeferredCaseMarkPaidFlow(
+		s: AdvisorCutSummaryWithState,
+		at: number,
+		lateEntry: LateReasonEntry | undefined,
+		receiptUrl: string | undefined,
+	): Promise<'use-legacy' | void> {
+		const deferredPays = this.getDeferredPaymentsInSummary(s);
+		if (deferredPays.length === 0) return 'use-legacy';
+
+		const defCut = s.cutDate;
+		const caseKind = classifyDeferralPaymentCase(defCut, [at]) ?? 'ON_OR_AFTER_DEFERRED_CUT';
+		const originals = [...new Set(deferredPays.map((p) => p.cutDate))];
+
+		const uidsForDeferredCut = (cd: number): string[] => {
+			if (cd === defCut) return deferredPays.map((p) => p.uid);
+			return deferredPays.filter((p) => p.cutDate === cd).map((p) => p.uid);
+		};
+
+		if (caseKind === 'BEFORE_DEFERRED_CUT') {
+			await this.paymentFirestore.clearDeferredToCutDateForPaymentUids(deferredPays.map((p) => p.uid));
+			for (const orig of originals) {
+				const uids = uidsForDeferredCut(orig);
+				if (!uids.length) continue;
+				await this.paymentFirestore.applyPaidToPaymentUids(uids, {
+					paidAt: at,
+					receiptUrl,
+					lateEntry,
+				});
+			}
+			return;
+		}
+
+		const cuts = [...new Set([...originals, defCut])];
+		for (const cd of cuts) {
+			const uids = uidsForDeferredCut(cd);
+			if (!uids.length) continue;
+			await this.paymentFirestore.applyPaidToPaymentUids(uids, {
+				paidAt: at,
+				receiptUrl,
+				lateEntry,
+			});
+		}
 	}
 
 	setFilterCut(cutDate: number | null) {
@@ -824,7 +904,12 @@ export class CommissionCutsPage implements OnInit {
 
 	/** Corte donde está el estado (puede ser original cuando es diferida). */
 	getStateCutDate(s: AdvisorCutSummaryWithState): number {
-		return s.state?.cutDate ?? s.cutDate;
+		const raw = s.state?.cutDate ?? s.cutDate;
+		if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+		if (raw != null && typeof raw === 'object' && typeof (raw as { toMillis?: () => number }).toMillis === 'function') {
+			return (raw as { toMillis: () => number }).toMillis();
+		}
+		return s.cutDate;
 	}
 
 	/** true cuando se muestra en corte original y está diferida (solo lectura). */
@@ -836,7 +921,8 @@ export class CommissionCutsPage implements OnInit {
 	getEffectiveLateReasons(s: AdvisorCutSummaryWithState): LateReasonEntry[] {
 		const normalized = normalizeLateReasons(s.state?.lateReasons);
 		if (normalized.length) return this.sortLateReasonEntriesByFlowOrder(normalized);
-		return this.sortLateReasonEntriesByFlowOrder(this.computeAutoLateReasonEntries(s.state, s.cutDate));
+		const cutForState = s.state?.cutDate ?? s.cutDate;
+		return this.sortLateReasonEntriesByFlowOrder(this.computeAutoLateReasonEntries(s.state, cutForState));
 	}
 
 	/** Al menos una comisión pagada con franja “tarde” (cualquier paso fuera de plazo), o flag legacy en estado. */
@@ -851,43 +937,24 @@ export class CommissionCutsPage implements OnInit {
 		return false;
 	}
 
-	/** Estado persistido del corte **de esa comisión** (no el “prestado” de otro corte por arrastre). */
+	/** Estado agregado en el corte original de la asesora (varias líneas → mismo modelo que la tarjeta). */
 	getAdvisorStateForCut(advisorUid: string, cutDate: number): CommissionCutAdvisorState | null {
-		return this.stateStates$.value.find((st) => st.cutDate === cutDate && st.advisorUid === advisorUid) ?? null;
+		const relevant = this.latestPaymentsSnapshot.filter(
+			(p) => p.advisorUid === advisorUid && !p.cancelled && sameCanonicalCutDate(p.cutDate, cutDate),
+		);
+		if (!relevant.length) return null;
+		return deriveAdvisorWorkflowFromPayments(relevant, cutDate).mergedState;
 	}
 
-	/**
-	 * Doc de estado con timestamps del flujo (pago cerrado puede estar en otro `cutDate`, p. ej. Path 2).
-	 */
-	private getFlowStateForPayment(s: AdvisorCutSummaryWithState, pay: CommissionPayment): CommissionCutAdvisorState | null {
-		const orig = this.getAdvisorStateForCut(s.advisorUid, pay.cutDate);
-		if (!pay.paid && !pay.paidAt) return orig;
-		if (orig?.state === 'PAID' && orig.receiptSentAt != null) return orig;
-		const paidAt = pay.paidAt;
-		if (paidAt) {
-			const candidates = this.stateStates$.value.filter(
-				(st) =>
-					st.advisorUid === pay.advisorUid &&
-					st.state === 'PAID' &&
-					st.receiptSentAt != null &&
-					Math.abs((st.receiptSentAt ?? 0) - paidAt) <= 86400000 * 3
-			);
-			if (candidates.length === 1) return candidates[0];
-			if (candidates.length > 1) {
-				return candidates.reduce((best, cur) =>
-					Math.abs((cur.receiptSentAt ?? 0) - paidAt) < Math.abs((best.receiptSentAt ?? 0) - paidAt)
-						? cur
-						: best
-				);
-			}
-		}
-		return orig;
+	/** Timestamps del flujo viven en el doc del pago. */
+	private getFlowStateForPayment(_s: AdvisorCutSummaryWithState, pay: CommissionPayment): CommissionCutAdvisorState | null {
+		return commissionPaymentToSyntheticAdvisorState(pay);
 	}
 
-	/** Motivos de atraso / desglose solo para esta línea (mismo `pay.cutDate` que el estado). */
-	getEffectiveLateReasonsForPayment(s: AdvisorCutSummaryWithState, pay: CommissionPayment): LateReasonEntry[] {
-		const st = this.getAdvisorStateForCut(s.advisorUid, pay.cutDate);
-		const normalized = normalizeLateReasons(st?.lateReasons);
+	/** Motivos de atraso / desglose solo para esta línea. */
+	getEffectiveLateReasonsForPayment(_s: AdvisorCutSummaryWithState, pay: CommissionPayment): LateReasonEntry[] {
+		const st = commissionPaymentToSyntheticAdvisorState(pay);
+		const normalized = normalizeLateReasons(st.lateReasons);
 		if (normalized.length) return this.sortLateReasonEntriesByFlowOrder(normalized);
 		return this.sortLateReasonEntriesByFlowOrder(this.computeAutoLateReasonEntries(st, pay.cutDate));
 	}
@@ -952,7 +1019,7 @@ export class CommissionCutsPage implements OnInit {
 			const flowSt = this.getFlowStateForPayment(s, pay);
 			return paymentFlowHasAnyLateStep(pay.cutDate, flowSt) ? 'paidLate' : 'paid';
 		}
-		const st = this.getAdvisorStateForCut(s.advisorUid, pay.cutDate);
+		const st = commissionPaymentToSyntheticAdvisorState(pay);
 		const invoiceDeadline = st?.breakdownSentAt
 			? getInvoiceDeadline(st.breakdownSentAt)
 			: getBreakdownDeadline(pay.cutDate);
@@ -1024,6 +1091,11 @@ export class CommissionCutsPage implements OnInit {
 		return this.STATE_LABELS[state] ?? state;
 	}
 
+	/** Badge y `@switch` de acciones: expone `MIXED` aunque `mergedState.state` sea el “peor” paso. */
+	cardWorkflowUiKey(s: AdvisorCutSummaryWithState): string {
+		return s.advisorWorkflowDerived === 'MIXED' ? 'MIXED' : (s.state?.state ?? 'PENDING');
+	}
+
 	paymentTypeLabel(type: string): string {
 		return this.PAYMENT_TYPE_LABELS[type] ?? type;
 	}
@@ -1055,7 +1127,10 @@ export class CommissionCutsPage implements OnInit {
 
 	/** Texto del plazo vigente según estado */
 	getPlazoLabel(s: AdvisorCutSummaryWithState): string {
-		const state = s.state?.state ?? 'PENDING';
+		const state = s.advisorWorkflowDerived ?? s.state?.state ?? 'PENDING';
+		if (state === 'MIXED') {
+			return 'Varias líneas en distinto paso; revisa el detalle por comisión.';
+		}
 		if (state === 'PENDING') {
 			const deadline = getBreakdownDeadline(s.cutDate);
 			return `Informe / desglose: hasta ${new Date(deadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
@@ -1091,7 +1166,11 @@ export class CommissionCutsPage implements OnInit {
 						{
 							text: 'Continuar',
 							handler: (data: Record<string, unknown>) => {
-								const raw = data?.['actionDate'];
+								let raw: unknown = data?.['actionDate'];
+								if (raw === undefined && Array.isArray(data?.['values'])) {
+									const vals = data['values'] as unknown[];
+									raw = vals.length ? vals[0] : undefined;
+								}
 								const ts =
 									typeof raw === 'string'
 										? toCanonicalMexicoDateTimestamp(raw)
@@ -1130,84 +1209,268 @@ export class CommissionCutsPage implements OnInit {
 			if (!result) return;
 			lateEntry = { step: 'DESGLOSE', reason: result.reason, text: result.text };
 		}
-		this.pdfService.exportAdvisorCutCalculation(s);
-		await this.stateService.markBreakdownSent(stateCutDate, s.advisorUid, {
-			breakdownSentAt: at,
-			lateEntry,
-		});
-		this.refreshCutData();
+		try {
+			const pendingUids = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt).map((p) => p.uid);
+			const deferredPays = this.getDeferredPaymentsInSummary(s);
+			if (deferredPays.length === 0) {
+				if (pendingUids.length) {
+					await this.paymentFirestore.applyBreakdownSentToPaymentUids(pendingUids, {
+						breakdownSentAt: at,
+						lateEntry,
+					});
+				}
+			} else {
+				const defCut = s.cutDate;
+				const caseKind = classifyDeferralPaymentCase(defCut, [at]) ?? 'ON_OR_AFTER_DEFERRED_CUT';
+				const originals = [...new Set(deferredPays.map((p) => p.cutDate))];
+				if (caseKind === 'BEFORE_DEFERRED_CUT') {
+					await this.paymentFirestore.clearDeferredToCutDateForPaymentUids(deferredPays.map((p) => p.uid));
+					for (const orig of originals) {
+						const uids = deferredPays.filter((p) => p.cutDate === orig).map((p) => p.uid);
+						if (uids.length) {
+							await this.paymentFirestore.applyBreakdownSentToPaymentUids(uids, {
+								breakdownSentAt: at,
+								lateEntry,
+							});
+						}
+					}
+				} else if (pendingUids.length) {
+					await this.paymentFirestore.applyBreakdownSentToPaymentUids(pendingUids, {
+						breakdownSentAt: at,
+						lateEntry,
+					});
+				}
+			}
+			this.pdfService.exportAdvisorCutCalculation(s);
+			this.refreshCutData(true);
+		} catch (err) {
+			console.error(err);
+			const t = await this.toastCtrl.create({
+				message: 'No se guardó el desglose en Firestore. Revisa conexión o reglas de seguridad.',
+				duration: 5500,
+				color: 'danger',
+			});
+			await t.present();
+		}
 	}
 
-	async beginInvoiceAttach(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
+	async beginInvoiceAttach(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement, stateCutDate?: number) {
+		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
 		const at = await this.promptStepActionDate('¿En qué fecha la asesora envió su factura?');
 		if (at === undefined) return;
-		this.pendingFileAttach = {
-			kind: 'invoice',
-			advisorUid: s.advisorUid,
-			stateCutDate: this.getStateCutDate(s),
-			summaryCutDate: s.cutDate,
-			at,
-			s,
-		};
-		setTimeout(() => fileInput.click(), 0);
-	}
-
-	async beginReceiptAttach(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
-		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
-		if (at === undefined) return;
-		this.pendingFileAttach = {
-			kind: 'receipt',
-			advisorUid: s.advisorUid,
-			stateCutDate: this.getStateCutDate(s),
-			summaryCutDate: s.cutDate,
-			at,
-			s,
-		};
-		setTimeout(() => fileInput.click(), 0);
-	}
-
-	private async finishInvoiceWithFile(file: File) {
-		const p = this.pendingFileAttach;
-		if (!p || p.kind !== 'invoice') return;
-		this.pendingFileAttach = null;
-		const { advisorUid, stateCutDate, summaryCutDate, at, s } = p;
-		const wouldBeLate = !!(s.invoiceDeadline && at > s.invoiceDeadline);
-		const isDeferred = !!(s.state?.movedToNextCut || s.state?.originalCutDate);
+		const st = this.getAdvisorStateForCut(s.advisorUid, effectiveStateCutDate);
+		const invoiceDeadline = st?.breakdownSentAt
+			? getInvoiceDeadline(st.breakdownSentAt)
+			: getBreakdownDeadline(effectiveStateCutDate);
+		const wouldBeLate = at > invoiceDeadline;
+		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
 		const needsReason = wouldBeLate || isDeferred;
-
 		let lateEntry: LateReasonEntry | undefined;
 		if (needsReason) {
 			const result = await this.openLateReasonModal(
 				'FACTURA',
 				s,
 				isDeferred
-					? 'Hay comisiones diferidas. Indica el motivo antes de registrar la factura (reemplaza el automático si aplica).'
-					: 'Se superó el plazo de factura. Indica el motivo (reemplaza el registrado automáticamente si aplica).'
+					? 'Hay comisiones diferidas. Indica el motivo antes de seleccionar el archivo.'
+					: 'La fecha supera el plazo de factura. Indica el motivo antes de seleccionar el archivo.'
 			);
 			if (!result) return;
 			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
 		}
+		this.pendingFileAttach = {
+			kind: 'invoice',
+			advisorUid: s.advisorUid,
+			stateCutDate: effectiveStateCutDate,
+			summaryCutDate: s.cutDate,
+			at,
+			lateEntry,
+			s,
+		};
+		setTimeout(() => fileInput.click(), 0);
+	}
+
+	async beginReceiptAttach(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement, stateCutDate?: number) {
+		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
+		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
+		if (at === undefined) return;
+		const st = this.getAdvisorStateForCut(s.advisorUid, effectiveStateCutDate);
+		const paymentDeadline = st?.invoiceSentAt ? getPaymentDeadline(st.invoiceSentAt) : undefined;
+		const paymentWouldBeLate = !!paymentDeadline && at > paymentDeadline;
+		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
+		const needsReason = paymentWouldBeLate || isDeferred;
+		let lateEntry: LateReasonEntry | undefined;
+		if (needsReason) {
+			const result = await this.openLateReasonModal(
+				'PAGO',
+				s,
+				isDeferred
+					? 'Hay comisiones diferidas. Indica el motivo antes de seleccionar el archivo.'
+					: 'La fecha supera el plazo de pago. Indica el motivo antes de seleccionar el archivo.'
+			);
+			if (!result) return;
+			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
+		}
+		this.pendingFileAttach = {
+			kind: 'receipt',
+			advisorUid: s.advisorUid,
+			stateCutDate: effectiveStateCutDate,
+			summaryCutDate: s.cutDate,
+			at,
+			lateEntry,
+			s,
+		};
+		setTimeout(() => fileInput.click(), 0);
+	}
+
+	async markInvoiceStatusOnly(s: AdvisorCutSummaryWithState) {
+		const stateCutDate = this.getStateCutDate(s);
+		const at = await this.promptStepActionDate('¿En qué fecha se recibió la factura de la asesora?');
+		if (at === undefined) return;
+		const st = this.getAdvisorStateForCut(s.advisorUid, stateCutDate);
+		const invoiceDeadline = st?.breakdownSentAt
+			? getInvoiceDeadline(st.breakdownSentAt)
+			: getBreakdownDeadline(stateCutDate);
+		const wouldBeLate = at > invoiceDeadline;
+		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
+		const needsReason = wouldBeLate || isDeferred;
+		let lateEntry: LateReasonEntry | undefined;
+		if (needsReason) {
+			const result = await this.openLateReasonModal(
+				'FACTURA',
+				s,
+				isDeferred
+					? 'Hay comisiones diferidas. Indica el motivo antes de cambiar estatus.'
+					: 'La fecha supera el plazo de factura. Indica el motivo antes de cambiar estatus.'
+			);
+			if (!result) return;
+			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
+		}
+		const deferredFlow = await this.applyDeferredCaseInvoiceFlow(s, at, lateEntry, undefined);
+		if (deferredFlow !== 'use-legacy') {
+			this.refreshCutData(true);
+			return;
+		}
+		const uids = s.payments
+			.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.breakdownSentAt)
+			.map((p) => p.uid);
+		if (uids.length) {
+			await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
+				invoiceSentAt: at,
+				lateEntry,
+			});
+		}
+		const sample = s.payments.find((p) => uids.includes(p.uid)) ?? s.payments[0];
+		const syn = sample ? commissionPaymentToSyntheticAdvisorState(sample) : null;
+		const invoiceDeadlineForCheck = syn?.breakdownSentAt
+			? getInvoiceDeadline(syn.breakdownSentAt)
+			: getBreakdownDeadline(stateCutDate);
+		const invoiceWasLate = isInvoiceLate(at, invoiceDeadlineForCheck);
+		if (invoiceWasLate) {
+			const uidsAtCut = await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, s.advisorUid, true);
+			const nextCutDate = getNextCutDate(stateCutDate);
+			await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, s.advisorUid, nextCutDate);
+			if (!lateEntry && uidsAtCut.length) {
+				await this.paymentFirestore.mergeLateReasonToPaymentUids(uidsAtCut, {
+					step: 'FACTURA',
+					reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
+					at: Date.now(),
+				});
+			}
+		}
+		this.refreshCutData(true);
+	}
+
+	async markPaidStatusOnly(s: AdvisorCutSummaryWithState) {
+		const stateCutDate = this.getStateCutDate(s);
+		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
+		if (at === undefined) return;
+		const st = this.getAdvisorStateForCut(s.advisorUid, stateCutDate);
+		const paymentDeadline = st?.invoiceSentAt ? getPaymentDeadline(st.invoiceSentAt) : undefined;
+		const paymentWouldBeLate = !!paymentDeadline && at > paymentDeadline;
+		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
+		const needsReason = paymentWouldBeLate || isDeferred;
+		let lateEntry: LateReasonEntry | undefined;
+		if (needsReason) {
+			const result = await this.openLateReasonModal(
+				'PAGO',
+				s,
+				isDeferred
+					? 'Hay comisiones diferidas. Indica el motivo antes de cambiar estatus.'
+					: 'La fecha supera el plazo de pago. Indica el motivo antes de cambiar estatus.'
+			);
+			if (!result) return;
+			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
+		}
+		const paidDeferred = await this.applyDeferredCaseMarkPaidFlow(s, at, lateEntry, undefined);
+		if (paidDeferred !== 'use-legacy') {
+			this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(s.cutDate, s.advisorUid, at);
+			this.refreshCutData(true);
+			return;
+		}
+		const uids = s.payments
+			.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt)
+			.map((p) => p.uid);
+		if (uids.length) {
+			await this.paymentFirestore.applyPaidToPaymentUids(uids, { paidAt: at, lateEntry });
+		}
+		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(s.cutDate, s.advisorUid, at);
+		this.refreshCutData(true);
+	}
+
+	private async finishInvoiceWithFile(file: File) {
+		const p = this.pendingFileAttach;
+		if (!p || p.kind !== 'invoice') return;
+		this.pendingFileAttach = null;
+		const { advisorUid, stateCutDate, at, lateEntry } = p;
+		const currentState = this.getAdvisorStateForCut(advisorUid, stateCutDate);
 
 		try {
 			await this.withUploadLoading('Subiendo factura…', async () => {
 				const invoiceUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'invoice', file);
-				const state = await this.stateService.markInvoiceSent(stateCutDate, advisorUid, invoiceUrl, lateEntry, at);
-				const invoiceDeadlineForCheck = state.breakdownSentAt
-					? getInvoiceDeadline(state.breakdownSentAt)
+				if (currentState?.state === 'PAID') {
+					const uidsPaid = await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, false);
+					if (uidsPaid.length) {
+						await this.paymentFirestore.patchInvoiceFieldsOnPaymentUids(uidsPaid, { invoiceUrl, invoiceSentAt: at });
+					}
+					this.refreshCutData(true);
+					return;
+				}
+				const defInv = p.s ? await this.applyDeferredCaseInvoiceFlow(p.s, at, lateEntry, invoiceUrl) : 'use-legacy';
+				if (defInv !== 'use-legacy') {
+					this.refreshCutData(true);
+					return;
+				}
+				const uids = p.s
+					? p.s.payments
+							.filter((x) => !x.cancelled && !x.paid && !x.paidAt && x.breakdownSentAt)
+							.map((x) => x.uid)
+					: await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
+				if (uids.length) {
+					await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
+						invoiceSentAt: at,
+						invoiceUrl,
+						lateEntry,
+					});
+				}
+				const sample = p.s?.payments.find((x) => uids.includes(x.uid));
+				const syn = sample ? commissionPaymentToSyntheticAdvisorState(sample) : null;
+				const invoiceDeadlineForCheck = syn?.breakdownSentAt
+					? getInvoiceDeadline(syn.breakdownSentAt)
 					: getBreakdownDeadline(stateCutDate);
-				const invoiceWasLate = !!(state.invoiceSentAt && isInvoiceLate(state.invoiceSentAt, invoiceDeadlineForCheck));
+				const invoiceWasLate = isInvoiceLate(at, invoiceDeadlineForCheck);
 				if (invoiceWasLate) {
+					const uidsAtCut = await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
 					const nextCutDate = getNextCutDate(stateCutDate);
 					await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, advisorUid, nextCutDate);
-					await this.stateService.moveStateToNextCut(stateCutDate, advisorUid);
-					if (!lateEntry) {
-						await this.stateService.addLateReason(stateCutDate, advisorUid, {
+					if (!lateEntry && uidsAtCut.length) {
+						await this.paymentFirestore.mergeLateReasonToPaymentUids(uidsAtCut, {
 							step: 'FACTURA',
 							reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
+							at: Date.now(),
 						});
 					}
 				}
-				this.refreshCutData(invoiceWasLate);
+				this.refreshCutData(true);
 			});
 		} catch {
 			const t = await this.toastCtrl.create({
@@ -1224,30 +1487,36 @@ export class CommissionCutsPage implements OnInit {
 		const p = this.pendingFileAttach;
 		if (!p || p.kind !== 'receipt') return;
 		this.pendingFileAttach = null;
-		const { advisorUid, stateCutDate, summaryCutDate, at, s } = p;
-		const paymentWouldBeLate = !!(s.paymentDeadline && at > s.paymentDeadline);
-		const isDeferred = !!(s.state?.movedToNextCut || s.state?.originalCutDate);
-		const needsReason = paymentWouldBeLate || isDeferred;
-
-		let lateEntry: LateReasonEntry | undefined;
-		if (needsReason) {
-			const result = await this.openLateReasonModal(
-				'PAGO',
-				s,
-				isDeferred
-					? 'Hay comisiones diferidas. Indica el motivo antes de registrar el pago (reemplaza el automático si aplica).'
-					: 'Se superó el plazo de pago. Indica el motivo (reemplaza el registrado automáticamente si aplica).'
-			);
-			if (!result) return;
-			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
-		}
+		const { advisorUid, stateCutDate, summaryCutDate, at, lateEntry } = p;
+		const currentState = this.getAdvisorStateForCut(advisorUid, stateCutDate);
 
 		try {
 			await this.withUploadLoading('Subiendo comprobante de pago…', async () => {
 				const receiptUrl = await this.attachmentService.uploadAttachment(stateCutDate, advisorUid, 'receipt', file);
-				await this.stateService.markPaid(stateCutDate, advisorUid, receiptUrl, lateEntry, at);
+				if (currentState?.state === 'PAID') {
+					const uidsPaid = await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, false);
+					if (uidsPaid.length) {
+						await this.paymentFirestore.patchReceiptFieldsOnPaymentUids(uidsPaid, { receiptUrl, receiptSentAt: at });
+					}
+					this.refreshCutData(true);
+					return;
+				}
+				const defPaid = p.s ? await this.applyDeferredCaseMarkPaidFlow(p.s, at, lateEntry, receiptUrl) : 'use-legacy';
+				if (defPaid !== 'use-legacy') {
+					this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
+					this.refreshCutData(true);
+					return;
+				}
+				const uids = p.s
+					? p.s.payments
+							.filter((x) => !x.cancelled && !x.paid && !x.paidAt && x.invoiceSentAt)
+							.map((x) => x.uid)
+					: await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
+				if (uids.length) {
+					await this.paymentFirestore.applyPaidToPaymentUids(uids, { paidAt: at, receiptUrl, lateEntry });
+				}
 				this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
-				this.refreshCutData();
+				this.refreshCutData(true);
 			});
 		} catch {
 			const t = await this.toastCtrl.create({
@@ -1292,6 +1561,56 @@ export class CommissionCutsPage implements OnInit {
 		input.value = '';
 		if (file) void this.finishReceiptWithFile(file);
 		else if (this.pendingFileAttach?.kind === 'receipt') this.pendingFileAttach = null;
+	}
+
+	private getAdvisorAttachmentActionOptions(
+		s: AdvisorCutSummaryWithState,
+	): Array<'invoice' | 'receipt'> {
+		const state = s.advisorWorkflowDerived ?? s.state?.state ?? 'PENDING';
+		if (state === 'MIXED') return ['invoice', 'receipt'];
+		if (state === 'PENDING') return [];
+		if (state === 'BREAKDOWN_SENT') return ['invoice'];
+		if (state === 'SENT_TO_PAYMENT') return ['receipt'];
+		if (state === 'PAID') return ['invoice', 'receipt'];
+		return [];
+	}
+
+	canShowAdvisorAttachmentActions(s: AdvisorCutSummaryWithState): boolean {
+		return this.getAdvisorAttachmentActionOptions(s).length > 0;
+	}
+
+	async openAdvisorAttachmentActions(
+		s: AdvisorCutSummaryWithState,
+		invoiceInput: HTMLInputElement,
+		receiptInput: HTMLInputElement,
+	) {
+		const options = this.getAdvisorAttachmentActionOptions(s);
+		if (!options.length) return;
+		const buttons: Array<{ text: string; handler: () => void }> = [];
+		if (options.includes('invoice')) {
+			buttons.push({
+				text: 'Subir Factura',
+				handler: () => {
+					void this.beginInvoiceAttach(s, invoiceInput);
+				},
+			});
+		}
+		if (options.includes('receipt')) {
+			buttons.push({
+				text: 'Subir Comprobante',
+				handler: () => {
+					void this.beginReceiptAttach(s, receiptInput);
+				},
+			});
+		}
+		const sheet = await this.actionSheetCtrl.create({
+			header: 'Acciones de comisión',
+			buttons: [
+				...buttons,
+				{ text: 'Cancelar', role: 'cancel' },
+			],
+		});
+		await sheet.present();
 	}
 
 	exportPdfGeneral(summaries?: AdvisorCutSummaryWithState[], cutDateLabel?: string) {

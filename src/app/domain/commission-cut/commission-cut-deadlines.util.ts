@@ -6,6 +6,8 @@ import {
 } from 'src/app/domain/time/mexico-time.util';
 import type { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
 import { normalizeLateReasons } from 'src/app/models/commission-cut-late-reason.model';
+import type { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
+import { paymentWorkflowStateAtCut } from 'src/app/domain/commission-cut/commission-payment-workflow.util';
 
 function pad2(n: number): string {
 	return n < 10 ? `0${n}` : `${n}`;
@@ -243,6 +245,27 @@ export function computeDeferralDisplayIndex(
 	return { horizon, effectiveByUid };
 }
 
+/**
+ * Índice de diferidas con estado leído desde cada `CommissionPayment` (modelo híbrido).
+ */
+export function computeDeferralDisplayIndexFromPayments(payments: CommissionPayment[]): {
+	horizon: number;
+	effectiveByUid: Map<string, number | null>;
+} {
+	const effectiveByUid = new Map<string, number | null>();
+	let horizon = getDeferralEndCutDate(payments);
+	for (const p of payments) {
+		if (p.cancelled || p.paid || p.paidAt) {
+			effectiveByUid.set(p.uid, null);
+			continue;
+		}
+		const eff = getEffectiveDeferredDisplayCut(p, p.advisorUid, (cd) => paymentWorkflowStateAtCut(p, cd));
+		effectiveByUid.set(p.uid, eff);
+		if (eff != null) horizon = Math.max(horizon, eff);
+	}
+	return { horizon, effectiveByUid };
+}
+
 /** Tope de horizonte (dropdown / cap) reutilizando el índice si ya lo tienes. */
 export function getDeferralHorizonCutDate(
 	payments: (PaymentLikeForDeferralDisplay & { advisorUid: string; uid: string; cancelled?: boolean; paid?: boolean; paidAt?: number })[],
@@ -321,4 +344,35 @@ export function getMinValidTargetCut(originalCutDate: number, deferredCutDate: n
 		cur = getPreviousCutDate(cur);
 	}
 	return minSameDay >= originalCutDate ? minSameDay : originalCutDate;
+}
+
+/** `deferredToCutDate` persistido: ignora ausente o igual al origen (valor inválido). */
+export function normalizeDeferredToCutStored(p: { cutDate: number; deferredToCutDate?: number }): number | null {
+	const d = p.deferredToCutDate;
+	if (d == null || d === p.cutDate) return null;
+	return d;
+}
+
+/** Misma fecha de corte de negocio (7/21) en calendario México. */
+export function sameCanonicalCutDate(a: number, b: number): boolean {
+	return mexicoDateKeyFromTimestamp(a) === mexicoDateKeyFromTimestamp(b);
+}
+
+export type DeferralPaymentCase = 'BEFORE_DEFERRED_CUT' | 'ON_OR_AFTER_DEFERRED_CUT';
+
+/**
+ * Caso 1 vs 2 (commission-cuts.md): compara fechas de acción del usuario con el corte diferido.
+ * Usa claves de fecha México (YYYY-MM-DD): acciones con día calendario estrictamente anterior al día del corte → BEFORE.
+ */
+export function classifyDeferralPaymentCase(
+	deferredCutDate: number,
+	actionTimestamps: number[],
+): DeferralPaymentCase | null {
+	if (!Number.isFinite(deferredCutDate) || actionTimestamps.length === 0) return null;
+	const defKey = mexicoDateKeyFromTimestamp(deferredCutDate);
+	const valid = actionTimestamps.filter((t) => typeof t === 'number' && Number.isFinite(t) && t > 0);
+	if (!valid.length) return null;
+	const minKey = valid.map((t) => mexicoDateKeyFromTimestamp(t)).sort()[0];
+	if (minKey < defKey) return 'BEFORE_DEFERRED_CUT';
+	return 'ON_OR_AFTER_DEFERRED_CUT';
 }

@@ -1,5 +1,6 @@
 // Interfaces
 import { Metadata } from 'src/app/models/metadata.model';
+import type { LateReasonEntry } from 'src/app/models/commission-cut-late-reason.model';
 
 //
 export interface CommissionPayment extends Metadata {
@@ -42,4 +43,18 @@ export interface CommissionPayment extends Metadata {
 	 */
 	fundingDeferralReasonCode?: string;
 	fundingDeferralReasonText?: string;
+
+	// --- Flujo cortes (verdad híbrida por comisión; Firestore `commissionPayments`) ---
+	breakdownSentAt?: number;
+	invoiceSentAt?: number;
+	receiptSentAt?: number;
+	invoiceUrl?: string;
+	receiptUrl?: string;
+	lateReasons?: LateReasonEntry[];
+	/** Pagada fuera de plazo (auditoría / franja naranja). */
+	paidLate?: boolean;
+	/** Factura tarde → arrastre (además de deferredToCutDate). */
+	movedToNextCut?: boolean;
+	/** Corte origen cuando se mostró como diferida desde otro corte. */
+	workflowOriginalCutDate?: number;
 }

@@ -6,6 +6,68 @@ Commissions are generated when a tranche becomes fully funded.
 
 ---
 
+# Commission state model (hybrid — implemented in Commission Cuts)
+
+The platform behaves as a **commission-based** system with **advisor + cut** grouping for UX, **not** as an advisor-level state machine that overwrites all lines in a group. The **Commission Cuts** dashboard persists workflow on **`CommissionPayment`** only.
+
+## Source of truth: each commission line
+
+Each **commission** (logical row: `CommissionPayment` `uid` or equivalent) is authoritative for:
+
+| Area | Stored on the commission |
+|------|---------------------------|
+| **Status** | Pendiente → Desglose enviado → Enviada a pago → Pagada |
+| **Timestamps** | Desglose, factura, pago (names may be `breakdownSentAt`, `invoiceSentAt`, `receiptSentAt` / `paidAt` in implementation) |
+| **Deadlines & lateness** | Evaluated **per commission** (cut / deferral context of **that** row) |
+| **`lateReasons`** | Per commission |
+| **Factura / comprobante** | URLs or storage refs **linked to that commission** (and optionally shared file behind multiple links — see cuts doc) |
+
+All deadline, delay, color, and audit rules **must** use **per-commission** data unless explicitly aggregated for display only.
+
+## Advisor + cut = operational container (not authoritative state)
+
+The **Firestore** collection `commissionCutAdvisorStates` is **not** used by the current dashboard for workflow. Grouping and totals come from **queries on `commissionPayments`** and in-memory aggregates.
+
+If a legacy or external **container** document exists elsewhere, it **must not** be the only place where “the” status of each commission lives.
+
+**Do not** treat advisor-level `state` as overriding commission-level state.
+
+## Critical behavior: actions are commission-scoped
+
+Workflow actions (**enviar desglose**, **adjuntar factura**, **adjuntar comprobante**) apply only to **commissions explicitly selected** by the user (or a single line when the UI is line-scoped).
+
+- **No** automatic propagation to every commission in the advisor card.
+- **No** rule that one advisor `upsert` advances all lines in the cut.
+
+**Deferred** commissions are independent: updating one deferred line **must not** mutate non-deferred lines in the same advisor group.
+
+## Derived advisor status (computed, not stored as truth)
+
+From all commissions shown under an advisor for a cut, **derive** a label for the **card header** (examples):
+
+| Condition | Derived advisor status (UI) |
+|-----------|-------------------------|
+| All Pendiente | Pendiente |
+| All share the same workflow step | That status (`BREAKDOWN_SENT`, `SENT_TO_PAYMENT`, `PAID`, …) |
+| Mixed steps | **MIXED** — card shows “En proceso (varias líneas)” and compact actions |
+| All Pagada | Pagada |
+
+This value is **recomputed** from commission rows (`deriveAdvisorWorkflowFromPayments`); it is **not** a second source of truth.
+
+## Single invoice per advisor cut (optional grouping)
+
+- **One** invoice file may **cover several commissions** in the same advisor + cut.
+- Each covered commission must **link** to that invoice (and respect state prerequisites: e.g. do not attach invoice to lines still Pendiente de desglose if rules require desglose first).
+
+Details and deferrals: [commission-cuts.md](./commission-cuts.md).
+
+## Documentation alignment
+
+- [commission-cuts.md](./commission-cuts.md) — workflow, PDF, deferrals, colors, hybrid UI rules.
+- [commission-cut-implementation.md](./commission-cut-implementation.md) — Firestore fields, reconcile, code map (hybrid **implemented**).
+
+---
+
 # Commission Schemes
 
 Two schemes exist:
