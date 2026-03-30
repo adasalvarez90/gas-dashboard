@@ -370,10 +370,28 @@
 																			}
 																			@let motivoLines = getPaymentMotivoDisplayLines(s, pay);
 																			@if (motivoLines.length > 0) {
-																				<div class="payment-motivo-line" aria-label="Motivos de atraso">
-																					@for (line of motivoLines; track $index) {
-																						<div class="payment-motivo-item"><span class="payment-motivo-bullet" aria-hidden="true">·</span> {{ line }}</div>
-																					}
+																				<div class="payment-motivo-accordion payment-motivo-line" aria-label="Motivos de atraso">
+																					<div
+																						class="payment-motivo-accordion-header"
+																						role="button"
+																						tabindex="0"
+																						(click)="toggleMotivosAccordion(pay.uid)"
+																						(keydown.enter)="toggleMotivosAccordion(pay.uid)"
+																					>
+																						<span class="payment-motivo-accordion-title">Motivos</span>
+																						<ion-icon
+																							class="payment-motivo-accordion-chevron"
+																							[name]="isMotivosAccordionOpen(pay.uid) ? 'chevron-up' : 'chevron-down'"
+																						></ion-icon>
+																					</div>
+																					<div
+																						class="payment-motivo-accordion-body"
+																						[class.payment-motivo-accordion-body--open]="isMotivosAccordionOpen(pay.uid)"
+																					>
+																						@for (line of motivoLines; track $index) {
+																							<div class="payment-motivo-item"><span class="payment-motivo-bullet" aria-hidden="true">·</span> {{ line }}</div>
+																						}
+																					</div>
 																				</div>
 																			}
 																			<div class="payment-flow-dates-footer" aria-label="Fechas del flujo">

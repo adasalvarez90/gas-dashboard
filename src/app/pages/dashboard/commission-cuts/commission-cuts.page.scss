@@ -573,6 +573,45 @@
 		word-break: break-word;
 	}
 
+	/* Acordeón visual: header clickeable + body con altura animada */
+	.payment-motivo-accordion.payment-motivo-line {
+		gap: 0;
+		padding: 0;
+	}
+
+	.payment-motivo-accordion-header {
+		padding: 10px 10px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.payment-motivo-accordion-title {
+		font-weight: 900;
+		letter-spacing: 0.02em;
+	}
+
+	.payment-motivo-accordion-chevron {
+		opacity: 0.85;
+	}
+
+	.payment-motivo-accordion-body {
+		overflow: hidden;
+		max-height: 0px;
+		opacity: 0;
+		padding: 0 10px;
+		transition: max-height 220ms ease, opacity 180ms ease;
+	}
+
+	.payment-motivo-accordion-body--open {
+		/* Suficiente para listas de motivos típicas; evita saltos visuales. */
+		max-height: 240px;
+		opacity: 1;
+		padding: 8px 10px 12px;
+	}
+
 	.payment-motivo-rule {
 		border: none;
 		border-top: 1px solid rgba(255, 255, 255, 0.14);

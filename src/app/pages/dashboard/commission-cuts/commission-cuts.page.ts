@@ -341,6 +341,23 @@ export class CommissionCutsPage implements OnInit {
 	/** UIDs de comisiones diferidas seleccionadas para procesar (Path 2). */
 	selectedDeferredIds = new Set<string>();
 
+	/** Accordion "Motivos" (por uid de pago) en cada fila. */
+	private motivosOpenByPaymentUid = new Set<string>();
+
+	toggleMotivosAccordion(paymentUid: string) {
+		if (this.motivosOpenByPaymentUid.has(paymentUid)) {
+			this.motivosOpenByPaymentUid.delete(paymentUid);
+		} else {
+			this.motivosOpenByPaymentUid.add(paymentUid);
+		}
+		// Reasignar para que Angular detecte cambios con OnPush/Signals mixtos.
+		this.motivosOpenByPaymentUid = new Set(this.motivosOpenByPaymentUid);
+	}
+
+	isMotivosAccordionOpen(paymentUid: string): boolean {
+		return this.motivosOpenByPaymentUid.has(paymentUid);
+	}
+
 	/** Tras elegir fecha, abre el input de archivo oculto. */
 	private pendingFileAttach: {
 		kind: 'invoice' | 'receipt';
@@ -349,6 +366,9 @@ export class CommissionCutsPage implements OnInit {
 		summaryCutDate: number;
 		at: number;
 		lateEntry?: LateReasonEntry;
+		/** Solo estos UIDs reciben `lateReasons` en factura/pago (flujo grupal mixto). */
+		invoiceUidsRequiringLateReason?: string[];
+		paymentUidsRequiringLateReason?: string[];
 		s: AdvisorCutSummaryWithState;
 		/** Tarjeta asesora = GROUPED (default). */
 		processingMode: CommissionProcessingMode;
@@ -820,6 +840,33 @@ export class CommissionCutsPage implements OnInit {
 		}
 	}
 
+	/** Desglose tarde respecto al plazo del **corte original** de cada comisión. */
+	private paymentNeedsDesgloseLateReason(pay: CommissionPayment, desgloseSentAt: number): boolean {
+		return isInvoiceLate(desgloseSentAt, getBreakdownDeadline(pay.cutDate));
+	}
+
+	/**
+	 * Motivo en factura: comisión con origen diferida en este resumen, o factura después del plazo desde su desglose.
+	 */
+	private paymentNeedsInvoiceLateReason(s: AdvisorCutSummaryWithState, pay: CommissionPayment, invoiceAt: number): boolean {
+		if (!pay.breakdownSentAt) return false;
+		return (
+			this.paymentShowsDeferredOriginInSummary(pay, s.cutDate) ||
+			isInvoiceLate(invoiceAt, getInvoiceDeadline(pay.breakdownSentAt))
+		);
+	}
+
+	/**
+	 * Motivo en pago: origen diferida en este resumen, o pago después del plazo desde la factura de esa línea.
+	 */
+	private paymentNeedsPaymentLateReason(s: AdvisorCutSummaryWithState, pay: CommissionPayment, paidAt: number): boolean {
+		if (!pay.invoiceSentAt) return false;
+		return (
+			this.paymentShowsDeferredOriginInSummary(pay, s.cutDate) ||
+			isInvoiceLate(paidAt, getPaymentDeadline(pay.invoiceSentAt))
+		);
+	}
+
 	/** Líneas con `deferredToCutDate` = corte del resumen (vista diferida). */
 	private getDeferredPaymentsInSummary(s: AdvisorCutSummaryWithState): CommissionPayment[] {
 		const out: CommissionPayment[] = [];
@@ -843,20 +890,36 @@ export class CommissionCutsPage implements OnInit {
 		lateEntry: LateReasonEntry | undefined,
 		invoiceUrl: string | undefined,
 		mode: CommissionProcessingMode,
+		groupedInvoiceLateUids?: string[],
 	): Promise<'use-legacy' | { invoiceWasLateAny: boolean }> {
 		const deferredPays = this.getDeferredPaymentsInSummary(s);
 		if (deferredPays.length === 0) return 'use-legacy';
 
 		if (mode === 'GROUPED') {
-			const uids = s.payments
-				.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.breakdownSentAt)
-				.map((p) => p.uid);
-			if (uids.length) {
-				await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
-					invoiceSentAt: at,
-					invoiceUrl,
-					lateEntry,
-				});
+			const pending = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.breakdownSentAt);
+			if (!pending.length) return { invoiceWasLateAny: false };
+			if (groupedInvoiceLateUids?.length && lateEntry) {
+				const need = new Set(groupedInvoiceLateUids);
+				const withL = pending.filter((p) => need.has(p.uid)).map((p) => p.uid);
+				const withoutL = pending.filter((p) => !need.has(p.uid)).map((p) => p.uid);
+				if (withL.length) {
+					await this.paymentFirestore.applyInvoiceSentToPaymentUids(withL, {
+						invoiceSentAt: at,
+						invoiceUrl,
+						lateEntry,
+					});
+				}
+				if (withoutL.length) {
+					await this.paymentFirestore.applyInvoiceSentToPaymentUids(withoutL, {
+						invoiceSentAt: at,
+						invoiceUrl,
+					});
+				}
+			} else {
+				await this.paymentFirestore.applyInvoiceSentToPaymentUids(
+					pending.map((p) => p.uid),
+					{ invoiceSentAt: at, invoiceUrl, lateEntry },
+				);
 			}
 			return { invoiceWasLateAny: false };
 		}
@@ -935,20 +998,43 @@ export class CommissionCutsPage implements OnInit {
 		lateEntry: LateReasonEntry | undefined,
 		receiptUrl: string | undefined,
 		mode: CommissionProcessingMode,
+		groupedPaymentLateUids?: string[],
 	): Promise<'use-legacy' | void> {
 		const deferredPays = this.getDeferredPaymentsInSummary(s);
 		if (deferredPays.length === 0) return 'use-legacy';
 
 		if (mode === 'GROUPED') {
-			const uids = s.payments
-				.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt)
-				.map((p) => p.uid);
-			if (uids.length) {
-				await this.paymentFirestore.applyPaidToPaymentUids(uids, {
-					paidAt: at,
-					receiptUrl,
-					lateEntry,
-				});
+			const pending = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt);
+			if (!pending.length) return;
+			if (groupedPaymentLateUids?.length && lateEntry) {
+				const need = new Set(groupedPaymentLateUids);
+				const withL = pending.filter((p) => need.has(p.uid)).map((p) => p.uid);
+				const withoutL = pending.filter((p) => !need.has(p.uid)).map((p) => p.uid);
+				if (withL.length) {
+					await this.paymentFirestore.applyPaidToPaymentUids(withL, {
+						paidAt: at,
+						receiptUrl,
+						lateEntry,
+						paidLate: true,
+					});
+				}
+				if (withoutL.length) {
+					await this.paymentFirestore.applyPaidToPaymentUids(withoutL, {
+						paidAt: at,
+						receiptUrl,
+						paidLate: false,
+					});
+				}
+			} else {
+				await this.paymentFirestore.applyPaidToPaymentUids(
+					pending.map((p) => p.uid),
+					{
+						paidAt: at,
+						receiptUrl,
+						lateEntry,
+						paidLate: !!lateEntry,
+					},
+				);
 			}
 			return;
 		}
@@ -1390,30 +1476,35 @@ export class CommissionCutsPage implements OnInit {
 	 * Pide la fecha del informe; solo si confirma (y motivo si aplica) descarga el PDF y marca BREAKDOWN_SENT.
 	 */
 	async downloadCalculationAndMarkBreakdown(s: AdvisorCutSummaryWithState) {
-		const stateCutDate = this.getStateCutDate(s);
 		const at = await this.promptStepActionDate(
 			'¿En qué fecha se envió el informe de cálculo (desglose) a la asesora?'
 		);
 		if (at === undefined) return;
-		const deadline = getBreakdownDeadline(stateCutDate);
-		const wasLate = at > deadline;
+		const pending = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt);
+		const uidsDesgloseLate = pending.filter((p) => this.paymentNeedsDesgloseLateReason(p, at)).map((p) => p.uid);
+		const lateSet = new Set(uidsDesgloseLate);
+		const uidsDesgloseOnTime = pending.filter((p) => !lateSet.has(p.uid)).map((p) => p.uid);
 		let lateEntry: LateReasonEntry | undefined;
-		if (wasLate) {
+		if (uidsDesgloseLate.length > 0) {
 			const result = await this.openLateReasonModal(
 				'DESGLOSE',
 				s,
-				'Se superó el plazo para el informe de cálculo. Indica el motivo (reemplaza el registrado automáticamente si aplica).'
+				'Una o más comisiones superan el plazo de desglose de su corte original. Indica el motivo (solo aplica a esas líneas).'
 			);
 			if (!result) return;
 			lateEntry = { step: 'DESGLOSE', reason: result.reason, text: result.text };
 		}
 		try {
-			/** GROUPED (tarjeta asesora): todas las líneas pendientes del resumen, sin Case 1/2 ni limpiar diferido. */
-			const pendingUids = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt).map((p) => p.uid);
-			if (pendingUids.length) {
-				await this.paymentFirestore.applyBreakdownSentToPaymentUids(pendingUids, {
+			/** GROUPED (tarjeta asesora): cada línea evalúa plazo según su `cutDate` original. */
+			if (uidsDesgloseLate.length) {
+				await this.paymentFirestore.applyBreakdownSentToPaymentUids(uidsDesgloseLate, {
 					breakdownSentAt: at,
 					lateEntry,
+				});
+			}
+			if (uidsDesgloseOnTime.length) {
+				await this.paymentFirestore.applyBreakdownSentToPaymentUids(uidsDesgloseOnTime, {
+					breakdownSentAt: at,
 				});
 			}
 			this.pdfService.exportAdvisorCutCalculation(s);
@@ -1433,21 +1524,16 @@ export class CommissionCutsPage implements OnInit {
 		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
 		const at = await this.promptStepActionDate('¿En qué fecha la asesora envió su factura?');
 		if (at === undefined) return;
-		const st = this.getAdvisorStateForCut(s.advisorUid, effectiveStateCutDate);
-		const invoiceDeadline = st?.breakdownSentAt
-			? getInvoiceDeadline(st.breakdownSentAt)
-			: getBreakdownDeadline(effectiveStateCutDate);
-		const wouldBeLate = at > invoiceDeadline;
-		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
-		const needsReason = wouldBeLate || isDeferred;
+		const pendingInv = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.breakdownSentAt);
+		const invoiceUidsRequiringLateReason = pendingInv
+			.filter((p) => this.paymentNeedsInvoiceLateReason(s, p, at))
+			.map((p) => p.uid);
 		let lateEntry: LateReasonEntry | undefined;
-		if (needsReason) {
+		if (invoiceUidsRequiringLateReason.length > 0) {
 			const result = await this.openLateReasonModal(
 				'FACTURA',
 				s,
-				isDeferred
-					? 'Hay comisiones diferidas. Indica el motivo antes de seleccionar el archivo.'
-					: 'La fecha supera el plazo de factura. Indica el motivo antes de seleccionar el archivo.'
+				'Hay comisiones diferidas o fuera de plazo de factura. Indica el motivo (solo se guarda en las líneas que lo requieren).'
 			);
 			if (!result) return;
 			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
@@ -1459,6 +1545,9 @@ export class CommissionCutsPage implements OnInit {
 			summaryCutDate: s.cutDate,
 			at,
 			lateEntry,
+			invoiceUidsRequiringLateReason: invoiceUidsRequiringLateReason.length
+				? invoiceUidsRequiringLateReason
+				: undefined,
 			s,
 			processingMode: 'GROUPED',
 		};
@@ -1469,19 +1558,16 @@ export class CommissionCutsPage implements OnInit {
 		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
 		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
 		if (at === undefined) return;
-		const st = this.getAdvisorStateForCut(s.advisorUid, effectiveStateCutDate);
-		const paymentDeadline = st?.invoiceSentAt ? getPaymentDeadline(st.invoiceSentAt) : undefined;
-		const paymentWouldBeLate = !!paymentDeadline && at > paymentDeadline;
-		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
-		const needsReason = paymentWouldBeLate || isDeferred;
+		const pendingPay = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt);
+		const paymentUidsRequiringLateReason = pendingPay
+			.filter((p) => this.paymentNeedsPaymentLateReason(s, p, at))
+			.map((p) => p.uid);
 		let lateEntry: LateReasonEntry | undefined;
-		if (needsReason) {
+		if (paymentUidsRequiringLateReason.length > 0) {
 			const result = await this.openLateReasonModal(
 				'PAGO',
 				s,
-				isDeferred
-					? 'Hay comisiones diferidas. Indica el motivo antes de seleccionar el archivo.'
-					: 'La fecha supera el plazo de pago. Indica el motivo antes de seleccionar el archivo.'
+				'Hay comisiones diferidas o fuera de plazo de pago. Indica el motivo (solo se guarda en las líneas que lo requieren).'
 			);
 			if (!result) return;
 			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
@@ -1493,6 +1579,9 @@ export class CommissionCutsPage implements OnInit {
 			summaryCutDate: s.cutDate,
 			at,
 			lateEntry,
+			paymentUidsRequiringLateReason: paymentUidsRequiringLateReason.length
+				? paymentUidsRequiringLateReason
+				: undefined,
 			s,
 			processingMode: 'GROUPED',
 		};
@@ -1500,77 +1589,95 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	async markInvoiceStatusOnly(s: AdvisorCutSummaryWithState) {
-		const stateCutDate = this.getStateCutDate(s);
 		const at = await this.promptStepActionDate('¿En qué fecha se recibió la factura de la asesora?');
 		if (at === undefined) return;
-		const st = this.getAdvisorStateForCut(s.advisorUid, stateCutDate);
-		const invoiceDeadline = st?.breakdownSentAt
-			? getInvoiceDeadline(st.breakdownSentAt)
-			: getBreakdownDeadline(stateCutDate);
-		const wouldBeLate = at > invoiceDeadline;
-		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
-		const needsReason = wouldBeLate || isDeferred;
+		const pendingInv = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.breakdownSentAt);
+		const invoiceUidsRequiringLateReason = pendingInv
+			.filter((p) => this.paymentNeedsInvoiceLateReason(s, p, at))
+			.map((p) => p.uid);
 		let lateEntry: LateReasonEntry | undefined;
-		if (needsReason) {
+		if (invoiceUidsRequiringLateReason.length > 0) {
 			const result = await this.openLateReasonModal(
 				'FACTURA',
 				s,
-				isDeferred
-					? 'Hay comisiones diferidas. Indica el motivo antes de cambiar estatus.'
-					: 'La fecha supera el plazo de factura. Indica el motivo antes de cambiar estatus.'
+				'Hay comisiones diferidas o fuera de plazo de factura. Indica el motivo (solo aplica donde corresponde).'
 			);
 			if (!result) return;
 			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
 		}
-		const deferredFlow = await this.applyDeferredCaseInvoiceFlow(s, at, lateEntry, undefined, 'GROUPED');
+		const groupedInvoiceLate =
+			invoiceUidsRequiringLateReason.length > 0 ? invoiceUidsRequiringLateReason : undefined;
+		const deferredFlow = await this.applyDeferredCaseInvoiceFlow(
+			s,
+			at,
+			lateEntry,
+			undefined,
+			'GROUPED',
+			groupedInvoiceLate,
+		);
 		if (deferredFlow !== 'use-legacy') {
 			this.refreshCutData(true);
 			return;
 		}
-		const uids = s.payments
-			.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.breakdownSentAt)
-			.map((p) => p.uid);
-		if (uids.length) {
-			await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
+		const need = new Set(invoiceUidsRequiringLateReason);
+		const withL = pendingInv.filter((p) => need.has(p.uid)).map((p) => p.uid);
+		const withoutL = pendingInv.filter((p) => !need.has(p.uid)).map((p) => p.uid);
+		if (withL.length && lateEntry) {
+			await this.paymentFirestore.applyInvoiceSentToPaymentUids(withL, {
 				invoiceSentAt: at,
 				lateEntry,
 			});
+		}
+		if (withoutL.length) {
+			await this.paymentFirestore.applyInvoiceSentToPaymentUids(withoutL, { invoiceSentAt: at });
 		}
 		this.refreshCutData(true);
 	}
 
 	async markPaidStatusOnly(s: AdvisorCutSummaryWithState) {
-		const stateCutDate = this.getStateCutDate(s);
 		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
 		if (at === undefined) return;
-		const st = this.getAdvisorStateForCut(s.advisorUid, stateCutDate);
-		const paymentDeadline = st?.invoiceSentAt ? getPaymentDeadline(st.invoiceSentAt) : undefined;
-		const paymentWouldBeLate = !!paymentDeadline && at > paymentDeadline;
-		const isDeferred = !!(st?.movedToNextCut || st?.originalCutDate);
-		const needsReason = paymentWouldBeLate || isDeferred;
+		const pendingPay = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt);
+		const paymentUidsRequiringLateReason = pendingPay
+			.filter((p) => this.paymentNeedsPaymentLateReason(s, p, at))
+			.map((p) => p.uid);
 		let lateEntry: LateReasonEntry | undefined;
-		if (needsReason) {
+		if (paymentUidsRequiringLateReason.length > 0) {
 			const result = await this.openLateReasonModal(
 				'PAGO',
 				s,
-				isDeferred
-					? 'Hay comisiones diferidas. Indica el motivo antes de cambiar estatus.'
-					: 'La fecha supera el plazo de pago. Indica el motivo antes de cambiar estatus.'
+				'Hay comisiones diferidas o fuera de plazo de pago. Indica el motivo (solo aplica donde corresponde).'
 			);
 			if (!result) return;
 			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
 		}
-		const paidDeferred = await this.applyDeferredCaseMarkPaidFlow(s, at, lateEntry, undefined, 'GROUPED');
+		const groupedPayLate =
+			paymentUidsRequiringLateReason.length > 0 ? paymentUidsRequiringLateReason : undefined;
+		const paidDeferred = await this.applyDeferredCaseMarkPaidFlow(
+			s,
+			at,
+			lateEntry,
+			undefined,
+			'GROUPED',
+			groupedPayLate,
+		);
 		if (paidDeferred !== 'use-legacy') {
 			this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(s.cutDate, s.advisorUid, at);
 			this.refreshCutData(true);
 			return;
 		}
-		const uids = s.payments
-			.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt)
-			.map((p) => p.uid);
-		if (uids.length) {
-			await this.paymentFirestore.applyPaidToPaymentUids(uids, { paidAt: at, lateEntry });
+		const need = new Set(paymentUidsRequiringLateReason);
+		const withL = pendingPay.filter((p) => need.has(p.uid)).map((p) => p.uid);
+		const withoutL = pendingPay.filter((p) => !need.has(p.uid)).map((p) => p.uid);
+		if (withL.length && lateEntry) {
+			await this.paymentFirestore.applyPaidToPaymentUids(withL, {
+				paidAt: at,
+				lateEntry,
+				paidLate: true,
+			});
+		}
+		if (withoutL.length) {
+			await this.paymentFirestore.applyPaidToPaymentUids(withoutL, { paidAt: at, paidLate: false });
 		}
 		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(s.cutDate, s.advisorUid, at);
 		this.refreshCutData(true);
@@ -1596,18 +1703,44 @@ export class CommissionCutsPage implements OnInit {
 				}
 				const procMode = p.processingMode ?? 'GROUPED';
 				const defInv = p.s
-					? await this.applyDeferredCaseInvoiceFlow(p.s, at, lateEntry, invoiceUrl, procMode)
+					? await this.applyDeferredCaseInvoiceFlow(
+							p.s,
+							at,
+							lateEntry,
+							invoiceUrl,
+							procMode,
+							p.invoiceUidsRequiringLateReason,
+						)
 					: 'use-legacy';
 				if (defInv !== 'use-legacy') {
 					this.refreshCutData(true);
 					return;
 				}
-				const uids = p.s
-					? p.s.payments
-							.filter((x) => !x.cancelled && !x.paid && !x.paidAt && x.breakdownSentAt)
-							.map((x) => x.uid)
-					: await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
-				if (uids.length) {
+				const pendingInv = p.s
+					? p.s.payments.filter((x) => !x.cancelled && !x.paid && !x.paidAt && x.breakdownSentAt)
+					: [];
+				const uids =
+					p.s && pendingInv.length
+						? pendingInv.map((x) => x.uid)
+						: await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
+				if (uids.length && p.s && pendingInv.length) {
+					const need = new Set(p.invoiceUidsRequiringLateReason ?? []);
+					const withL = pendingInv.filter((x) => need.has(x.uid)).map((x) => x.uid);
+					const withoutL = pendingInv.filter((x) => !need.has(x.uid)).map((x) => x.uid);
+					if (withL.length && lateEntry) {
+						await this.paymentFirestore.applyInvoiceSentToPaymentUids(withL, {
+							invoiceSentAt: at,
+							invoiceUrl,
+							lateEntry,
+						});
+					}
+					if (withoutL.length) {
+						await this.paymentFirestore.applyInvoiceSentToPaymentUids(withoutL, {
+							invoiceSentAt: at,
+							invoiceUrl,
+						});
+					}
+				} else if (uids.length) {
 					await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
 						invoiceSentAt: at,
 						invoiceUrl,
@@ -1647,20 +1780,53 @@ export class CommissionCutsPage implements OnInit {
 				}
 				const procMode = p.processingMode ?? 'GROUPED';
 				const defPaid = p.s
-					? await this.applyDeferredCaseMarkPaidFlow(p.s, at, lateEntry, receiptUrl, procMode)
+					? await this.applyDeferredCaseMarkPaidFlow(
+							p.s,
+							at,
+							lateEntry,
+							receiptUrl,
+							procMode,
+							p.paymentUidsRequiringLateReason,
+						)
 					: 'use-legacy';
 				if (defPaid !== 'use-legacy') {
 					this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
 					this.refreshCutData(true);
 					return;
 				}
-				const uids = p.s
-					? p.s.payments
-							.filter((x) => !x.cancelled && !x.paid && !x.paidAt && x.invoiceSentAt)
-							.map((x) => x.uid)
-					: await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
-				if (uids.length) {
-					await this.paymentFirestore.applyPaidToPaymentUids(uids, { paidAt: at, receiptUrl, lateEntry });
+				const pendingPay = p.s
+					? p.s.payments.filter((x) => !x.cancelled && !x.paid && !x.paidAt && x.invoiceSentAt)
+					: [];
+				const uids =
+					p.s && pendingPay.length
+						? pendingPay.map((x) => x.uid)
+						: await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
+				if (uids.length && p.s && pendingPay.length) {
+					const need = new Set(p.paymentUidsRequiringLateReason ?? []);
+					const withL = pendingPay.filter((x) => need.has(x.uid)).map((x) => x.uid);
+					const withoutL = pendingPay.filter((x) => !need.has(x.uid)).map((x) => x.uid);
+					if (withL.length && lateEntry) {
+						await this.paymentFirestore.applyPaidToPaymentUids(withL, {
+							paidAt: at,
+							receiptUrl,
+							lateEntry,
+							paidLate: true,
+						});
+					}
+					if (withoutL.length) {
+						await this.paymentFirestore.applyPaidToPaymentUids(withoutL, {
+							paidAt: at,
+							receiptUrl,
+							paidLate: false,
+						});
+					}
+				} else if (uids.length) {
+					await this.paymentFirestore.applyPaidToPaymentUids(uids, {
+						paidAt: at,
+						receiptUrl,
+						lateEntry,
+						paidLate: !!lateEntry,
+					});
 				}
 				this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
 				this.refreshCutData(true);
