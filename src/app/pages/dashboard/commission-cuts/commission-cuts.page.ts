@@ -1554,6 +1554,25 @@ export class CommissionCutsPage implements OnInit {
 		setTimeout(() => fileInput.click(), 0);
 	}
 
+	/**
+	 * Para el dropdown (3 puntitos): subir archivo sin pedir fecha ni motivos.
+	 * Guardamos `invoiceSentAt` con la hora actual para que el flujo pueda avanzar.
+	 */
+	beginInvoiceAttachQuick(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement, stateCutDate?: number) {
+		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
+		const at = Date.now();
+		this.pendingFileAttach = {
+			kind: 'invoice',
+			advisorUid: s.advisorUid,
+			stateCutDate: effectiveStateCutDate,
+			summaryCutDate: s.cutDate,
+			at,
+			s,
+			processingMode: 'GROUPED',
+		};
+		setTimeout(() => fileInput.click(), 0);
+	}
+
 	async beginReceiptAttach(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement, stateCutDate?: number) {
 		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
 		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
@@ -1582,6 +1601,25 @@ export class CommissionCutsPage implements OnInit {
 			paymentUidsRequiringLateReason: paymentUidsRequiringLateReason.length
 				? paymentUidsRequiringLateReason
 				: undefined,
+			s,
+			processingMode: 'GROUPED',
+		};
+		setTimeout(() => fileInput.click(), 0);
+	}
+
+	/**
+	 * Para el dropdown (3 puntitos): subir archivo sin pedir fecha ni motivos.
+	 * Guardamos `receiptSentAt` con la hora actual para que el flujo pueda avanzar.
+	 */
+	beginReceiptAttachQuick(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement, stateCutDate?: number) {
+		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
+		const at = Date.now();
+		this.pendingFileAttach = {
+			kind: 'receipt',
+			advisorUid: s.advisorUid,
+			stateCutDate: effectiveStateCutDate,
+			summaryCutDate: s.cutDate,
+			at,
 			s,
 			processingMode: 'GROUPED',
 		};
@@ -1899,12 +1937,22 @@ export class CommissionCutsPage implements OnInit {
 	) {
 		const options = this.getAdvisorAttachmentActionOptions(s);
 		if (!options.length) return;
-		const buttons: Array<{ text: string; handler: () => void }> = [];
+
+		// Nota: este menú no debe alterar estatus ni fechas, solo ofrecer acciones para adjuntar y/o descargar.
+		const buttons: Array<{ text: string; handler: () => void }> = [
+			{
+				text: 'Descargar cálculo',
+				handler: () => {
+					this.downloadCalculationOnly(s);
+				},
+			},
+		];
+
 		if (options.includes('invoice')) {
 			buttons.push({
 				text: 'Subir Factura',
 				handler: () => {
-					void this.beginInvoiceAttach(s, invoiceInput);
+					this.beginInvoiceAttachQuick(s, invoiceInput);
 				},
 			});
 		}
@@ -1912,7 +1960,7 @@ export class CommissionCutsPage implements OnInit {
 			buttons.push({
 				text: 'Subir Comprobante',
 				handler: () => {
-					void this.beginReceiptAttach(s, receiptInput);
+					this.beginReceiptAttachQuick(s, receiptInput);
 				},
 			});
 		}
@@ -1924,6 +1972,11 @@ export class CommissionCutsPage implements OnInit {
 			],
 		});
 		await sheet.present();
+	}
+
+	/** Solo descarga/re-exporta el PDF del cálculo; no pide fecha ni cambia estatus. */
+	downloadCalculationOnly(s: AdvisorCutSummaryWithState) {
+		this.pdfService.exportAdvisorCutCalculation(s);
 	}
 
 	exportPdfGeneral(summaries?: AdvisorCutSummaryWithState[], cutDateLabel?: string) {
