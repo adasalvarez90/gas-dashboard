@@ -23,6 +23,19 @@ This document describes the **implemented** Firestore and TypeScript shapes for 
 
 ---
 
+# Processing modes: GROUPED vs INDIVIDUAL
+
+| Mode | UI trigger | Code |
+|------|------------|------|
+| **GROUPED** | Botones de tarjeta asesora: desglose, factura (con/sin archivo), pagada; menú `...` de adjuntos | `commission-cuts.page.ts` pasa `'GROUPED'` a `applyDeferredCaseInvoiceFlow` / `applyDeferredCaseMarkPaidFlow`; desglose usa **todas** las líneas pendientes del resumen sin ramas Case 1/2. |
+| **INDIVIDUAL** | *Procesar seleccionadas* (Path 2) | `completeDeferredPath2OnPaymentGroups` + `targetCutDate` / `deferredToCutDate` según fechas; `applyDeferredCase*` con `mode === 'INDIVIDUAL'` conserva el comportamiento histórico (classifier + `clearDeferredToCutDate` + `movePaymentsToNextCut` donde aplique). |
+
+**GROUPED — garantías:** No recalcular corte destino por fechas; no quitar `deferredToCutDate` por fecha “antes del corte diferido”; no `movePaymentsToNextCut` desde acciones de factura tarde a nivel tarjeta. Las fechas siguen escribiendo `breakdownSentAt` / `invoiceSentAt` / `paidAt` y motivos en cada `CommissionPayment`.
+
+**Tipo:** `CommissionProcessingMode` en `src/app/models/commission-processing-mode.model.ts`.
+
+---
+
 # CommissionPayment — workflow fields (authoritative)
 
 Persisted on each `commissionPayments` document (names as in `commission-payment.model.ts`):
@@ -173,7 +186,7 @@ Per advisor card in `commission-cuts.page` (gates use **derived** workflow, incl
 - `PAID`: menu with both (`Subir Factura`, `Subir Comprobante`) for attachment replacement / audit.
 - **`MIXED`** (lines disagree): both upload options (same as practical need for partial progress).
 
-Status transitions are driven by card-level buttons that write to **all pending lines in that summary row** (or deferred Case 1/2 splits as implemented); optional **MIXED** row shows compact **Desglose / Factura / Pagada** actions.
+Status transitions from **card-level** buttons use **GROUPED** mode: escriben en **todas** las líneas pendientes del resumen (incluidas diferidas con `deferredToCutDate ===` corte del card), **sin** splits Case 1/2 ni traslado automático por factura tarde. La fila **MIXED** muestra **Desglose / Factura / Pagada** con la misma semántica **GROUPED**.
 
 ## Path 2: selección de diferidas (`completeDeferredPath2OnPaymentGroups` + `targetCutDate`)
 
@@ -198,7 +211,7 @@ Implementation enforces:
    - **Case 1a** (targetCutDate equals the payment’s origin cutDate): clear `deferredToCutDate`; persist workflow fields on the **payment** row only.  
    - **Case 1b** (`targetCutDate` strictly between original and former deferred): set `deferredToCutDate = targetCutDate` on the **same** payment row; UI must not list the row under later cuts in the old chain.  
    See **“Ejemplos canónicos”** 3 and 4 in `commission-cuts.md`.
-3. **Case 2 (status dates on or after the deferred cut day):** Keep visibility in **original + current deferred** cut; **same** breakdown / invoice / payment fields on the **single** payment document (both cuts are views of that row). Card flows apply updates to the relevant **uids** (possibly grouped by original cut + deferred cut via `applyInvoiceSentToPaymentUids` / `applyPaidToPaymentUids` over the deferred set).
+3. **Case 2 (status dates on or after the deferred cut day):** Keep visibility in **original + current deferred** cut; **same** breakdown / invoice / payment fields on the **single** payment document (both cuts are views of that row). **GROUPED** card flows apply updates to **all** pending **uids** in the advisor summary row (including deferred-in-cut) **without** Case 1/2 splitting; **INDIVIDUAL** (Path 2) uses `targetCutDate` / `deferredToCutDate` rules above.
 4. **`cutDate` on the payment row** remains the **original** cut; do not rewrite origin.
 5. After writes, **`refreshCutData(true)`** → `loadCommissionPaymentsForCuts` refreshes the store (no local advisor-state merge).
 
@@ -215,15 +228,18 @@ Implementation enforces:
 - **When:** `ionViewWillEnter` on **Commission Cuts** runs `CommissionPaymentFirestoreService.reconcileDeferredToCutDates(payments)` (solo lista de pagos del store).
 - **What:** `computeDeferralDisplayIndexFromPayments` → `effectiveByUid` por línea; para cada pago activo no pagado, alinear `deferredToCutDate` en Firestore con el destino efectivo o limpiar con `deleteField` (idempotente, chunks de **400**). Si hubo cambios, `loadCommissionPaymentsForCuts`.
 
-## 3. Case 2 — deferred summary (sin mirror en advisor state)
+## 3. GROUPED — resumen con diferidas (`deferredToCutDate ===` corte del card)
 
-- Acciones desde resumen con `deferredToCutDate ===` corte del resumen actualizan los **`uid`** correspondientes (`applyBreakdownSentToPaymentUids`, `applyInvoiceSentToPaymentUids`, `applyPaidToPaymentUids`, etc.) según Case 1 vs 2 (`classifyDeferralPaymentCase`). Factura tarde: `movePaymentsToNextCut` + `mergeLateReasonToPaymentUids` (sin `moveStateToNextCut`).
+- Desglose: `downloadCalculationAndMarkBreakdown` → `applyBreakdownSentToPaymentUids` sobre **todos** los `uid` pendientes del resumen (no classifier).
+- Factura / pago (y adjuntos): `applyDeferredCaseInvoiceFlow` / `applyDeferredCaseMarkPaidFlow` con `mode: 'GROUPED'` → aplican a líneas con prerequisito (desglose / factura) **sin** `clearDeferredToCutDateForPaymentUids` y **sin** `movePaymentsToNextCut` por factura tarde en ese flujo.
 
-## 4. Case 1 vs Case 2 (user dates vs deferred cut)
+## 4. INDIVIDUAL — Case 1 vs Case 2 (fechas vs corte diferido)
 
-- **Classifier:** `classifyDeferralPaymentCase(deferredCutDate, actionTimestamps)` in `commission-cut-deadlines.util.ts` — compares **Mexico calendar date keys** (`YYYY-MM-DD`): strictly **before** the deferred cut’s day → **BEFORE** (Case 1); same day or later → **ON_OR_AFTER** (Case 2).
-- **Case 1:** `clearDeferredToCutDateForPaymentUids` cuando aplica; escrituras solo en filas `CommissionPayment` de los orígenes afectados.
-- **Case 2:** mantener puntero; mismos campos de flujo en la **misma** fila (vistas dobles origen + diferido).
+- Aplica a **Path 2** (`completeDeferredPath2OnPaymentGroups`) y a `applyDeferredCase*` cuando `mode === 'INDIVIDUAL'` (p. ej. futuras herramientas o llamadas explícitas).
+- **Classifier:** `classifyDeferralPaymentCase(deferredCutDate, actionTimestamps)` — comparación por **día calendario México** (`YYYY-MM-DD`): estrictamente **antes** del día del corte diferido → **BEFORE** (Case 1); mismo día o después → **ON_OR_AFTER** (Case 2).
+- **Case 1:** `clearDeferredToCutDateForPaymentUids` cuando aplica; escrituras en orígenes según implementación previa.
+- **Case 2:** mantener puntero; mismos campos en la **misma** fila.
+- Factura tarde en flujo **INDIVIDUAL** con diferidas: `movePaymentsToNextCut` + `mergeLateReasonToPaymentUids` en `applyDeferredCaseInvoiceFlow` como antes.
 
 ## 5. Batches & failures
 

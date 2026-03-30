@@ -118,7 +118,7 @@
 										[class.summary-card--border-danger]="getSummaryCardBorderSeverity(s) === 'danger'"
 										[class.summary-card--border-warning]="getSummaryCardBorderSeverity(s) === 'warning'"
 										[class.summary-card--border-success]="getSummaryCardBorderSeverity(s) === 'success'"
-										[class.summary-card--paid-late]="summaryHasAnyPaidLateStrip(s)"
+										[class.summary-card--paid-late]="summaryHasOrangePaidAccent(s)"
 									>
 										<div
 											class="summary-card-header"
@@ -327,17 +327,20 @@
 																		{{ c.pendingAmount === 0 ? 'Liquidado' : 'Activo' }}
 																	</ion-badge>
 																</ion-item>
-																@for (pay of c.payments; track pay.uid) {
+																@for (pay of c.payments; track pay.uid; let isLastPay = $last) {
 																	<ion-item
-																		[lines]="c.payments.length > 1 && c.payments.indexOf(pay) !== c.payments.length - 1 ? 'inset' : 'none'"
+																		lines="none"
 																		class="contract-payment-item"
+																		[class.contract-payment-item--sep-after]="!isLastPay"
 																		[class.is-paid-row]="!!pay.paidAt || pay.paid"
 																		[class.payment-strip--overdue]="getPaymentStripStatus(s, pay) === 'overdue'"
 																		[class.payment-strip--pending]="getPaymentStripStatus(s, pay) === 'pending'"
+																		[class.payment-strip--deferred-pending]="getPaymentStripStatus(s, pay) === 'deferredPending'"
 																		[class.payment-strip--paid]="getPaymentStripStatus(s, pay) === 'paid'"
 																		[class.payment-strip--paid-late]="getPaymentStripStatus(s, pay) === 'paidLate'"
+																		[class.payment-strip--paid-deferred]="getPaymentStripStatus(s, pay) === 'paidDeferred'"
 																	>
-																		@if (pay.deferredToCutDate === s.cutDate && !pay.paidAt && !pay.paid) {
+																		@if (showDeferredPath2Checkbox(s, pay)) {
 																			<ion-checkbox slot="start" [checked]="isDeferredSelected(pay)" (ionChange)="toggleDeferredSelection(pay, s)"></ion-checkbox>
 																		}
 																		<ion-label class="ion-text-wrap payment-inline-label">

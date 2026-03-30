@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { AlertController } from '@ionic/angular';
+import { AlertController, LoadingController, ToastController } from '@ionic/angular';
 // Facades
 import { AuthFacade } from 'src/app/store/auth/auth.facade';
 import { UserFacade } from 'src/app/store/user/user.facade';
+import { DevTestDataWipeService } from 'src/app/services/dev-test-data-wipe.service';
 
 @Component({
 	selector: 'app-dashboard',
@@ -40,6 +41,9 @@ export class DashboardPage implements OnInit {
 		private authFacade: AuthFacade,
 		private userFacade: UserFacade,
 		private alertCtrl: AlertController,
+		private loadingCtrl: LoadingController,
+		private toastCtrl: ToastController,
+		private devTestDataWipe: DevTestDataWipeService,
 	) { }
 
 	ngOnInit() { }
@@ -70,5 +74,57 @@ export class DashboardPage implements OnInit {
 				],
 			})
 			.then((alert) => alert.present());
+	}
+
+	confirmWipeTestData() {
+		this.alertCtrl
+			.create({
+				header: 'Borrar datos',
+				message:
+					'Se eliminarán permanentemente todos los documentos en Firestore de: contratos, depósitos, tranches, pagos de comisión y estados de corte por asesor (commissionCutAdvisorStates). Esta acción no se puede deshacer. ¿Continuar?',
+				buttons: [
+					{ text: 'Cancelar', role: 'cancel' },
+					{
+						text: 'Borrar',
+						role: 'destructive',
+						handler: () => {
+							void this.runWipeTestData();
+						},
+					},
+				],
+			})
+			.then((a) => a.present());
+	}
+
+	private async runWipeTestData() {
+		const loading = await this.loadingCtrl.create({
+			message: 'Borrando datos…',
+			spinner: 'crescent',
+		});
+		await loading.present();
+		try {
+			const summary =
+				await this.devTestDataWipe.wipeContractsDepositsTranchesCommissionPayments();
+			const detail = summary.map((s) => `${s.name} ${s.deleted}`).join(' · ');
+			const toast = await this.toastCtrl.create({
+				message: `Listo. Documentos borrados: ${detail}. Recarga si aún ves datos viejos.`,
+				duration: 6000,
+				position: 'bottom',
+				color: 'success',
+			});
+			await toast.present();
+		} catch (e) {
+			const msg =
+				e instanceof Error ? e.message : 'No se pudieron borrar los datos.';
+			const toast = await this.toastCtrl.create({
+				message: msg,
+				duration: 5000,
+				position: 'bottom',
+				color: 'danger',
+			});
+			await toast.present();
+		} finally {
+			await loading.dismiss();
+		}
 	}
 }

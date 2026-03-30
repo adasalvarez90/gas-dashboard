@@ -40,6 +40,7 @@ import {
 	isPaymentOverdue,
 	paymentFlowHasAnyLateStep,
 	paymentTrasladadaChipLabel as computePaymentTrasladadaChipLabel,
+	normalizeDeferredToCutStored,
 	sameCanonicalCutDate,
 } from 'src/app/domain/commission-cut/commission-cut-deadlines.util';
 import {
@@ -54,6 +55,7 @@ import {
 	toMexicoDateInputValue,
 } from 'src/app/domain/time/mexico-time.util';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
+import type { CommissionProcessingMode } from 'src/app/models/commission-processing-mode.model';
 import { ActionSheetController, AlertController, LoadingController, ModalController, ToastController } from '@ionic/angular';
 
 export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
@@ -215,6 +217,10 @@ export class CommissionCutsPage implements OnInit {
 				addToBucket(p, p.cutDate);
 				const eff = effectiveByUid.get(p.uid) ?? null;
 				if (eff != null && eff <= horizon) addToBucket(p, eff);
+				if (p.paid || p.paidAt) {
+					const def = normalizeDeferredToCutStored(p);
+					if (def != null && def <= horizon) addToBucket(p, def);
+				}
 			}
 
 			const result = Array.from(byCutAdvisor.values());
@@ -344,6 +350,8 @@ export class CommissionCutsPage implements OnInit {
 		at: number;
 		lateEntry?: LateReasonEntry;
 		s: AdvisorCutSummaryWithState;
+		/** Tarjeta asesora = GROUPED (default). */
+		processingMode: CommissionProcessingMode;
 	} | null = null;
 
 	constructor(
@@ -550,7 +558,15 @@ export class CommissionCutsPage implements OnInit {
 	 * Esta fila es el **segundo** corte (arrastre desde el original). Solo entonces se muestra “Corte orig.”.
 	 */
 	paymentRolledIntoSummaryCut(pay: CommissionPayment, summaryCutDate: number): boolean {
-		if (pay.cancelled || pay.paid || pay.paidAt) return false;
+		if (pay.cancelled) return false;
+		if (pay.paid || pay.paidAt) {
+			const def = normalizeDeferredToCutStored(pay);
+			return (
+				def != null &&
+				sameCanonicalCutDate(def, summaryCutDate) &&
+				summaryCutDate > pay.cutDate
+			);
+		}
 		if (summaryCutDate <= pay.cutDate) return false;
 		const second = this.effectiveDeferredCut(pay);
 		return second != null && summaryCutDate === second;
@@ -570,6 +586,27 @@ export class CommissionCutsPage implements OnInit {
 		return s.payments.filter(
 			(p) => p.deferredToCutDate === s.cutDate && !p.paid && !p.paidAt && !p.cancelled
 		);
+	}
+
+	/**
+	 * Path 2 (checkbox): solo mientras ninguna diferida impaga de este corte tiene ya desglose
+	 * (flujo grupal — ej. “descargar cálculo” a nivel asesora).
+	 */
+	showDeferredPath2Checkbox(s: AdvisorCutSummaryWithState, pay: CommissionPayment): boolean {
+		if (pay.cancelled || pay.paid || pay.paidAt) return false;
+		if (pay.deferredToCutDate == null || !sameCanonicalCutDate(pay.deferredToCutDate, s.cutDate)) {
+			return false;
+		}
+		const groupedStarted = s.payments.some(
+			(p) =>
+				!p.cancelled &&
+				p.deferredToCutDate != null &&
+				sameCanonicalCutDate(p.deferredToCutDate, s.cutDate) &&
+				!p.paid &&
+				!p.paidAt &&
+				!!p.breakdownSentAt,
+		);
+		return !groupedStarted;
 	}
 
 	/** Selecciones que pertenecen a este resumen. */
@@ -796,16 +833,33 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	/**
-	 * Factura: Caso 1/2 vs corte diferido. Sin diferidas en el resumen → `'use-legacy'`.
+	 * Factura con diferidas en el resumen. Sin diferidas → `'use-legacy'`.
+	 * - **GROUPED:** todas las líneas con desglose en la tarjeta; no limpiar diferido ni `movePaymentsToNextCut`.
+	 * - **INDIVIDUAL:** Caso 1/2 (`classifyDeferralPaymentCase`) + traslados por factura tarde.
 	 */
 	private async applyDeferredCaseInvoiceFlow(
 		s: AdvisorCutSummaryWithState,
 		at: number,
 		lateEntry: LateReasonEntry | undefined,
 		invoiceUrl: string | undefined,
+		mode: CommissionProcessingMode,
 	): Promise<'use-legacy' | { invoiceWasLateAny: boolean }> {
 		const deferredPays = this.getDeferredPaymentsInSummary(s);
 		if (deferredPays.length === 0) return 'use-legacy';
+
+		if (mode === 'GROUPED') {
+			const uids = s.payments
+				.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.breakdownSentAt)
+				.map((p) => p.uid);
+			if (uids.length) {
+				await this.paymentFirestore.applyInvoiceSentToPaymentUids(uids, {
+					invoiceSentAt: at,
+					invoiceUrl,
+					lateEntry,
+				});
+			}
+			return { invoiceWasLateAny: false };
+		}
 
 		const defCut = s.cutDate;
 		const caseKind = classifyDeferralPaymentCase(defCut, [at]) ?? 'ON_OR_AFTER_DEFERRED_CUT';
@@ -874,15 +928,30 @@ export class CommissionCutsPage implements OnInit {
 		return { invoiceWasLateAny };
 	}
 
-	/** Pago: Caso 1/2 vs corte diferido. */
+	/** Pago con diferidas en el resumen. Sin diferidas → `'use-legacy'`. */
 	private async applyDeferredCaseMarkPaidFlow(
 		s: AdvisorCutSummaryWithState,
 		at: number,
 		lateEntry: LateReasonEntry | undefined,
 		receiptUrl: string | undefined,
+		mode: CommissionProcessingMode,
 	): Promise<'use-legacy' | void> {
 		const deferredPays = this.getDeferredPaymentsInSummary(s);
 		if (deferredPays.length === 0) return 'use-legacy';
+
+		if (mode === 'GROUPED') {
+			const uids = s.payments
+				.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt)
+				.map((p) => p.uid);
+			if (uids.length) {
+				await this.paymentFirestore.applyPaidToPaymentUids(uids, {
+					paidAt: at,
+					receiptUrl,
+					lateEntry,
+				});
+			}
+			return;
+		}
 
 		const defCut = s.cutDate;
 		const caseKind = classifyDeferralPaymentCase(defCut, [at]) ?? 'ON_OR_AFTER_DEFERRED_CUT';
@@ -955,6 +1024,7 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	/** Al menos una comisión pagada con franja “tarde” (cualquier paso fuera de plazo), o flag legacy en estado. */
+	/** Solo retraso real en el flujo (pestaña “Pagadas con retraso”). */
 	summaryHasAnyPaidLateStrip(s: AdvisorCutSummaryWithState): boolean {
 		if (s.state?.paidLate) return true;
 		for (const c of s.contractBreakdown) {
@@ -966,16 +1036,96 @@ export class CommissionCutsPage implements OnInit {
 		return false;
 	}
 
-	/** Misma idea que `summaryHasAnyPaidLateStrip`, solo pagos de un contrato (borde del bloque comisión). */
+	/** Acento naranja (fondo/borde “pagada tarde / diferida”). */
+	private static stripeIsOrangeForAccent(
+		strip: ReturnType<CommissionCutsPage['getPaymentStripStatus']>,
+	): boolean {
+		return strip === 'paidLate' || strip === 'paidDeferred';
+	}
+
+	/**
+	 * Si **todo** el resumen está liquidado: el acento sigue primero las filas **Regular**;
+	 * si no hay regulares, las **Diferidas**. Si aún hay pendientes, comportamiento previo.
+	 */
+	summaryHasOrangePaidAccent(s: AdvisorCutSummaryWithState): boolean {
+		const pays = this.nonCancelledPaymentsForSummary(s);
+		if (pays.length === 0) return false;
+
+		if (s.pendingAmount === 0) {
+			const regular = pays.filter((p) => !this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			const deferred = pays.filter((p) => this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			const scope = regular.length > 0 ? regular : deferred;
+			return scope.some(
+				(p) =>
+					(p.paid || p.paidAt) &&
+					CommissionCutsPage.stripeIsOrangeForAccent(this.getPaymentStripStatus(s, p)),
+			);
+		}
+
+		if (s.state?.paidLate) return true;
+		for (const p of pays) {
+			if (!p.paid && !p.paidAt) continue;
+			if (CommissionCutsPage.stripeIsOrangeForAccent(this.getPaymentStripStatus(s, p))) return true;
+		}
+		return false;
+	}
+
+	/** Naranja en borde interno del contrato (misma prioridad regular → diferida si ya está todo pagado). */
 	contractGroupHasAnyPaidLateStrip(
 		s: AdvisorCutSummaryWithState,
 		c: AdvisorCutSummaryWithState['contractBreakdown'][0],
 	): boolean {
-		for (const p of c.payments) {
-			if (p.cancelled || (!p.paid && !p.paidAt)) continue;
-			if (this.getPaymentStripStatus(s, p) === 'paidLate') return true;
+		const pays = c.payments.filter((p) => !p.cancelled);
+		if (pays.length === 0) return false;
+
+		if (c.pendingAmount === 0) {
+			const regular = pays.filter((p) => !this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			const deferred = pays.filter((p) => this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			const scope = regular.length > 0 ? regular : deferred;
+			return scope.some(
+				(p) =>
+					(p.paid || p.paidAt) &&
+					CommissionCutsPage.stripeIsOrangeForAccent(this.getPaymentStripStatus(s, p)),
+			);
+		}
+
+		for (const p of pays) {
+			if (!p.paid && !p.paidAt) continue;
+			if (CommissionCutsPage.stripeIsOrangeForAccent(this.getPaymentStripStatus(s, p))) return true;
 		}
 		return false;
+	}
+
+	private nonCancelledPaymentsForSummary(s: AdvisorCutSummaryWithState): CommissionPayment[] {
+		const out: CommissionPayment[] = [];
+		for (const c of s.contractBreakdown) {
+			for (const p of c.payments) {
+				if (!p.cancelled) out.push(p);
+			}
+		}
+		return out;
+	}
+
+	private severityFromPaymentStrips(
+		s: AdvisorCutSummaryWithState,
+		pays: CommissionPayment[],
+	): 'danger' | 'warning' | 'success' | 'neutral' {
+		if (pays.length === 0) return 'neutral';
+		let anyOverdue = false;
+		let anyPendingUnpaid = false;
+		let anyPaidLate = false;
+		let anyPaidOnTime = false;
+		for (const pay of pays) {
+			const strip = this.getPaymentStripStatus(s, pay);
+			if (strip === 'overdue') anyOverdue = true;
+			else if (strip === 'pending' || strip === 'deferredPending') anyPendingUnpaid = true;
+			else if (strip === 'paidLate' || strip === 'paidDeferred') anyPaidLate = true;
+			else anyPaidOnTime = true;
+		}
+		if (anyOverdue) return 'danger';
+		if (anyPendingUnpaid || anyPaidLate) return 'warning';
+		if (anyPaidOnTime && !anyPendingUnpaid) return 'success';
+		return 'neutral';
 	}
 
 	/** Estado agregado en el corte original de la asesora (varias líneas → mismo modelo que la tarjeta). */
@@ -1058,14 +1208,22 @@ export class CommissionCutsPage implements OnInit {
 
 	/**
 	 * Franja por comisión: pagada a tiempo = verde; pagada con algún paso tarde = naranja;
-	 * pendiente en plazo = amarillo; atraso activo = rojo.
+	 * pendiente en plazo = amarillo; diferida en el corte de trabajo (impaga) = naranja;
+	 * comisión diferida ya pagada en este corte = naranja; atraso activo = rojo.
 	 */
 	getPaymentStripStatus(
 		s: AdvisorCutSummaryWithState,
 		pay: CommissionPayment
-	): 'paid' | 'paidLate' | 'overdue' | 'pending' {
+	):
+		| 'paid'
+		| 'paidLate'
+		| 'paidDeferred'
+		| 'overdue'
+		| 'pending'
+		| 'deferredPending' {
 		if (pay.cancelled) return 'pending';
 		if (pay.paid || pay.paidAt) {
+			if (this.paymentShowsDeferredOriginInSummary(pay, s.cutDate)) return 'paidDeferred';
 			const flowSt = this.getFlowStateForPayment(s, pay);
 			return paymentFlowHasAnyLateStep(pay.cutDate, flowSt) ? 'paidLate' : 'paid';
 		}
@@ -1082,52 +1240,42 @@ export class CommissionCutsPage implements OnInit {
 			!!invoiceDeadline &&
 			isInvoiceOverdue(undefined, invoiceDeadline);
 		if (invOverdue || payOverdue || hasLate || desgloseOverdueSinEnviar) return 'overdue';
+		const def = normalizeDeferredToCutStored(pay);
+		if (def != null && sameCanonicalCutDate(def, s.cutDate)) return 'deferredPending';
 		return 'pending';
 	}
 
-	/** Borde de tarjeta asesora: rojo > amarillo/naranja > verde (según peor comisión). */
+	/**
+	 * Borde tarjeta asesora: rojo > amarillo/naranja > verde.
+	 * Si **todo** está liquidado (`pendingAmount === 0`), la severidad sale solo de filas **Regular**;
+	 * si no hay regulares en el resumen, de las **Diferidas**. Con pendientes, cuentan todas.
+	 */
 	getSummaryCardBorderSeverity(s: AdvisorCutSummaryWithState): 'danger' | 'warning' | 'success' | 'neutral' {
-		let anyOverdue = false;
-		let anyPendingUnpaid = false;
-		let anyPaidLate = false;
-		let anyPaidOnTime = false;
-		for (const c of s.contractBreakdown) {
-			for (const pay of c.payments) {
-				if (pay.cancelled) continue;
-				const strip = this.getPaymentStripStatus(s, pay);
-				if (strip === 'overdue') anyOverdue = true;
-				else if (strip === 'pending') anyPendingUnpaid = true;
-				else if (strip === 'paidLate') anyPaidLate = true;
-				else anyPaidOnTime = true;
-			}
+		const pays = this.nonCancelledPaymentsForSummary(s);
+		if (pays.length === 0) return 'neutral';
+		if (s.pendingAmount === 0) {
+			const regular = pays.filter((p) => !this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			const deferred = pays.filter((p) => this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			if (regular.length > 0) return this.severityFromPaymentStrips(s, regular);
+			return this.severityFromPaymentStrips(s, deferred);
 		}
-		if (anyOverdue) return 'danger';
-		if (anyPendingUnpaid || anyPaidLate) return 'warning';
-		if (anyPaidOnTime && !anyPendingUnpaid) return 'success';
-		return 'neutral';
+		return this.severityFromPaymentStrips(s, pays);
 	}
 
-	/** Borde del bloque contrato (misma prioridad, solo pagos de ese contrato). */
+	/** Borde bloque contrato: misma regla con `c.pendingAmount === 0` y pagos de ese contrato. */
 	getContractGroupBorderSeverity(
 		s: AdvisorCutSummaryWithState,
 		c: AdvisorCutSummaryWithState['contractBreakdown'][0]
 	): 'danger' | 'warning' | 'success' | 'neutral' {
-		let anyOverdue = false;
-		let anyPendingUnpaid = false;
-		let anyPaidLate = false;
-		let anyPaidOnTime = false;
-		for (const pay of c.payments) {
-			if (pay.cancelled) continue;
-			const strip = this.getPaymentStripStatus(s, pay);
-			if (strip === 'overdue') anyOverdue = true;
-			else if (strip === 'pending') anyPendingUnpaid = true;
-			else if (strip === 'paidLate') anyPaidLate = true;
-			else anyPaidOnTime = true;
+		const pays = c.payments.filter((p) => !p.cancelled);
+		if (pays.length === 0) return 'neutral';
+		if (c.pendingAmount === 0) {
+			const regular = pays.filter((p) => !this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			const deferred = pays.filter((p) => this.paymentShowsDeferredOriginInSummary(p, s.cutDate));
+			if (regular.length > 0) return this.severityFromPaymentStrips(s, regular);
+			return this.severityFromPaymentStrips(s, deferred);
 		}
-		if (anyOverdue) return 'danger';
-		if (anyPendingUnpaid || anyPaidLate) return 'warning';
-		if (anyPaidOnTime && !anyPendingUnpaid) return 'success';
-		return 'neutral';
+		return this.severityFromPaymentStrips(s, pays);
 	}
 
 	/** Motivos de atraso como string unido por comas (resumen; legacy). */
@@ -1260,36 +1408,13 @@ export class CommissionCutsPage implements OnInit {
 			lateEntry = { step: 'DESGLOSE', reason: result.reason, text: result.text };
 		}
 		try {
+			/** GROUPED (tarjeta asesora): todas las líneas pendientes del resumen, sin Case 1/2 ni limpiar diferido. */
 			const pendingUids = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt).map((p) => p.uid);
-			const deferredPays = this.getDeferredPaymentsInSummary(s);
-			if (deferredPays.length === 0) {
-				if (pendingUids.length) {
-					await this.paymentFirestore.applyBreakdownSentToPaymentUids(pendingUids, {
-						breakdownSentAt: at,
-						lateEntry,
-					});
-				}
-			} else {
-				const defCut = s.cutDate;
-				const caseKind = classifyDeferralPaymentCase(defCut, [at]) ?? 'ON_OR_AFTER_DEFERRED_CUT';
-				const originals = [...new Set(deferredPays.map((p) => p.cutDate))];
-				if (caseKind === 'BEFORE_DEFERRED_CUT') {
-					await this.paymentFirestore.clearDeferredToCutDateForPaymentUids(deferredPays.map((p) => p.uid));
-					for (const orig of originals) {
-						const uids = deferredPays.filter((p) => p.cutDate === orig).map((p) => p.uid);
-						if (uids.length) {
-							await this.paymentFirestore.applyBreakdownSentToPaymentUids(uids, {
-								breakdownSentAt: at,
-								lateEntry,
-							});
-						}
-					}
-				} else if (pendingUids.length) {
-					await this.paymentFirestore.applyBreakdownSentToPaymentUids(pendingUids, {
-						breakdownSentAt: at,
-						lateEntry,
-					});
-				}
+			if (pendingUids.length) {
+				await this.paymentFirestore.applyBreakdownSentToPaymentUids(pendingUids, {
+					breakdownSentAt: at,
+					lateEntry,
+				});
 			}
 			this.pdfService.exportAdvisorCutCalculation(s);
 			this.refreshCutData(true);
@@ -1335,6 +1460,7 @@ export class CommissionCutsPage implements OnInit {
 			at,
 			lateEntry,
 			s,
+			processingMode: 'GROUPED',
 		};
 		setTimeout(() => fileInput.click(), 0);
 	}
@@ -1368,6 +1494,7 @@ export class CommissionCutsPage implements OnInit {
 			at,
 			lateEntry,
 			s,
+			processingMode: 'GROUPED',
 		};
 		setTimeout(() => fileInput.click(), 0);
 	}
@@ -1395,7 +1522,7 @@ export class CommissionCutsPage implements OnInit {
 			if (!result) return;
 			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
 		}
-		const deferredFlow = await this.applyDeferredCaseInvoiceFlow(s, at, lateEntry, undefined);
+		const deferredFlow = await this.applyDeferredCaseInvoiceFlow(s, at, lateEntry, undefined, 'GROUPED');
 		if (deferredFlow !== 'use-legacy') {
 			this.refreshCutData(true);
 			return;
@@ -1408,24 +1535,6 @@ export class CommissionCutsPage implements OnInit {
 				invoiceSentAt: at,
 				lateEntry,
 			});
-		}
-		const sample = s.payments.find((p) => uids.includes(p.uid)) ?? s.payments[0];
-		const syn = sample ? commissionPaymentToSyntheticAdvisorState(sample) : null;
-		const invoiceDeadlineForCheck = syn?.breakdownSentAt
-			? getInvoiceDeadline(syn.breakdownSentAt)
-			: getBreakdownDeadline(stateCutDate);
-		const invoiceWasLate = isInvoiceLate(at, invoiceDeadlineForCheck);
-		if (invoiceWasLate) {
-			const uidsAtCut = await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, s.advisorUid, true);
-			const nextCutDate = getNextCutDate(stateCutDate);
-			await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, s.advisorUid, nextCutDate);
-			if (!lateEntry && uidsAtCut.length) {
-				await this.paymentFirestore.mergeLateReasonToPaymentUids(uidsAtCut, {
-					step: 'FACTURA',
-					reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
-					at: Date.now(),
-				});
-			}
 		}
 		this.refreshCutData(true);
 	}
@@ -1451,7 +1560,7 @@ export class CommissionCutsPage implements OnInit {
 			if (!result) return;
 			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
 		}
-		const paidDeferred = await this.applyDeferredCaseMarkPaidFlow(s, at, lateEntry, undefined);
+		const paidDeferred = await this.applyDeferredCaseMarkPaidFlow(s, at, lateEntry, undefined, 'GROUPED');
 		if (paidDeferred !== 'use-legacy') {
 			this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(s.cutDate, s.advisorUid, at);
 			this.refreshCutData(true);
@@ -1485,7 +1594,10 @@ export class CommissionCutsPage implements OnInit {
 					this.refreshCutData(true);
 					return;
 				}
-				const defInv = p.s ? await this.applyDeferredCaseInvoiceFlow(p.s, at, lateEntry, invoiceUrl) : 'use-legacy';
+				const procMode = p.processingMode ?? 'GROUPED';
+				const defInv = p.s
+					? await this.applyDeferredCaseInvoiceFlow(p.s, at, lateEntry, invoiceUrl, procMode)
+					: 'use-legacy';
 				if (defInv !== 'use-legacy') {
 					this.refreshCutData(true);
 					return;
@@ -1501,24 +1613,6 @@ export class CommissionCutsPage implements OnInit {
 						invoiceUrl,
 						lateEntry,
 					});
-				}
-				const sample = p.s?.payments.find((x) => uids.includes(x.uid));
-				const syn = sample ? commissionPaymentToSyntheticAdvisorState(sample) : null;
-				const invoiceDeadlineForCheck = syn?.breakdownSentAt
-					? getInvoiceDeadline(syn.breakdownSentAt)
-					: getBreakdownDeadline(stateCutDate);
-				const invoiceWasLate = isInvoiceLate(at, invoiceDeadlineForCheck);
-				if (invoiceWasLate) {
-					const uidsAtCut = await this.paymentFirestore.getPaymentUidsForCutAndAdvisor(stateCutDate, advisorUid, true);
-					const nextCutDate = getNextCutDate(stateCutDate);
-					await this.paymentFirestore.movePaymentsToNextCut(stateCutDate, advisorUid, nextCutDate);
-					if (!lateEntry && uidsAtCut.length) {
-						await this.paymentFirestore.mergeLateReasonToPaymentUids(uidsAtCut, {
-							step: 'FACTURA',
-							reason: 'FACTURA_NO_RECIBIDA_A_TIEMPO',
-							at: Date.now(),
-						});
-					}
 				}
 				this.refreshCutData(true);
 			});
@@ -1551,7 +1645,10 @@ export class CommissionCutsPage implements OnInit {
 					this.refreshCutData(true);
 					return;
 				}
-				const defPaid = p.s ? await this.applyDeferredCaseMarkPaidFlow(p.s, at, lateEntry, receiptUrl) : 'use-legacy';
+				const procMode = p.processingMode ?? 'GROUPED';
+				const defPaid = p.s
+					? await this.applyDeferredCaseMarkPaidFlow(p.s, at, lateEntry, receiptUrl, procMode)
+					: 'use-legacy';
 				if (defPaid !== 'use-legacy') {
 					this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
 					this.refreshCutData(true);

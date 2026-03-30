@@ -394,18 +394,29 @@ Commissions that were **paid late** retain the orange indicator after payment (a
 
 The normal flow is: **Download breakdown** → **Attach invoice** → **Attach payment receipt**. This flow covers all commissions in the cut.
 
-When there are **diferida** commissions in the cut, the system must support two exception paths:
+When there are **diferida** commissions in the cut, the system must support two exception paths.
 
-## Path 1: Normal flow including all deferred
+## Processing modes: GROUPED vs INDIVIDUAL
 
-- User follows the flow (download breakdown, invoice, receipt) for a **defined set of lines** — in the hybrid model, that set must be **explicit** (e.g. “all pending in this advisor card” with confirmation, or pre-selected checkboxes). **Do not** mutate lines the user did not include in that set.
+| Mode | Trigger (Commission Cuts UI) | Semantics |
+|------|------------------------------|-----------|
+| **GROUPED** | Advisor-level buttons: *Descargar cálculo* / *Desglose*, *Factura recibida*, *Pagada*, and the same flows via `...` uploads | One operational pass over **all pending lines** on that advisor card for the current cut row — **including** commissions with `deferredToCutDate ===` this cut. Mirrors “one invoice / one payment” for the bucket the user is working. |
+| **INDIVIDUAL** | *Procesar … seleccionada(s)* (Path 2 modal) | Historical correction: dates may imply **`targetCutDate`**, **`deferredToCutDate`** updates or removal — Case 1 / 2 rules and `completeDeferredPath2OnPaymentGroups`. |
+
+**Critical rule:** Processing behavior depends on **action source**, not on dates alone. In **GROUPED** mode the app **must not**: (1) use `classifyDeferralPaymentCase` to **clear** `deferredToCutDate` or split breakdown/invoice/paid by original cut only because the user picked a date before the deferred cut day; (2) run advisor-level **invoice-late** auto `movePaymentsToNextCut` (that was individual-style reconstruction). Timestamps and `lateReasons` still apply per line.
+
+**TypeScript:** `CommissionProcessingMode` in `src/app/models/commission-processing-mode.model.ts` (`'GROUPED' | 'INDIVIDUAL'`). Advisor flows pass `'GROUPED'`; Path 2 remains the **INDIVIDUAL** implementation path.
+
+## Path 1: GROUPED — normal flow including all deferred
+
+- User follows the flow (download breakdown, invoice, receipt) for **all pending lines** on the advisor card for this cut (**GROUPED**). **Do not** mutate lines outside that summary row’s pending set without a different explicit action.
 - Because there are deferred commissions in the set, the system **asks for a reason** before proceeding:
   - **Motivo** (required): Why these deferred commissions are being paid in this cut.
   - **Texto** (optional): Additional explanation.
 - That reason is recorded on **each** commission in the set (or per line as required for audit).
 - Flow continues: attach invoice → attach receipt. **One** invoice file may cover **multiple** lines in the set; each line must **link** to it. Same for receipt when rules allow grouping.
 
-## Path 2: Process only selected deferred commissions
+## Path 2: INDIVIDUAL — process only selected deferred commissions
 
 - User **selects** one or more deferred commissions (some or all, only diferida).
 - User provides **dates** for each step: desglose, factura, comprobante.

@@ -326,7 +326,10 @@ export class CommissionPaymentFirestoreService {
 	}
 
 	/**
-	 * Path 2 (diferidas): update por comisión; cada grupo puede traer fechas/adjuntos y motivos por paso distintos.
+	 * Path 2 (diferidas, proceso **individual** por selección/modal): cierra cada comisión y
+	 * **elimina** `deferredToCutDate` al pagar para que la línea ya no se liste en el corte de trabajo;
+	 * queda solo en su `cutDate` original. El flujo **grupal** usa `markCommissionPaymentsPaidByCutDateAndAdvisor`,
+	 * que sí conserva `deferredToCutDate` mientras aplique al producto.
 	 */
 	async completeDeferredPath2OnPaymentGroups(
 		groups: Array<{
@@ -377,11 +380,7 @@ export class CommissionPaymentFirestoreService {
 				if (g.receiptUrl != null && g.receiptUrl !== '') {
 					payload['receiptUrl'] = g.receiptUrl;
 				}
-				if (g.targetCutDate === g.originalCutDate) {
-					payload['deferredToCutDate'] = deleteField();
-				} else {
-					payload['deferredToCutDate'] = g.targetCutDate;
-				}
+				payload['deferredToCutDate'] = deleteField();
 				await updateDoc(dref, payload);
 			}
 		}
@@ -415,30 +414,25 @@ export class CommissionPaymentFirestoreService {
 		}
 	}
 
-	// ===== MARK PAID BY UIDS (procesar solo los seleccionados, ej. diferidas) =====
+	// ===== MARK PAID BY UIDS (proceso individual por UID; no conserva corte de trabajo) =====
 	/**
-	 * @param opts.targetCutDate Corte donde se procesó (≤ fecha desglose).
-	 * @param opts.originalCutDate Corte original de la comisión.
-	 * Si targetCutDate === originalCutDate → se quita deferredToCutDate (pagada en original).
-	 * Si targetCutDate !== originalCutDate → se actualiza deferredToCutDate = targetCutDate (aún diferida, pagada en ese corte).
+	 * Marca pagadas por UID. Siempre quita `deferredToCutDate` para que la línea no siga en el corte agrupado.
+	 * El flujo grupal es `markCommissionPaymentsPaidByCutDateAndAdvisor`.
 	 */
 	async markCommissionPaymentsPaidByUids(
 		paymentUids: string[],
 		paidAt: number = Date.now(),
-		opts?: { targetCutDate?: number; originalCutDate?: number }
+		_opts?: { targetCutDate?: number; originalCutDate?: number }
 	): Promise<number> {
 		if (paymentUids.length === 0) return 0;
 		const batch = writeBatch(this.firestore);
-		const updates: Record<string, unknown> = { paid: true, paidAt, receiptSentAt: paidAt, _update: paidAt };
-		if (opts?.targetCutDate != null && opts?.originalCutDate != null) {
-			if (opts.targetCutDate === opts.originalCutDate) {
-				(updates as any).deferredToCutDate = deleteField();
-			} else {
-				(updates as any).deferredToCutDate = opts.targetCutDate;
-			}
-		} else {
-			(updates as any).deferredToCutDate = deleteField();
-		}
+		const updates: Record<string, unknown> = {
+			paid: true,
+			paidAt,
+			receiptSentAt: paidAt,
+			_update: paidAt,
+			deferredToCutDate: deleteField(),
+		} as Record<string, unknown>;
 		for (const uid of paymentUids) {
 			const ref = doc(this.firestore, this.collectionName, uid);
 			batch.update(ref, updates);
@@ -447,7 +441,7 @@ export class CommissionPaymentFirestoreService {
 		return paymentUids.length;
 	}
 
-	// ===== MARK PAID BY CUT DATE + ADVISOR (incluye pagos con cutDate o deferredToCutDate = cutDate) =====
+	// ===== MARK PAID BY CUT DATE + ADVISOR (flujo grupal: conserva `deferredToCutDate` en docs ya pagados) =====
 	async markCommissionPaymentsPaidByCutDateAndAdvisor(cutDate: number, advisorUid: string, paidAt: number = Date.now()): Promise<number> {
 		const ref = collection(this.firestore, this.collectionName);
 		const [snapCut, snapDeferred] = await Promise.all([
@@ -460,10 +454,7 @@ export class CommissionPaymentFirestoreService {
 		allDocs.forEach((d) => {
 			if (!docIds.has(d.id)) {
 				docIds.add(d.id);
-				const p = d.data() as CommissionPayment;
-				const updates: Record<string, unknown> = { paid: true, paidAt, receiptSentAt: paidAt, _update: paidAt };
-				if (p.deferredToCutDate) (updates as any).deferredToCutDate = deleteField();
-				batch.update(d.ref, updates);
+				batch.update(d.ref, { paid: true, paidAt, receiptSentAt: paidAt, _update: paidAt });
 			}
 		});
 		await batch.commit();

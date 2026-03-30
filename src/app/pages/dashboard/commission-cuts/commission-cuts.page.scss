@@ -485,7 +485,40 @@
 		--padding-start: 14px;
 		--padding-end: 14px;
 		--min-height: 52px;
+		--border-width: 0;
+		--inner-border-width: 0;
 		position: relative;
+		border-style: none;
+		border-bottom: none;
+	}
+
+	.contract-payment-item.contract-payment-item--sep-after {
+		border-bottom-style: solid;
+		border-bottom-width: 1px;
+	}
+
+	.contract-payment-item.contract-payment-item--sep-after.payment-strip--overdue {
+		border-bottom-color: rgba(var(--ion-color-danger-rgb), 0.55);
+	}
+
+	.contract-payment-item.contract-payment-item--sep-after.payment-strip--pending {
+		border-bottom-color: rgba(var(--ion-color-warning-rgb), 0.65);
+	}
+
+	.contract-payment-item.contract-payment-item--sep-after.payment-strip--deferred-pending {
+		border-bottom-color: rgba(255, 149, 0, 0.78);
+	}
+
+	.contract-payment-item.contract-payment-item--sep-after.payment-strip--paid {
+		border-bottom-color: rgba(var(--ion-color-success-rgb), 0.55);
+	}
+
+	.contract-payment-item.contract-payment-item--sep-after.payment-strip--paid-late {
+		border-bottom-color: rgba(255, 149, 0, 0.82);
+	}
+
+	.contract-payment-item.contract-payment-item--sep-after.payment-strip--paid-deferred {
+		border-bottom-color: rgba(255, 149, 0, 0.8);
 	}
 
 	/* Franja de estado solo en la fila de la comisión */
@@ -499,6 +532,12 @@
 		box-shadow: inset 4px 0 0 0 rgba(var(--ion-color-warning-rgb), 0.9);
 	}
 
+	/* Diferida en el corte de trabajo (impaga): naranja, distinto del amarillo “pendiente en plazo” */
+	.contract-payment-item.payment-strip--deferred-pending {
+		--background: rgba(255, 149, 0, 0.12);
+		box-shadow: inset 4px 0 0 0 rgba(255, 149, 0, 0.92);
+	}
+
 	.contract-payment-item.payment-strip--paid {
 		--background: rgba(var(--ion-color-success-rgb), 0.1);
 		box-shadow: inset 4px 0 0 0 rgba(var(--ion-color-success-rgb), 0.75);
@@ -508,6 +547,11 @@
 	.contract-payment-item.payment-strip--paid-late {
 		--background: rgba(var(--ion-color-warning-rgb), 0.16);
 		box-shadow: inset 4px 0 0 0 rgba(255, 149, 0, 0.95);
+	}
+
+	.contract-payment-item.payment-strip--paid-deferred {
+		--background: rgba(255, 149, 0, 0.14);
+		box-shadow: inset 4px 0 0 0 rgba(255, 149, 0, 0.9);
 	}
 
 	.contract-payment-item.is-paid-row {

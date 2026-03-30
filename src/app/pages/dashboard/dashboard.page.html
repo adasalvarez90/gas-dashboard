@@ -57,6 +57,24 @@
 							}
 						</ion-list>
 					}
+					@if (user.role < 2) {
+					<ion-list class="ion-no-padding">
+						<ion-item-divider>
+							<ion-label>Herramientas</ion-label>
+						</ion-item-divider>
+						<ion-menu-toggle auto-hide="false">
+							<ion-item
+								button
+								detail="false"
+								lines="inset"
+								(click)="confirmWipeTestData()"
+							>
+								<ion-icon name="trash-outline" slot="start" color="danger"></ion-icon>
+								<ion-label color="danger">Borrar datos</ion-label>
+							</ion-item>
+						</ion-menu-toggle>
+					</ion-list>
+					}
 				</ion-list>
 				}
 			</div>
