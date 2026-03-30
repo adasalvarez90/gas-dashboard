@@ -137,15 +137,12 @@
 											</div>
 
 											<div class="summary-card-mid">
-												@if (cardWorkflowUiKey(s) === 'PAID' && s.state?.paidLate) {
+												@if (cardWorkflowUiKey(s) === 'PAID' && summaryHasOrangePaidAccent(s)) {
 													<ion-badge class="badge-outline badge-outline--orange">Pagada atrasada</ion-badge>
 												} @else {
 													<span class="state-badge" [class]="'state-' + cardWorkflowUiKey(s)">
 														{{ stateLabel(cardWorkflowUiKey(s)) }}
 													</span>
-													@if (s.state?.paidLate) {
-														<ion-badge class="badge-outline badge-outline--orange">Pagada atrasada</ion-badge>
-													}
 												}
 
 												<div class="summary-kpis">
