@@ -10,9 +10,7 @@ import { TrancheDepositService } from 'src/app/domain/tranche/tranche-deposit.se
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
-import { getCutDateForDueDateMexico, toCanonicalMexicoDateTimestamp } from 'src/app/domain/time/mexico-time.util';
-import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
-import { FundingDeferralMotivesModalComponent } from 'src/app/components/funding-deferral-motives-modal/funding-deferral-motives-modal.component';
+import { toCanonicalMexicoDateTimestamp } from 'src/app/domain/time/mexico-time.util';
 import { lastValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
@@ -53,7 +51,6 @@ export class ContractSeedModalComponent {
 		private advisorFacade: AdvisorFacade,
 		private contractFacade: ContractFacade,
 		private commissionPaymentFacade: CommissionPaymentFacade,
-		private commissionPaymentFS: CommissionPaymentFirestoreService,
 	) {}
 
 	ngOnInit() {
@@ -217,21 +214,6 @@ export class ContractSeedModalComponent {
 			}
 
 			await loading.dismiss();
-
-			const payments = await this.commissionPaymentFS.getCommissionPaymentsByContract(contract.uid);
-			const currentCut = getCutDateForDueDateMexico(Date.now());
-			const needsReason = payments.filter(
-				(p) => p._on !== false && !p.cancelled && !p.fundingDeferralReasonCode && p.cutDate < currentCut,
-			);
-			if (needsReason.length > 0) {
-				const motivesModal = await this.modalCtrl.create({
-					component: FundingDeferralMotivesModalComponent,
-					componentProps: { payments: needsReason },
-					backdropDismiss: false,
-				});
-				await motivesModal.present();
-				await motivesModal.onDidDismiss();
-			}
 
 			const toast = await this.toastCtrl.create({
 				color: 'primary',

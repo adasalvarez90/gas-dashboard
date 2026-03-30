@@ -444,8 +444,40 @@
 		border: 2px solid rgba(var(--ion-color-warning-rgb), 0.42) !important;
 	}
 
+	/* Alineado con `.summary-card--paid-late` (naranja), no amarillo `warning` */
+	.contracts-ion-list--border-paid-late {
+		--paid-late-rgb: 255, 152, 0;
+		border: 2px solid rgba(var(--paid-late-rgb), 0.45) !important;
+	}
+
 	.contracts-ion-list--border-success {
 		border: 2px solid rgba(var(--ion-color-success-rgb), 0.38) !important;
+	}
+
+	/* Separadores entre filas (lines inset / full): mismo lenguaje que el borde del bloque */
+	.contracts-ion-list .contract-header-item,
+	.contracts-ion-list .contract-payment-item {
+		--border-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.contracts-ion-list--border-danger .contract-header-item,
+	.contracts-ion-list--border-danger .contract-payment-item {
+		--border-color: rgba(var(--ion-color-danger-rgb), 0.3);
+	}
+
+	.contracts-ion-list--border-warning .contract-header-item,
+	.contracts-ion-list--border-warning .contract-payment-item {
+		--border-color: rgba(var(--ion-color-warning-rgb), 0.28);
+	}
+
+	.contracts-ion-list--border-paid-late .contract-header-item,
+	.contracts-ion-list--border-paid-late .contract-payment-item {
+		--border-color: rgba(255, 152, 0, 0.3);
+	}
+
+	.contracts-ion-list--border-success .contract-header-item,
+	.contracts-ion-list--border-success .contract-payment-item {
+		--border-color: rgba(var(--ion-color-success-rgb), 0.28);
 	}
 
 	.contract-payment-item {
@@ -515,6 +547,57 @@
 		flex-shrink: 0;
 		opacity: 0.85;
 		font-weight: 700;
+	}
+
+	.payment-transfer-chip-row {
+		margin-top: 8px;
+		margin-bottom: 2px;
+	}
+
+	.payment-transfer-chip-row ion-chip {
+		--padding-start: 10px;
+		--padding-end: 10px;
+		min-height: 26px;
+		font-size: 12px;
+		font-weight: 700;
+	}
+
+	.payment-flow-dates-footer {
+		margin-top: 10px;
+		padding-top: 8px;
+		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		align-items: baseline;
+		column-gap: 14px;
+		row-gap: 6px;
+		font-size: 12px;
+		line-height: 1.35;
+	}
+
+	.payment-flow-date-row {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: baseline;
+		gap: 6px;
+		white-space: nowrap;
+	}
+
+	.payment-flow-date-label {
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-size: 10px;
+		font-weight: 700;
+		opacity: 0.55;
+	}
+
+	.payment-flow-date-value {
+		font-variant-numeric: tabular-nums;
+		font-weight: 600;
+		opacity: 0.92;
 	}
 
 	.payment-inline-label {

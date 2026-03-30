@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import { AdvisorCutSummary } from '../models/commission-cuts-summary.model';
 import { CommissionCutAdvisorState } from '../models/commission-cut-state.model';
 import { mexicoDateKeyFromTimestamp } from '../domain/time/mexico-time.util';
+import { advisorCutSummaryTipoPdfLabel } from '../domain/commission-cut/commission-cut-deadlines.util';
 
 export type SummaryForPdf = AdvisorCutSummary & { state?: CommissionCutAdvisorState | null };
 
@@ -37,7 +38,7 @@ export class CommissionCutsPdfService {
 		doc.setTextColor(0, 0, 0);
 		let y = startY + rowHeight;
 		summaries.forEach((s) => {
-			const tipoLabel = s.state?.movedToNextCut || s.state?.originalCutDate ? 'Diferida' : 'Regular';
+			const tipoLabel = advisorCutSummaryTipoPdfLabel(s);
 			const row = [
 				new Date(s.cutDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
 				s.advisorName,
@@ -95,7 +96,7 @@ export class CommissionCutsPdfService {
 		doc.setTextColor(0, 0, 0);
 		let y = startY + rowHeight;
 		summaries.forEach((s) => {
-			const tipoLabel = s.state?.movedToNextCut || s.state?.originalCutDate ? 'Diferida' : 'Regular';
+			const tipoLabel = advisorCutSummaryTipoPdfLabel(s);
 			const row = [
 				new Date(s.cutDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
 				this.formatCurrency(s.totalAmount),

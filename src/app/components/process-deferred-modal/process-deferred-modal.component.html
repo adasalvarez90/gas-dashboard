@@ -6,57 +6,110 @@
 		</ion-buttons>
 	</ion-toolbar>
 </ion-header>
+
 <ion-content class="ion-padding">
-	<p class="subtitle">Se procesarán {{ count }} comisión(es) por {{ totalAmount | currency:'MXN':'symbol-narrow' }}.</p>
-	<p class="date-hint">Indica las fechas en que ocurrió cada paso. Si el desglose fue antes del corte diferido, las comisiones se moverán a ese corte.</p>
+	<p class="summary">
+		<strong>{{ totalCount }}</strong> comisiones · <strong>{{ totalAmount | currency: 'MXN' }}</strong>
+	</p>
+	<p class="hint">
+		Por cada corte de origen indica las fechas del flujo. Factura y comprobante son <strong>opcionales</strong> si aún no
+		los tienes. Los motivos (DESGLOSE / FACTURA / PAGO) solo aplican si
+		<strong>algún</strong> grupo va fuera de plazo en ese paso.
+	</p>
 
-	<ion-item lines="full">
-		<ion-label position="stacked">Fecha desglose enviado</ion-label>
-		<ion-input type="date" [value]="breakdownDate" (ionInput)="breakdownDate = $any($event).detail?.value ?? ''"></ion-input>
-	</ion-item>
-	<ion-item lines="full">
-		<ion-label position="stacked">Fecha factura recibida</ion-label>
-		<ion-input type="date" [value]="invoiceDate" (ionInput)="invoiceDate = $any($event).detail?.value ?? ''"></ion-input>
-	</ion-item>
-	<ion-item lines="full">
-		<ion-label position="stacked">Fecha comprobante de pago</ion-label>
-		<ion-input type="date" [value]="receiptDate" (ionInput)="receiptDate = $any($event).detail?.value ?? ''"></ion-input>
-	</ion-item>
+	<ion-accordion-group [multiple]="true" class="groups-acc">
+		<ion-accordion *ngFor="let row of rows; let i = index" [value]="'g' + i">
+			<ion-item slot="header" lines="full">
+				<ion-label>
+					<h3>Corte {{ row.originalCutDate | date: 'dd/MM/yyyy' }}</h3>
+					<p>{{ row.count }} comisiones · {{ row.amount | currency: 'MXN' }}</p>
+				</ion-label>
+				<ion-badge
+					*ngIf="rowComplete(row) || rowAnyLate(row)"
+					[color]="rowAnyLate(row) ? 'warning' : 'success'"
+					slot="end"
+				>
+					{{ rowAnyLate(row) ? 'Atrasada' : 'En tiempo' }}
+				</ion-badge>
+			</ion-item>
+			<div class="ion-padding accordion-body" slot="content">
+				<ion-list lines="none">
+					<ion-item>
+						<ion-label position="stacked">Fecha envío desglose</ion-label>
+						<ion-input type="date" [(ngModel)]="row.breakdownDate" name="bd{{ i }}"></ion-input>
+					</ion-item>
+					<ion-item *ngIf="rowBreakdownLate(row)">
+						<ion-note color="warning" class="late-note">Fuera de plazo (desglose)</ion-note>
+					</ion-item>
+					<ion-item>
+						<ion-label position="stacked">Fecha envío factura</ion-label>
+						<ion-input type="date" [(ngModel)]="row.invoiceDate" name="inv{{ i }}"></ion-input>
+					</ion-item>
+					<ion-item *ngIf="rowInvoiceLate(row)">
+						<ion-note color="warning" class="late-note">Fuera de plazo (factura)</ion-note>
+					</ion-item>
+					<ion-item>
+						<ion-label position="stacked">Fecha pago</ion-label>
+						<ion-input type="date" [(ngModel)]="row.receiptDate" name="rec{{ i }}"></ion-input>
+					</ion-item>
+					<ion-item *ngIf="rowPaymentLate(row)">
+						<ion-note color="warning" class="late-note">Fuera de plazo (pago)</ion-note>
+					</ion-item>
+					<ion-item>
+						<ion-label position="stacked">Factura (PDF, opcional)</ion-label>
+						<input type="file" accept="application/pdf" (change)="onInvoiceSelected(row, $event)" />
+					</ion-item>
+					<ion-item>
+						<ion-label position="stacked">Comprobante de pago (PDF, opcional)</ion-label>
+						<input type="file" accept="application/pdf" (change)="onReceiptSelected(row, $event)" />
+					</ion-item>
+				</ion-list>
+			</div>
+		</ion-accordion>
+	</ion-accordion-group>
 
-	<ion-item lines="full">
-		<ion-label position="stacked">Motivo (requerido)</ion-label>
-		<ion-select
-			label="Motivo"
-			interface="popover"
-			[value]="reason"
-			(ionChange)="reason = $any($event).detail.value"
-			placeholder="Selecciona un motivo"
-		>
-			@for (opt of options; track opt.value) {
-				<ion-select-option [value]="opt.value">{{ opt.label }}</ion-select-option>
-			}
-		</ion-select>
-	</ion-item>
-	<ion-item lines="none">
-		<ion-label position="stacked">Texto adicional (opcional)</ion-label>
-		<ion-textarea
-			[value]="text"
-			(ionInput)="text = $any($event).detail?.value ?? ''"
-			placeholder="Explicación adicional..."
-			rows="2"
-		></ion-textarea>
-	</ion-item>
+	<div class="motivos-section" *ngIf="anyDesgloseLate() || anyFacturaLate() || anyPagoLate()">
+		<h3>Motivos (por paso)</h3>
 
-	<label class="file-upload-label">
-		<span class="file-upload-text">Factura (requerido) — {{ invoiceFile?.name ?? 'Seleccionar archivo' }}</span>
-		<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onInvoiceSelected($event)">
-	</label>
-	<label class="file-upload-label">
-		<span class="file-upload-text">Comprobante de pago (requerido) — {{ receiptFile?.name ?? 'Seleccionar archivo' }}</span>
-		<input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptSelected($event)">
-	</label>
+		<ng-container *ngIf="anyDesgloseLate()">
+			<ion-item lines="none">
+				<ion-label position="stacked">Motivo — DESGLOSE (algún grupo fuera de plazo)</ion-label>
+				<ion-select [(ngModel)]="motivoDesgloseReason" interface="popover" placeholder="Selecciona">
+					<ion-select-option *ngFor="let o of optionsDesglose" [value]="o.value">{{ o.label }}</ion-select-option>
+				</ion-select>
+			</ion-item>
+			<ion-item lines="none">
+				<ion-label position="stacked">Detalle (opcional)</ion-label>
+				<ion-textarea [(ngModel)]="motivoDesgloseText" rows="2" autoGrow="true"></ion-textarea>
+			</ion-item>
+		</ng-container>
 
-	<ion-button expand="block" (click)="submit()" [disabled]="!reason?.trim() || !invoiceFile || !receiptFile">
-		Procesar
-	</ion-button>
+		<ng-container *ngIf="anyFacturaLate()">
+			<ion-item lines="none">
+				<ion-label position="stacked">Motivo — FACTURA</ion-label>
+				<ion-select [(ngModel)]="motivoFacturaReason" interface="popover" placeholder="Selecciona">
+					<ion-select-option *ngFor="let o of optionsFactura" [value]="o.value">{{ o.label }}</ion-select-option>
+				</ion-select>
+			</ion-item>
+			<ion-item lines="none">
+				<ion-label position="stacked">Detalle (opcional)</ion-label>
+				<ion-textarea [(ngModel)]="motivoFacturaText" rows="2" autoGrow="true"></ion-textarea>
+			</ion-item>
+		</ng-container>
+
+		<ng-container *ngIf="anyPagoLate()">
+			<ion-item lines="none">
+				<ion-label position="stacked">Motivo — PAGO</ion-label>
+				<ion-select [(ngModel)]="motivoPagoReason" interface="popover" placeholder="Selecciona">
+					<ion-select-option *ngFor="let o of optionsPago" [value]="o.value">{{ o.label }}</ion-select-option>
+				</ion-select>
+			</ion-item>
+			<ion-item lines="none">
+				<ion-label position="stacked">Detalle (opcional)</ion-label>
+				<ion-textarea [(ngModel)]="motivoPagoText" rows="2" autoGrow="true"></ion-textarea>
+			</ion-item>
+		</ng-container>
+	</div>
+
+	<ion-button expand="block" (click)="submit()" [disabled]="!canSubmit()">Confirmar</ion-button>
 </ion-content>

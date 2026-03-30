@@ -132,21 +132,20 @@
 
 												<div class="summary-card-meta">
 													<span class="chip chip--type">{{ schemeLabel(s.scheme) }}</span>
-													@if (isDeferred(s)) {
-														<span class="chip chip--deferred">Diferida</span>
-													} @else {
-														<span class="chip chip--regular">Regular</span>
-													}
 													<span class="chip chip--neutral">{{ s.contractUids.length }} contratos</span>
 												</div>
 											</div>
 
 											<div class="summary-card-mid">
-												<span class="state-badge" [class]="'state-' + cardWorkflowUiKey(s)">
-													{{ stateLabel(cardWorkflowUiKey(s)) }}
-												</span>
-												@if (s.state?.paidLate) {
+												@if (cardWorkflowUiKey(s) === 'PAID' && s.state?.paidLate) {
 													<ion-badge class="badge-outline badge-outline--orange">Pagada atrasada</ion-badge>
+												} @else {
+													<span class="state-badge" [class]="'state-' + cardWorkflowUiKey(s)">
+														{{ stateLabel(cardWorkflowUiKey(s)) }}
+													</span>
+													@if (s.state?.paidLate) {
+														<ion-badge class="badge-outline badge-outline--orange">Pagada atrasada</ion-badge>
+													}
 												}
 
 												<div class="summary-kpis">
@@ -166,9 +165,6 @@
 											</div>
 
 											<div class="summary-card-right">
-												@if (isReadOnlyDeferred(s)) {
-													<span class="chip chip--deferred">Diferida al sig. corte</span>
-												}
 												<input
 													#invFileAdvisor
 													type="file"
@@ -305,7 +301,14 @@
 																lines="full"
 																class="contracts-ion-list"
 																[class.contracts-ion-list--border-danger]="getContractGroupBorderSeverity(s, c) === 'danger'"
-																[class.contracts-ion-list--border-warning]="getContractGroupBorderSeverity(s, c) === 'warning'"
+																[class.contracts-ion-list--border-warning]="
+																	getContractGroupBorderSeverity(s, c) === 'warning' &&
+																	!contractGroupHasAnyPaidLateStrip(s, c)
+																"
+																[class.contracts-ion-list--border-paid-late]="
+																	contractGroupHasAnyPaidLateStrip(s, c) &&
+																	getContractGroupBorderSeverity(s, c) !== 'danger'
+																"
 																[class.contracts-ion-list--border-success]="getContractGroupBorderSeverity(s, c) === 'success'"
 															>
 																<ion-item lines="full" class="contract-header-item">
@@ -356,6 +359,12 @@
 																				<span class="pi pi-grow"><span class="pi-label">Esquema</span>{{ commissionReasonLabel(pay) }}</span>
 																				<span class="pi pi-amount"><span class="pi-label">Monto</span>{{ pay.amount | currency:'MXN':'symbol-narrow' }}</span>
 																			</div>
+																			@let trChip = paymentTrasladadaChipLabel(s, pay);
+																			@if (trChip) {
+																				<div class="payment-transfer-chip-row">
+																					<ion-chip class="chip-transfer-deferred" color="warning">{{ trChip }}</ion-chip>
+																				</div>
+																			}
 																			@let motivoLines = getPaymentMotivoDisplayLines(s, pay);
 																			@if (motivoLines.length > 0) {
 																				<div class="payment-motivo-line" aria-label="Motivos de atraso">
@@ -364,6 +373,16 @@
 																					}
 																				</div>
 																			}
+																			<div class="payment-flow-dates-footer" aria-label="Fechas del flujo">
+																				@for (step of paymentFlowStepsForDisplay(pay); track step.label) {
+																					<div class="payment-flow-date-row">
+																						<span class="payment-flow-date-label">{{ step.label }}</span>
+																						<span class="payment-flow-date-value">{{
+																							step.at != null ? (step.at | date:'d/M/yyyy') : '—'
+																						}}</span>
+																					</div>
+																				}
+																			</div>
 																		</ion-label>
 																	</ion-item>
 																}

@@ -1,12 +1,41 @@
-.subtitle {
+.summary {
 	margin-bottom: 8px;
-	opacity: 0.9;
-	font-size: 14px;
+	font-size: 15px;
 }
-.date-hint {
+
+.hint {
 	margin-bottom: 16px;
+	font-size: 13px;
+	opacity: 0.85;
+	line-height: 1.45;
+}
+
+.groups-acc {
+	margin-bottom: 16px;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.accordion-body ion-list {
+	background: transparent;
+}
+
+.late-note {
 	font-size: 12px;
-	opacity: 0.75;
+	width: 100%;
+	padding: 4px 0;
+}
+
+.motivos-section {
+	margin: 20px 0 16px;
+	padding-top: 12px;
+	border-top: 1px solid rgba(var(--ion-color-medium-rgb), 0.25);
+
+	h3 {
+		font-size: 16px;
+		margin: 0 0 12px;
+		font-weight: 600;
+	}
 }
 
 .file-upload-label {
@@ -18,9 +47,11 @@
 	cursor: pointer;
 	background: rgba(var(--ion-color-light-rgb), 0.3);
 }
+
 .file-upload-label input {
 	display: none;
 }
+
 .file-upload-text {
 	font-size: 14px;
 	opacity: 0.9;

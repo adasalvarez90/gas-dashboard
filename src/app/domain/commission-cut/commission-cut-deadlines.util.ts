@@ -376,3 +376,53 @@ export function classifyDeferralPaymentCase(
 	if (minKey < defKey) return 'BEFORE_DEFERRED_CUT';
 	return 'ON_OR_AFTER_DEFERRED_CUT';
 }
+
+function effectiveDeferredCutForPayment(pay: CommissionPayment): number | null {
+	if (pay.cancelled || pay.paid || pay.paidAt) return null;
+	return getEffectiveDeferredDisplayCut(pay, pay.advisorUid, (cd) => paymentWorkflowStateAtCut(pay, cd));
+}
+
+const MONTH_SHORT_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const;
+
+/** Fecha de corte para copy UX: "7 feb" (día + mes corto, México). */
+export function formatCutDayMonthEs(cutDate: number): string {
+	const k = mexicoDateKeyFromTimestamp(cutDate);
+	const [, mo, dayStr] = k.split('-');
+	const moNum = parseInt(mo ?? '1', 10);
+	const day = parseInt(dayStr ?? '1', 10);
+	return `${day} ${MONTH_SHORT_ES[moNum - 1] ?? ''}`.trim();
+}
+
+/**
+ * Texto del chip por **línea de comisión**: solo en la fila del **corte origen** cuando el destino
+ * efectivo del diferido es **otro** corte (p. ej. "Trasladada al 7 abr"). En la vista del corte destino no se muestra.
+ */
+export function paymentTrasladadaChipLabel(summaryCutDate: number, pay: CommissionPayment): string | null {
+	if (pay.cancelled || pay.paid || pay.paidAt) return null;
+	const eff = effectiveDeferredCutForPayment(pay);
+	if (eff == null) return null;
+	if (sameCanonicalCutDate(eff, pay.cutDate)) return null;
+	if (sameCanonicalCutDate(summaryCutDate, eff)) return null;
+	if (!sameCanonicalCutDate(summaryCutDate, pay.cutDate)) return null;
+	return `Trasladada al ${formatCutDayMonthEs(eff)}`;
+}
+
+/** Columna "Tipo" en PDFs: sin usar estado agregado legacy de asesora. */
+export function advisorCutSummaryTipoPdfLabel(s: { cutDate: number; payments: CommissionPayment[] }): string {
+	const unpaid = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt);
+	const flags = unpaid.map((p) => {
+		const tr = paymentTrasladadaChipLabel(s.cutDate, p) != null;
+		const eff = effectiveDeferredCutForPayment(p);
+		const recDif =
+			eff != null && sameCanonicalCutDate(s.cutDate, eff) && !sameCanonicalCutDate(p.cutDate, s.cutDate);
+		const nativo = sameCanonicalCutDate(p.cutDate, s.cutDate);
+		return { tr, recDif, nativo };
+	});
+	const anyTr = flags.some((f) => f.tr);
+	const anyRecDif = flags.some((f) => f.recDif);
+	const anyNativoSinTr = flags.some((f) => f.nativo && !f.tr);
+	if ((anyTr && anyNativoSinTr) || (anyRecDif && anyNativoSinTr) || (anyTr && anyRecDif)) return 'Mixto';
+	if (anyTr) return 'Con traslado';
+	if (anyRecDif) return 'En corte dif.';
+	return 'Regular';
+}

@@ -326,19 +326,23 @@ export class CommissionPaymentFirestoreService {
 	}
 
 	/**
-	 * Path 2 (diferidas): un solo update por comisión con desglose + factura + pago y destino de diferido.
+	 * Path 2 (diferidas): update por comisión; cada grupo puede traer fechas/adjuntos y motivos por paso distintos.
 	 */
 	async completeDeferredPath2OnPaymentGroups(
-		groups: Array<{ uids: string[]; targetCutDate: number; originalCutDate: number }>,
-		common: {
+		groups: Array<{
+			uids: string[];
+			targetCutDate: number;
+			originalCutDate: number;
 			breakdownSentAt: number;
 			invoiceSentAt: number;
-			invoiceUrl: string;
+			/** Si no se envía, no se toca `invoiceUrl` en Firestore. */
+			invoiceUrl?: string;
 			receiptSentAt: number;
-			receiptUrl: string;
+			/** Si no se envía, no se toca `receiptUrl` en Firestore. */
+			receiptUrl?: string;
 			paidLate: boolean;
-			pagoLateEntry?: LateReasonEntry;
-		},
+			lateStepEntries?: LateReasonEntry[];
+		}>,
 	): Promise<void> {
 		const now = Date.now();
 		for (const g of groups) {
@@ -347,22 +351,32 @@ export class CommissionPaymentFirestoreService {
 				const snap = await getDoc(dref);
 				if (!snap.exists()) continue;
 				const p = snap.data() as CommissionPayment;
+				const order: LateReasonEntry['step'][] = ['DESGLOSE', 'FACTURA', 'PAGO'];
+				const sorted = [...(g.lateStepEntries ?? [])].sort(
+					(a, b) => order.indexOf(a.step) - order.indexOf(b.step),
+				);
 				let lateReasons = normalizeLateReasons(p.lateReasons);
-				if (common.paidLate && common.pagoLateEntry) {
-					lateReasons = this.mergeLateReasonsOnPayment(p, 'PAGO', { ...common.pagoLateEntry, step: 'PAGO' });
+				const acc: CommissionPayment = { ...p, lateReasons };
+				for (const e of sorted) {
+					lateReasons = this.mergeLateReasonsOnPayment(acc, e.step, { ...e, step: e.step });
+					acc.lateReasons = lateReasons;
 				}
 				const payload: Record<string, unknown> = {
-					breakdownSentAt: common.breakdownSentAt,
-					invoiceSentAt: common.invoiceSentAt,
-					invoiceUrl: common.invoiceUrl,
-					receiptSentAt: common.receiptSentAt,
-					receiptUrl: common.receiptUrl,
+					breakdownSentAt: g.breakdownSentAt,
+					invoiceSentAt: g.invoiceSentAt,
+					receiptSentAt: g.receiptSentAt,
 					paid: true,
-					paidAt: common.receiptSentAt,
-					paidLate: common.paidLate,
+					paidAt: g.receiptSentAt,
+					paidLate: g.paidLate,
 					lateReasons,
 					_update: now,
 				};
+				if (g.invoiceUrl != null && g.invoiceUrl !== '') {
+					payload['invoiceUrl'] = g.invoiceUrl;
+				}
+				if (g.receiptUrl != null && g.receiptUrl !== '') {
+					payload['receiptUrl'] = g.receiptUrl;
+				}
 				if (g.targetCutDate === g.originalCutDate) {
 					payload['deferredToCutDate'] = deleteField();
 				} else {

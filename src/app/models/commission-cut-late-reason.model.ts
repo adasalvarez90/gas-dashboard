@@ -23,13 +23,6 @@ export const LATE_REASON_CODES_BY_STEP: Record<LateReasonStep, string[]> = {
 	PAGO: ['PAGO_NO_REALIZADO_A_TIEMPO'],
 };
 
-/** Mismos motivos de atraso que en cortes (desglose / factura / pago) + texto libre al capturar diferimiento por fondeo. */
-export const LATE_REASON_CODES_FOR_FUNDING_CAPTURE: readonly string[] = [
-	'DESGLOSE_NO_ENVIADO_A_TIEMPO',
-	'FACTURA_NO_RECIBIDA_A_TIEMPO',
-	'PAGO_NO_REALIZADO_A_TIEMPO',
-];
-
 export function getLateReasonLabel(code: string): string {
 	return COMMISSION_CUT_LATE_REASONS[code] ?? code;
 }
