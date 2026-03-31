@@ -24,7 +24,9 @@ import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/
 export class ManagePage implements OnInit {
 	advisors$ = this.advisorFacade.advisors$;
 	advisorsDic$ = this.advisorFacade.entities$;
-	advisorsManager$ = this.advisors$.pipe(map((list) => list.filter((a) => a.hierarchyLevel === 'MANAGER')));
+	advisorsManager$ = this.advisors$.pipe(
+		map((list) => list.filter((a) => a.hierarchyLevel === 'MANAGER' || a.hierarchyLevel === 'CEO')),
+	);
 	advisorsCEO$ = this.advisors$.pipe(map((list) => list.filter((a) => a.hierarchyLevel === 'CEO')));
 	advisorsKam$ = this.advisors$.pipe(map((list) => list.filter((a) => a.tags?.includes('KAM'))));
 	advisorsSales$ = this.advisors$.pipe(map((list) => list.filter((a) => a.tags?.includes('SALES_DIRECTION'))));
