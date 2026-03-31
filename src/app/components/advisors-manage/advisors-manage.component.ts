@@ -23,6 +23,10 @@ import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 	],
 })
 export class AdvisorsManageComponent {
+	fiscalActivityOptions: ReadonlyArray<{ value: fromAdvisor.AdvisorFiscalActivity; label: string }> = [
+		{ value: 'RESICO', label: 'RESICO' },
+		{ value: 'PERSONA_FISICA_ACTIVIDAD_EMPRESARIAL', label: 'Persona Fisica con Actividad Empresarial' },
+	];
 	advisor$ = this.advisorFacade.selectedAdvisor$;
 	managers$ = this.advisorFacade.managers$;
 	advisor: fromAdvisor.Advisor;
@@ -30,6 +34,7 @@ export class AdvisorsManageComponent {
 		uid: [''],
 		name: ['', [Validators.required]],
 		hierarchyLevel: ['', [Validators.required]],
+		fiscalActivity: ['', [Validators.required]],
 		tags: [[], []],
 		managerId: [null, []],
 	});
@@ -53,6 +58,7 @@ export class AdvisorsManageComponent {
 				uid: this.advisor.uid,
 				name: this.advisor.name,
 				hierarchyLevel: this.advisor.hierarchyLevel,
+				fiscalActivity: this.advisor.fiscalActivity ?? '',
 				tags: this.advisor.tags,
 				managerId: this.advisor.managerId,
 			});

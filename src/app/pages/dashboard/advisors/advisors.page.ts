@@ -48,6 +48,13 @@ export class AdvisorsPage implements OnInit {
 		this.advisorFacade.searchText(searchTerm);
 	}
 
+	fiscalActivityLabel(activity: Advisor['fiscalActivity'] | null | undefined): string {
+		if (activity === 'PERSONA_FISICA_ACTIVIDAD_EMPRESARIAL') {
+			return 'Persona Fisica con Actividad Empresarial';
+		}
+		return activity || 'Actividad fiscal no asignada';
+	}
+
 	async openAdvisor(advisor: Advisor = null) {
 		// set selected advisor
 		this.advisorFacade.selectAdvisor(advisor);

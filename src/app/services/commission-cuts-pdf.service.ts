@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import { AdvisorCutSummary } from '../models/commission-cuts-summary.model';
 import { CommissionCutAdvisorState } from '../models/commission-cut-state.model';
 import { CommissionPayment } from '../store/commission-payment/commission-payment.model';
+import type { AdvisorFiscalActivity } from '../store/advisor/advisor.model';
 import { mexicoDateKeyFromTimestamp } from '../domain/time/mexico-time.util';
 import {
 	advisorCutSummaryTipoPdfLabel,
@@ -121,84 +122,86 @@ export class CommissionCutsPdfService {
 		doc.save(fileName ?? `comision-${advisorName.replace(/\s+/g, '-')}-${Date.now()}.pdf`);
 	}
 
-	/**
-	 * PDF del cálculo para un corte y asesora (paso “Descargar cálculo” / enviar informe).
-	 * Exporta una fila por cada comisión (incluye Regulares + Diferidas) para que
-	 * coincida el conteo y totales con lo que el componente muestra en el detalle.
-	 */
-	exportAdvisorCutCalculation(s: SummaryForPdf): void {
+	/** PDF de desglose SAT para factura (PFAE/RESICO). */
+	exportAdvisorCutCalculation(s: SummaryForPdf, fiscalActivity?: AdvisorFiscalActivity): void {
 		const payments = (s.payments ?? []).filter((p) => !p.cancelled);
-		const totalAmount = payments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
-		const pendingAmount = payments.filter((p) => !p.paidAt && !p.paid).reduce((acc, p) => acc + (p.amount ?? 0), 0);
-		const paidAmount = payments.filter((p) => !!p.paidAt || p.paid).reduce((acc, p) => acc + (p.amount ?? 0), 0);
+		const total = payments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
+
+		const IVA_TRASLADADO = 0.16;
+		const IVA_RETENIDO = 0.106667;
+		const ISR_RETENIDO = 0.0125;
+		const isResico = fiscalActivity === 'RESICO';
+		const isrRate = isResico ? ISR_RETENIDO : 0;
+
+		const divisor = 1 + IVA_TRASLADADO - IVA_RETENIDO - isrRate;
+		const importe = divisor > 0 ? total / divisor : 0;
+		const ivaTrasladado = importe * IVA_TRASLADADO;
+		const subtotal = importe + ivaTrasladado;
+		const ivaRetenido = importe * IVA_RETENIDO;
+		const isrRetenido = isResico ? importe * ISR_RETENIDO : 0;
+		const totalFinal = subtotal - ivaRetenido - isrRetenido;
+
+		const regimenLabel =
+			fiscalActivity === 'PERSONA_FISICA_ACTIVIDAD_EMPRESARIAL'
+				? 'PERSONA FISICA CON ACTIVIDAD EMPRESARIAL'
+				: fiscalActivity === 'RESICO'
+					? 'RESICO'
+					: 'SIN REGIMEN';
 
 		const cutKey = mexicoDateKeyFromTimestamp(s.cutDate);
 		const safeName = s.advisorName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '');
-		const fileName = `calculo-${safeName}-${cutKey}.pdf`;
+		const fileName = `calculo-sat-${safeName}-${cutKey}.pdf`;
 
 		const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-		doc.setFontSize(16);
-		doc.text(`Comisiones - ${s.advisorName}`, 14, 15);
-		doc.setFontSize(10);
-		doc.text(
-			`Total: ${this.formatCurrency(totalAmount)} | Pendiente: ${this.formatCurrency(pendingAmount)} | Pagado: ${this.formatCurrency(paidAmount)}`,
-			14,
-			22
-		);
+		doc.setFont('helvetica', 'normal');
 
-		const cols = ['Origen', 'Corte orig.', 'Tipo', 'Rol', 'Esquema', 'Monto', 'Estado'];
-		const colWidths = [22, 28, 22, 34, 26, 30, 22];
-		const startY = 28;
-		const rowHeight = 7;
+		let y = 18;
+		doc.setFontSize(12);
+		doc.text('Corte', 16, y);
+		doc.text(new Date(s.cutDate).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }), 62, y);
+		y += 8;
+		doc.text('Asesora', 16, y);
+		doc.text(s.advisorName, 62, y);
+		y += 8;
+		doc.text('Regimen Fiscal', 16, y);
+		doc.text(regimenLabel, 62, y);
+		y += 8;
+		doc.text('Comision', 16, y);
+		doc.text(this.formatCurrency(total), 62, y);
 
-		doc.setFillColor(66, 66, 66);
-		doc.rect(14, startY - 5, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
-		doc.setTextColor(255, 255, 255);
-		doc.setFontSize(9);
-		let x = 14;
-		colWidths.forEach((w, i) => {
-			doc.text(cols[i], x, startY + 1);
-			x += w;
-		});
+		y += 16;
+		if (isResico) doc.setFillColor(199, 220, 240);
+		else doc.setFillColor(245, 206, 175);
+		doc.rect(16, y - 6, 178, 12, 'F');
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(18);
+		doc.text('Desglose final', 105, y + 2, { align: 'center' });
+		doc.setFont('helvetica', 'normal');
 
-		doc.setTextColor(0, 0, 0);
-		doc.setFontSize(9);
-		let y = startY + rowHeight;
+		y += 15;
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(11);
+		doc.text('Concepto', 46, y);
+		doc.text('Monto', 132, y);
+		doc.setFont('helvetica', 'normal');
 
-		const sorted = [...payments].sort((a, b) => {
-			const ca = a.contractUid ?? '';
-			const cb = b.contractUid ?? '';
-			if (ca !== cb) return ca.localeCompare(cb);
-			const da = a.dueDate ?? 0;
-			const db = b.dueDate ?? 0;
-			if (da !== db) return da - db;
-			return (a.installment ?? 0) - (b.installment ?? 0);
-		});
-
-		sorted.forEach((p) => {
-			const isPaid = !!p.paidAt || !!p.paid;
-			const origen = this.paymentShowsDeferredOriginInSummary(p, s.cutDate) ? 'Diferida' : 'Regular';
-			const corteOrig = this.paymentRolledIntoSummaryCut(p, s.cutDate) ? this.formatCutDM(p.cutDate) : '—';
-			const row = [
-				origen,
-				corteOrig,
-				this.paymentTypeUiLabel(p.paymentType),
-				this.roleLabel(p.role),
-				this.commissionReasonLabel(p),
-				this.formatCurrency(p.amount ?? 0),
-				isPaid ? 'Pagada' : 'Pendiente',
-			];
-
-			x = 14;
-			colWidths.forEach((w, i) => {
-				const maxLen = i === 3 ? 12 : 14;
-				const text = this.truncate(String(row[i] ?? ''), maxLen);
-				doc.text(text, x, y);
-				x += w;
-			});
-
-			y += rowHeight;
-		});
+		y += 9;
+		const rows: Array<{ label: string; value: string }> = [
+			{ label: 'Importe:', value: this.formatCurrency(importe) },
+			{ label: 'Mas IVA (16%):', value: this.formatCurrency(ivaTrasladado) },
+			{ label: 'Subtotal:', value: this.formatCurrency(subtotal) },
+			{ label: 'Menos Retencion de IVA:', value: this.formatCurrency(ivaRetenido) },
+			{ label: 'Menos ISR (10%):', value: isResico ? this.formatCurrency(isrRetenido) : '$ -' },
+			{ label: 'Total:', value: this.formatCurrency(totalFinal) },
+		];
+		for (const r of rows) {
+			const isTotal = r.label === 'Total:';
+			doc.setFont('helvetica', isTotal ? 'bold' : 'normal');
+			doc.setFontSize(12);
+			doc.text(r.label, 16, y);
+			doc.text(r.value, 132, y);
+			y += 9;
+		}
 
 		doc.save(fileName);
 	}

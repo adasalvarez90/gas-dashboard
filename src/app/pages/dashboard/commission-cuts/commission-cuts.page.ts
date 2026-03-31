@@ -6,6 +6,7 @@ import { shareReplay } from 'rxjs/operators';
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
+import type { AdvisorFiscalActivity } from 'src/app/store/advisor/advisor.model';
 import { Contract } from 'src/app/store/contract/contract.model';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
@@ -109,6 +110,7 @@ export class CommissionCutsPage implements OnInit {
 
 	/** Snapshot síncrono para getAdvisorStateForCut (mismo orden que el store). */
 	private latestPaymentsSnapshot: CommissionPayment[] = [];
+	private latestAdvisorsSnapshot: Record<string, { fiscalActivity?: AdvisorFiscalActivity }> = {};
 
 	/** Pagos + índice de diferidas (estado solo en `CommissionPayment`). */
 	private readonly cutsDeferralIndex$ = this.commissionPayments$.pipe(
@@ -391,6 +393,13 @@ export class CommissionCutsPage implements OnInit {
 		this.commissionPayments$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((p) => {
 			this.latestPaymentsSnapshot = p ?? [];
 		});
+		this.advisors$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((entities) => {
+			this.latestAdvisorsSnapshot = (entities as Record<string, { fiscalActivity?: AdvisorFiscalActivity }>) ?? {};
+		});
+	}
+
+	private advisorFiscalActivityForSummary(s: AdvisorCutSummaryWithState): AdvisorFiscalActivity | undefined {
+		return this.latestAdvisorsSnapshot?.[s.advisorUid]?.fiscalActivity;
 	}
 
 	/** Loading bloqueante mientras sube a Storage y guarda estado (evita doble clic). */
@@ -1567,7 +1576,7 @@ export class CommissionCutsPage implements OnInit {
 					breakdownSentAt: at,
 				});
 			}
-			this.pdfService.exportAdvisorCutCalculation(s);
+			this.pdfService.exportAdvisorCutCalculation(s, this.advisorFiscalActivityForSummary(s));
 			this.refreshCutData(true);
 		} catch (err) {
 			console.error(err);
@@ -2069,7 +2078,7 @@ export class CommissionCutsPage implements OnInit {
 
 	/** Solo descarga/re-exporta el PDF del cálculo; no pide fecha ni cambia estatus. */
 	downloadCalculationOnly(s: AdvisorCutSummaryWithState) {
-		this.pdfService.exportAdvisorCutCalculation(s);
+		this.pdfService.exportAdvisorCutCalculation(s, this.advisorFiscalActivityForSummary(s));
 	}
 
 	exportPdfGeneral(summaries?: AdvisorCutSummaryWithState[], cutDateLabel?: string) {

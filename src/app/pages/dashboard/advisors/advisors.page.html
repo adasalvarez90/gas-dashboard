@@ -43,6 +43,11 @@
 
 				<div class="person-info">
 					<div class="name">{{ advisor.name }}</div>
+					<div class="meta">
+						<span class="tag manager">
+							{{ fiscalActivityLabel(advisor.fiscalActivity) }}
+						</span>
+					</div>
 
 					@if (advisor.tags?.length) {
 					<div class="tags">
@@ -66,6 +71,11 @@
 
 				<div class="person-info">
 					<div class="name">{{ advisor.name }}</div>
+					<div class="meta">
+						<span class="tag manager">
+							{{ fiscalActivityLabel(advisor.fiscalActivity) }}
+						</span>
+					</div>
 
 					@if (advisor.tags?.length) {
 					<div class="tags">
@@ -91,6 +101,9 @@
 					<div class="name">{{ advisor.name }}</div>
 
 					<div class="meta">
+						<span class="tag manager">
+							{{ fiscalActivityLabel(advisor.fiscalActivity) }}
+						</span>
 						@if (advisor.managerId && (managersDic$ | async); as managersDic) {
 						<span class="tag manager">👤 {{ managersDic[advisor.managerId]?.name }}</span>
 						}

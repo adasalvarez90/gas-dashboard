@@ -41,6 +41,11 @@
 				<div class="role-preview">
 					{{ form.get('hierarchyLevel')?.value || 'Nivel no asignado' }}
 				</div>
+				<div class="role-preview">
+					{{ form.get('fiscalActivity')?.value === 'PERSONA_FISICA_ACTIVIDAD_EMPRESARIAL'
+					? 'Persona Fisica con Actividad Empresarial'
+					: (form.get('fiscalActivity')?.value || 'Actividad fiscal no asignada') }}
+				</div>
 			</div>
 		</div>
 
@@ -59,6 +64,15 @@
 					<ion-select-option value="CONSULTANT">Consultora</ion-select-option>
 					<ion-select-option value="MANAGER">Gerente</ion-select-option>
 					<ion-select-option value="CEO">CEO</ion-select-option>
+				</ion-select>
+			</ion-item>
+
+			<ion-item lines="none">
+				<ion-label position="stacked">Actividad fiscal SAT</ion-label>
+				<ion-select formControlName="fiscalActivity" interface="popover" placeholder="Seleccionar actividad fiscal">
+					@for (activity of fiscalActivityOptions; track activity.value) {
+					<ion-select-option [value]="activity.value">{{ activity.label }}</ion-select-option>
+					}
 				</ion-select>
 			</ion-item>
 
