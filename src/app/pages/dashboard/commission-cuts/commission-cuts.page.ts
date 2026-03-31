@@ -532,6 +532,7 @@ export class CommissionCutsPage implements OnInit {
 
 	private expandedSummaryKey: string | null = null;
 	expandedContractKeys = new Set<string>();
+	private footerActionsMenuKey: string | null = null;
 
 	breakdownRowKey(s: AdvisorCutSummaryWithState): string {
 		return `breakdown::${s.advisorUid}::${s.cutDate}`;
@@ -541,6 +542,7 @@ export class CommissionCutsPage implements OnInit {
 		const key = this.breakdownRowKey(s);
 		const next = this.expandedSummaryKey === key ? null : key;
 		this.expandedSummaryKey = next;
+		this.footerActionsMenuKey = null;
 		if (next === null) {
 			this.expandedContractKeys = new Set();
 		} else {
@@ -550,6 +552,28 @@ export class CommissionCutsPage implements OnInit {
 
 	isSummaryExpanded(s: AdvisorCutSummaryWithState): boolean {
 		return this.expandedSummaryKey === this.breakdownRowKey(s);
+	}
+
+	private footerMenuKeyForSummary(s: AdvisorCutSummaryWithState): string {
+		return `footerMenu::${s.advisorUid}::${s.cutDate}`;
+	}
+
+	toggleFooterActionsMenu(s: AdvisorCutSummaryWithState, event?: Event) {
+		event?.stopPropagation();
+		const key = this.footerMenuKeyForSummary(s);
+		this.footerActionsMenuKey = this.footerActionsMenuKey === key ? null : key;
+	}
+
+	isFooterActionsMenuOpen(s: AdvisorCutSummaryWithState): boolean {
+		return this.footerActionsMenuKey === this.footerMenuKeyForSummary(s);
+	}
+
+	canShowInvoiceAttachmentAction(s: AdvisorCutSummaryWithState): boolean {
+		return this.getAdvisorAttachmentActionOptions(s).includes('invoice');
+	}
+
+	canShowReceiptAttachmentAction(s: AdvisorCutSummaryWithState): boolean {
+		return this.getAdvisorAttachmentActionOptions(s).includes('receipt');
 	}
 
 	private contractBreakdownKey(s: AdvisorCutSummaryWithState, contractUid: string): string {
@@ -1624,6 +1648,39 @@ export class CommissionCutsPage implements OnInit {
 			processingMode: 'GROUPED',
 		};
 		setTimeout(() => fileInput.click(), 0);
+	}
+
+	onInvoiceAttachmentCardClick(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
+		const url = s.state?.invoiceUrl;
+		if (url) {
+			window.open(url, '_blank', 'noopener');
+			return;
+		}
+		this.beginInvoiceAttachQuick(s, fileInput);
+	}
+
+	onReceiptAttachmentCardClick(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
+		const url = s.state?.receiptUrl;
+		if (url) {
+			window.open(url, '_blank', 'noopener');
+			return;
+		}
+		this.beginReceiptAttachQuick(s, fileInput);
+	}
+
+	runFooterInvoiceAction(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
+		this.footerActionsMenuKey = null;
+		this.onInvoiceAttachmentCardClick(s, fileInput);
+	}
+
+	runFooterReceiptAction(s: AdvisorCutSummaryWithState, fileInput: HTMLInputElement) {
+		this.footerActionsMenuKey = null;
+		this.onReceiptAttachmentCardClick(s, fileInput);
+	}
+
+	runFooterDownloadAction(s: AdvisorCutSummaryWithState) {
+		this.footerActionsMenuKey = null;
+		this.downloadCalculationOnly(s);
 	}
 
 	async markInvoiceStatusOnly(s: AdvisorCutSummaryWithState) {

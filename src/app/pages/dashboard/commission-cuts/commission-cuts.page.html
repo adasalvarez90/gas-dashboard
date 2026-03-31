@@ -124,6 +124,20 @@
 											class="summary-card-header"
 											(click)="toggleSummaryExpanded(s)"
 										>
+											<input
+												#invFileAdvisor
+												type="file"
+												accept="application/pdf,.pdf"
+												(change)="onInvoiceFilePicked($event)"
+												hidden
+											>
+											<input
+												#rcFileAdvisor
+												type="file"
+												accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
+												(change)="onReceiptFilePicked($event)"
+												hidden
+											>
 											<div class="summary-card-left">
 												<div class="summary-card-title">
 													<div class="summary-cut">{{ s.cutDate | date:'d MMM y' }}</div>
@@ -162,40 +176,7 @@
 											</div>
 
 											<div class="summary-card-right">
-												<input
-													#invFileAdvisor
-													type="file"
-													accept="application/pdf,.pdf"
-													(change)="onInvoiceFilePicked($event)"
-													hidden
-												>
-												<input
-													#rcFileAdvisor
-													type="file"
-													accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
-													(change)="onReceiptFilePicked($event)"
-													hidden
-												>
 												<div class="summary-card-actions">
-													@if (s.state?.invoiceUrl) {
-														<a
-															[href]="s.state.invoiceUrl"
-															target="_blank"
-															rel="noopener"
-															class="link"
-															(click)="$event.stopPropagation()"
-														>Factura</a>
-													}
-													@if (s.state?.receiptUrl) {
-														<a
-															[href]="s.state.receiptUrl"
-															target="_blank"
-															rel="noopener"
-															class="link"
-															(click)="$event.stopPropagation()"
-														>Comprobante</a>
-													}
-
 													@switch (cardWorkflowUiKey(s)) {
 														@case ('MIXED') {
 															<ion-button
@@ -261,7 +242,10 @@
 														}
 														@default {}
 													}
-													@if (canShowAdvisorAttachmentActions(s)) {
+													@if (
+														canShowAdvisorAttachmentActions(s) &&
+														cardWorkflowUiKey(s) !== 'BREAKDOWN_SENT'
+													) {
 														<ion-button
 															size="small"
 															class="action-btn attachment-more-btn"
@@ -280,6 +264,87 @@
 												</div>
 											</div>
 										</div>
+										@if (
+											cardWorkflowUiKey(s) === 'BREAKDOWN_SENT' ||
+											cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' ||
+											cardWorkflowUiKey(s) === 'PAID'
+										) {
+											<div class="summary-card-footer-actions" (click)="$event.stopPropagation()">
+												@if (cardWorkflowUiKey(s) === 'BREAKDOWN_SENT') {
+													<ion-button
+														size="small"
+														class="action-btn footer-action-btn"
+														color="primary"
+														fill="solid"
+														(click)="onInvoiceAttachmentCardClick(s, invFileAdvisor)"
+													>
+														<ion-icon slot="start" [name]="s.state?.invoiceUrl ? 'open-outline' : 'cloud-upload-outline'"></ion-icon>
+														{{ s.state?.invoiceUrl ? 'Ver factura' : 'Subir factura' }}
+													</ion-button>
+												}
+												@if (cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' || cardWorkflowUiKey(s) === 'PAID') {
+													<ion-button
+														size="small"
+														class="action-btn footer-action-btn"
+														color="success"
+														fill="solid"
+														(click)="onReceiptAttachmentCardClick(s, rcFileAdvisor)"
+													>
+														<ion-icon slot="start" [name]="s.state?.receiptUrl ? 'open-outline' : 'cloud-upload-outline'"></ion-icon>
+														{{ s.state?.receiptUrl ? 'Ver comprobante' : 'Subir comprobante' }}
+													</ion-button>
+												}
+
+												<div class="footer-menu-wrap">
+													<ion-button
+														size="small"
+														class="action-btn attachment-more-btn footer-more-btn"
+														color="medium"
+														fill="clear"
+														(click)="toggleFooterActionsMenu(s, $event)"
+														aria-label="Más acciones de comisión"
+													>
+														<ion-icon name="ellipsis-horizontal"></ion-icon>
+													</ion-button>
+
+													@if (isFooterActionsMenuOpen(s)) {
+														<div class="footer-actions-dropdown" (click)="$event.stopPropagation()">
+															@if (canShowInvoiceAttachmentAction(s)) {
+																<button type="button" class="footer-actions-dropdown-item" (click)="runFooterInvoiceAction(s, invFileAdvisor)">
+																	<div class="footer-actions-item-icon">
+																		<ion-icon [name]="s.state?.invoiceUrl ? 'eye-outline' : 'cloud-upload-outline'"></ion-icon>
+																	</div>
+																	<div class="footer-actions-item-copy">
+																		<div class="footer-actions-item-title">{{ s.state?.invoiceUrl ? 'Ver factura' : 'Subir factura' }}</div>
+																		<div class="footer-actions-item-subtitle">{{ s.state?.invoiceUrl ? 'Abrir documento cargado' : 'Adjuntar archivo PDF' }}</div>
+																	</div>
+																</button>
+															}
+															@if (canShowReceiptAttachmentAction(s)) {
+																<button type="button" class="footer-actions-dropdown-item" (click)="runFooterReceiptAction(s, rcFileAdvisor)">
+																	<div class="footer-actions-item-icon">
+																		<ion-icon [name]="s.state?.receiptUrl ? 'eye-outline' : 'cloud-upload-outline'"></ion-icon>
+																	</div>
+																	<div class="footer-actions-item-copy">
+																		<div class="footer-actions-item-title">{{ s.state?.receiptUrl ? 'Ver comprobante' : 'Subir comprobante' }}</div>
+																		<div class="footer-actions-item-subtitle">{{ s.state?.receiptUrl ? 'Abrir comprobante cargado' : 'Adjuntar PDF o imagen' }}</div>
+																	</div>
+																</button>
+															}
+															<button type="button" class="footer-actions-dropdown-item" (click)="runFooterDownloadAction(s)">
+																<div class="footer-actions-item-icon">
+																	<ion-icon name="document-outline"></ion-icon>
+																</div>
+																<div class="footer-actions-item-copy">
+																	<div class="footer-actions-item-title">Descargar cálculo</div>
+																	<div class="footer-actions-item-subtitle">Exportar PDF del corte actual</div>
+																</div>
+															</button>
+														</div>
+													}
+												</div>
+											</div>
+										}
 
 										@if (isSummaryExpanded(s)) {
 											<div class="summary-card-body" (click)="$event.stopPropagation()">

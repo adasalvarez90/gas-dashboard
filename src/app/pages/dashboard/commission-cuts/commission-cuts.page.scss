@@ -175,7 +175,7 @@
 		border-radius: 16px;
 		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
 		background: rgba(255, 255, 255, 0.03);
-		overflow: hidden;
+		overflow: visible;
 		transition: border-color 0.2s ease, background 0.2s ease;
 		transition: transform 0.2s ease;
 
@@ -295,7 +295,7 @@
 
 	.summary-card-mid {
 		flex: 1;
-		min-width: 300px;
+		min-width: 260px;
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
@@ -355,11 +355,111 @@
 	}
 
 	.summary-card-right {
-		min-width: 220px;
+		min-width: 170px;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
 		gap: 10px;
+	}
+
+	.summary-card-footer-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 0 14px 12px;
+		border-top: 1px solid rgba(var(--ion-color-medium-rgb), 0.12);
+		margin-top: -1px;
+		position: relative;
+	}
+
+	.footer-action-btn {
+		--border-radius: 12px;
+		--padding-start: 12px;
+		--padding-end: 12px;
+	}
+
+	.footer-menu-wrap {
+		position: relative;
+	}
+
+	.footer-more-btn {
+		--min-height: 36px;
+		--min-width: 36px;
+		--padding-start: 8px;
+		--padding-end: 8px;
+	}
+
+	.footer-actions-dropdown {
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 8px);
+		min-width: 276px;
+		padding: 8px;
+		border-radius: 16px;
+		border: 1px solid rgba(var(--ion-color-medium-rgb), 0.28);
+		background: rgba(255, 255, 255, 0.04);
+		backdrop-filter: blur(8px);
+		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+		z-index: 40;
+	}
+
+	.footer-actions-dropdown-item {
+		width: 100%;
+		border: 0;
+		background: transparent;
+		color: inherit;
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 10px;
+		border-radius: 12px;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.footer-actions-dropdown-item + .footer-actions-dropdown-item {
+		margin-top: 4px;
+	}
+
+	.footer-actions-dropdown-item:hover {
+		background: rgba(var(--ion-color-primary-rgb), 0.1);
+	}
+
+	.footer-actions-item-icon {
+		width: 28px;
+		height: 28px;
+		border-radius: 9px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(var(--ion-color-medium-rgb), 0.2);
+		color: rgba(var(--ion-color-light-rgb), 0.98);
+		flex: 0 0 28px;
+	}
+
+	.footer-actions-item-icon ion-icon {
+		font-size: 16px;
+	}
+
+	.footer-actions-item-copy {
+		min-width: 0;
+	}
+
+	.footer-actions-item-title {
+		font-size: 15px;
+		line-height: 1.2;
+		font-weight: 700;
+		color: #ffffff;
+		text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+	}
+
+	.footer-actions-item-subtitle {
+		margin-top: 2px;
+		font-size: 12px;
+		line-height: 1.25;
+		color: #d7dbe6;
 	}
 
 	.summary-card-actions {
