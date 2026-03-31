@@ -94,11 +94,7 @@
 							@if (form.get('source')?.value === 'REFERIDORA') {
 								<div class="role-card referral">
 									<div class="role-label referral">{{ roleLabels.REFERRAL }}</div>
-									<ion-select formControlName="referral">
-										@for (advisor of advisors$ | async; track advisor.uid) {
-											<ion-select-option [value]="advisor.uid">{{ advisor.name }}</ion-select-option>
-										}
-									</ion-select>
+									<ion-input formControlName="referral" placeholder="Nombre de referidora"></ion-input>
 								</div>
 							}
 						</div>
