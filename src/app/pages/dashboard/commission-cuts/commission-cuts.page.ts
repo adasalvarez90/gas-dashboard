@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, map, BehaviorSubject, firstValueFrom, take } from 'rxjs';
 import { shareReplay } from 'rxjs/operators';
@@ -533,6 +533,7 @@ export class CommissionCutsPage implements OnInit {
 	private expandedSummaryKey: string | null = null;
 	expandedContractKeys = new Set<string>();
 	private footerActionsMenuKey: string | null = null;
+	private footerActionsMenuOpenUpKeys = new Set<string>();
 
 	breakdownRowKey(s: AdvisorCutSummaryWithState): string {
 		return `breakdown::${s.advisorUid}::${s.cutDate}`;
@@ -558,14 +559,49 @@ export class CommissionCutsPage implements OnInit {
 		return `footerMenu::${s.advisorUid}::${s.cutDate}`;
 	}
 
-	toggleFooterActionsMenu(s: AdvisorCutSummaryWithState, event?: Event) {
+	toggleFooterActionsMenu(s: AdvisorCutSummaryWithState, hostEl?: HTMLElement, event?: Event) {
 		event?.stopPropagation();
 		const key = this.footerMenuKeyForSummary(s);
-		this.footerActionsMenuKey = this.footerActionsMenuKey === key ? null : key;
+		if (this.footerActionsMenuKey === key) {
+			this.footerActionsMenuKey = null;
+			this.footerActionsMenuOpenUpKeys.delete(key);
+			this.footerActionsMenuOpenUpKeys = new Set(this.footerActionsMenuOpenUpKeys);
+			return;
+		}
+		this.footerActionsMenuKey = key;
+		const estimatedHeight = this.estimateFooterMenuHeight(s);
+		const hostRect = hostEl?.getBoundingClientRect();
+		const viewportBottom = window.innerHeight;
+		const opensUp = hostRect ? hostRect.bottom + 8 + estimatedHeight > viewportBottom - 8 : false;
+		if (opensUp) this.footerActionsMenuOpenUpKeys.add(key);
+		else this.footerActionsMenuOpenUpKeys.delete(key);
+		this.footerActionsMenuOpenUpKeys = new Set(this.footerActionsMenuOpenUpKeys);
+	}
+
+	@HostListener('document:click', ['$event'])
+	onDocumentClickCloseFooterMenu(event: MouseEvent) {
+		if (!this.footerActionsMenuKey) return;
+		const target = event.target as Node | null;
+		if (!target) return;
+		const clickedInsideMenu = !!(target as Element).closest?.('.footer-menu-wrap');
+		if (clickedInsideMenu) return;
+		this.footerActionsMenuKey = null;
 	}
 
 	isFooterActionsMenuOpen(s: AdvisorCutSummaryWithState): boolean {
 		return this.footerActionsMenuKey === this.footerMenuKeyForSummary(s);
+	}
+
+	isFooterActionsMenuOpenUp(s: AdvisorCutSummaryWithState): boolean {
+		return this.footerActionsMenuOpenUpKeys.has(this.footerMenuKeyForSummary(s));
+	}
+
+	private estimateFooterMenuHeight(s: AdvisorCutSummaryWithState): number {
+		let rows = 1; // Descargar cálculo
+		const uiKey = this.cardWorkflowUiKey(s);
+		if (uiKey === 'SENT_TO_PAYMENT') rows += 1; // factura
+		if (uiKey === 'PAID') rows += 2; // factura + comprobante
+		return rows * 66 + 20;
 	}
 
 	canShowInvoiceAttachmentAction(s: AdvisorCutSummaryWithState): boolean {

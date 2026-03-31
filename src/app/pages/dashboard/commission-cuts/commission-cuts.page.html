@@ -115,6 +115,7 @@
 									<div
 										class="summary-card"
 										[class.summary-card--open]="isSummaryExpanded(s)"
+										[class.summary-card--menu-open]="isFooterActionsMenuOpen(s)"
 										[class.summary-card--border-danger]="getSummaryCardBorderSeverity(s) === 'danger'"
 										[class.summary-card--border-warning]="getSummaryCardBorderSeverity(s) === 'warning'"
 										[class.summary-card--border-success]="getSummaryCardBorderSeverity(s) === 'success'"
@@ -177,86 +178,6 @@
 
 											<div class="summary-card-right">
 												<div class="summary-card-actions">
-													@switch (cardWorkflowUiKey(s)) {
-														@case ('MIXED') {
-															<ion-button
-																size="small"
-																class="action-btn"
-																color="primary"
-																fill="outline"
-																(click)="$event.stopPropagation(); downloadCalculationAndMarkBreakdown(s)"
-															>
-																Desglose
-															</ion-button>
-															<ion-button
-																size="small"
-																class="action-btn"
-																color="primary"
-																fill="outline"
-																(click)="$event.stopPropagation(); markInvoiceStatusOnly(s)"
-															>
-																Factura
-															</ion-button>
-															<ion-button
-																size="small"
-																class="action-btn"
-																color="success"
-																fill="outline"
-																(click)="$event.stopPropagation(); markPaidStatusOnly(s)"
-															>
-																Pagada
-															</ion-button>
-														}
-														@case ('PENDING') {
-															<ion-button
-																size="small"
-																class="action-btn"
-																color="primary"
-																fill="outline"
-																(click)="$event.stopPropagation(); downloadCalculationAndMarkBreakdown(s)"
-															>
-																Descargar cálculo
-															</ion-button>
-														}
-														@case ('BREAKDOWN_SENT') {
-															<ion-button
-																size="small"
-																class="action-btn"
-																color="primary"
-																fill="outline"
-																(click)="$event.stopPropagation(); markInvoiceStatusOnly(s)"
-															>
-																Factura recibida
-															</ion-button>
-														}
-														@case ('SENT_TO_PAYMENT') {
-															<ion-button
-																size="small"
-																class="action-btn"
-																color="success"
-																fill="outline"
-																(click)="$event.stopPropagation(); markPaidStatusOnly(s)"
-															>
-																Pagada
-															</ion-button>
-														}
-														@default {}
-													}
-													@if (
-														canShowAdvisorAttachmentActions(s) &&
-														cardWorkflowUiKey(s) !== 'BREAKDOWN_SENT'
-													) {
-														<ion-button
-															size="small"
-															class="action-btn attachment-more-btn"
-															color="medium"
-															fill="clear"
-															(click)="$event.stopPropagation(); openAdvisorAttachmentActions(s, invFileAdvisor, rcFileAdvisor)"
-															aria-label="Adjuntar archivos de comisión"
-														>
-															<ion-icon name="ellipsis-vertical"></ion-icon>
-														</ion-button>
-													}
 												</div>
 
 												<div class="summary-card-chevron">
@@ -264,52 +185,38 @@
 												</div>
 											</div>
 										</div>
-										@if (
-											cardWorkflowUiKey(s) === 'BREAKDOWN_SENT' ||
-											cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' ||
-											cardWorkflowUiKey(s) === 'PAID'
-										) {
-											<div class="summary-card-footer-actions" (click)="$event.stopPropagation()">
-												@if (cardWorkflowUiKey(s) === 'BREAKDOWN_SENT') {
-													<ion-button
-														size="small"
-														class="action-btn footer-action-btn"
-														color="primary"
-														fill="solid"
-														(click)="onInvoiceAttachmentCardClick(s, invFileAdvisor)"
-													>
-														<ion-icon slot="start" [name]="s.state?.invoiceUrl ? 'open-outline' : 'cloud-upload-outline'"></ion-icon>
-														{{ s.state?.invoiceUrl ? 'Ver factura' : 'Subir factura' }}
-													</ion-button>
-												}
-												@if (cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' || cardWorkflowUiKey(s) === 'PAID') {
-													<ion-button
-														size="small"
-														class="action-btn footer-action-btn"
-														color="success"
-														fill="solid"
-														(click)="onReceiptAttachmentCardClick(s, rcFileAdvisor)"
-													>
-														<ion-icon slot="start" [name]="s.state?.receiptUrl ? 'open-outline' : 'cloud-upload-outline'"></ion-icon>
-														{{ s.state?.receiptUrl ? 'Ver comprobante' : 'Subir comprobante' }}
-													</ion-button>
-												}
+										<div class="summary-card-footer-actions">
+											@if (cardWorkflowUiKey(s) === 'PENDING') {
+												<ion-chip class="footer-action-chip footer-action-chip--primary" (click)="downloadCalculationAndMarkBreakdown(s)">
+													Descargar cálculo
+												</ion-chip>
+											}
 
-												<div class="footer-menu-wrap">
-													<ion-button
-														size="small"
-														class="action-btn attachment-more-btn footer-more-btn"
-														color="medium"
-														fill="clear"
-														(click)="toggleFooterActionsMenu(s, $event)"
-														aria-label="Más acciones de comisión"
-													>
+											@if (cardWorkflowUiKey(s) === 'BREAKDOWN_SENT') {
+												<ion-chip class="footer-action-chip footer-action-chip--primary" (click)="markInvoiceStatusOnly(s)">
+													Factura recibida
+												</ion-chip>
+											}
+
+											@if (cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT') {
+												<ion-chip class="footer-action-chip footer-action-chip--success" (click)="markPaidStatusOnly(s)">
+													Pagada
+												</ion-chip>
+											}
+
+											@if (
+												cardWorkflowUiKey(s) === 'BREAKDOWN_SENT' ||
+												cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' ||
+												cardWorkflowUiKey(s) === 'PAID'
+											) {
+												<div class="footer-menu-wrap" #footerMenuWrap>
+													<ion-button size="small" class="action-btn attachment-more-btn footer-more-btn" color="medium" fill="clear" (click)="toggleFooterActionsMenu(s, footerMenuWrap, $event)" aria-label="Más acciones de comisión">
 														<ion-icon name="ellipsis-horizontal"></ion-icon>
 													</ion-button>
 
 													@if (isFooterActionsMenuOpen(s)) {
-														<div class="footer-actions-dropdown" (click)="$event.stopPropagation()">
-															@if (canShowInvoiceAttachmentAction(s)) {
+														<div class="footer-actions-dropdown" [class.footer-actions-dropdown--up]="isFooterActionsMenuOpenUp(s)" (click)="$event.stopPropagation()">
+															@if (cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' || cardWorkflowUiKey(s) === 'PAID') {
 																<button type="button" class="footer-actions-dropdown-item" (click)="runFooterInvoiceAction(s, invFileAdvisor)">
 																	<div class="footer-actions-item-icon">
 																		<ion-icon [name]="s.state?.invoiceUrl ? 'eye-outline' : 'cloud-upload-outline'"></ion-icon>
@@ -320,7 +227,8 @@
 																	</div>
 																</button>
 															}
-															@if (canShowReceiptAttachmentAction(s)) {
+
+															@if (cardWorkflowUiKey(s) === 'PAID') {
 																<button type="button" class="footer-actions-dropdown-item" (click)="runFooterReceiptAction(s, rcFileAdvisor)">
 																	<div class="footer-actions-item-icon">
 																		<ion-icon [name]="s.state?.receiptUrl ? 'eye-outline' : 'cloud-upload-outline'"></ion-icon>
@@ -331,6 +239,7 @@
 																	</div>
 																</button>
 															}
+
 															<button type="button" class="footer-actions-dropdown-item" (click)="runFooterDownloadAction(s)">
 																<div class="footer-actions-item-icon">
 																	<ion-icon name="document-outline"></ion-icon>
@@ -343,8 +252,8 @@
 														</div>
 													}
 												</div>
-											</div>
-										}
+											}
+										</div>
 
 										@if (isSummaryExpanded(s)) {
 											<div class="summary-card-body" (click)="$event.stopPropagation()">
