@@ -123,7 +123,8 @@ export class CommissionCutsPdfService {
 
 	/** PDF de desglose SAT para factura (PFAE/RESICO). */
 	exportAdvisorCutCalculation(s: SummaryForPdf, fiscalActivity?: AdvisorFiscalActivity): void {
-		const payments = (s.payments ?? []).filter((p) => !p.cancelled);
+		// Siempre calcular sobre líneas pendientes (no canceladas y no pagadas).
+		const payments = (s.payments ?? []).filter((p) => !p.cancelled && !p.paid && !p.paidAt);
 		const total = payments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
 
 		const IVA_TRASLADADO = 0.16;

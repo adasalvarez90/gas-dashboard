@@ -629,7 +629,49 @@ export class CommissionCutsPage implements OnInit {
 		const uiKey = this.cardWorkflowUiKey(s);
 		if (uiKey === 'SENT_TO_PAYMENT') rows += 1; // factura
 		if (uiKey === 'PAID') rows += 2; // factura + comprobante
+		if (uiKey === 'MIXED') rows += 2; // factura + comprobante
 		return rows * 66 + 20;
+	}
+
+	private getMixedNextGroupAction(
+		s: AdvisorCutSummaryWithState,
+	): 'BREAKDOWN' | 'INVOICE' | 'SENT_TO_PAYMENT' | 'PAID' | null {
+		const active = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt);
+		if (!active.length) return null;
+		if (active.some((p) => !p.breakdownSentAt)) return 'BREAKDOWN';
+		if (active.some((p) => p.breakdownSentAt && !p.invoiceSentAt)) return 'INVOICE';
+		if (active.some((p) => p.invoiceSentAt && !p.sentToPaymentAt)) return 'SENT_TO_PAYMENT';
+		if (active.some((p) => this.paymentReadyForPaidStep(p))) return 'PAID';
+		return null;
+	}
+
+	getMixedAdvanceActionLabel(s: AdvisorCutSummaryWithState): string {
+		const next = this.getMixedNextGroupAction(s);
+		if (next === 'BREAKDOWN') return 'Descargar cálculo';
+		if (next === 'INVOICE') return 'Factura recibida';
+		if (next === 'SENT_TO_PAYMENT') return 'Enviada a pago';
+		if (next === 'PAID') return 'Marcar como pagada';
+		return 'Continuar estatus';
+	}
+
+	async advanceMixedGroupStatus(s: AdvisorCutSummaryWithState) {
+		const next = this.getMixedNextGroupAction(s);
+		if (next === 'BREAKDOWN') {
+			await this.downloadCalculationAndMarkBreakdown(s);
+			return;
+		}
+		if (next === 'INVOICE') {
+			await this.markInvoiceStatusOnly(s);
+			return;
+		}
+		if (next === 'SENT_TO_PAYMENT') {
+			await this.markSentToPaymentStatusOnly(s);
+			return;
+		}
+		if (next === 'PAID') {
+			await this.markPaidStatusOnly(s);
+			return;
+		}
 	}
 
 	canShowInvoiceAttachmentAction(s: AdvisorCutSummaryWithState): boolean {

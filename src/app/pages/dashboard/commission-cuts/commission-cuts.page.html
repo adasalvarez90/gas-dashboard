@@ -221,11 +221,18 @@
 												</ion-chip>
 											}
 
+											@if (cardWorkflowUiKey(s) === 'MIXED') {
+												<ion-chip class="footer-action-chip footer-action-chip--primary" (click)="advanceMixedGroupStatus(s)">
+													{{ getMixedAdvanceActionLabel(s) }}
+												</ion-chip>
+											}
+
 											@if (
 												cardWorkflowUiKey(s) === 'BREAKDOWN_SENT' ||
 												cardWorkflowUiKey(s) === 'INVOICE_RECIVED' ||
 												cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' ||
-												cardWorkflowUiKey(s) === 'PAID'
+												cardWorkflowUiKey(s) === 'PAID' ||
+												cardWorkflowUiKey(s) === 'MIXED'
 											) {
 												<div class="footer-menu-wrap" #footerMenuWrap>
 													<ion-button size="small" class="action-btn attachment-more-btn footer-more-btn" color="medium" fill="clear" (click)="toggleFooterActionsMenu(s, footerMenuWrap, $event)" aria-label="Más acciones de comisión">
@@ -234,7 +241,7 @@
 
 													@if (isFooterActionsMenuOpen(s)) {
 														<div class="footer-actions-dropdown" [class.footer-actions-dropdown--up]="isFooterActionsMenuOpenUp(s)" (click)="$event.stopPropagation()">
-															@if (cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' || cardWorkflowUiKey(s) === 'PAID') {
+															@if (cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' || cardWorkflowUiKey(s) === 'PAID' || cardWorkflowUiKey(s) === 'MIXED') {
 																<button type="button" class="footer-actions-dropdown-item" (click)="runFooterInvoiceAction(s, invFileAdvisor)">
 																	<div class="footer-actions-item-icon">
 																		<ion-icon [name]="s.state?.invoiceUrl ? 'eye-outline' : 'cloud-upload-outline'"></ion-icon>
@@ -246,7 +253,7 @@
 																</button>
 															}
 
-															@if (cardWorkflowUiKey(s) === 'PAID') {
+															@if (cardWorkflowUiKey(s) === 'PAID' || cardWorkflowUiKey(s) === 'MIXED') {
 																<button type="button" class="footer-actions-dropdown-item" (click)="runFooterReceiptAction(s, rcFileAdvisor)">
 																	<div class="footer-actions-item-icon">
 																		<ion-icon [name]="s.state?.receiptUrl ? 'eye-outline' : 'cloud-upload-outline'"></ion-icon>
