@@ -1539,6 +1539,7 @@ export class CommissionCutsPage implements OnInit {
 		return new Promise((resolve) => {
 			void this.alertCtrl
 				.create({
+					cssClass: 'commission-cuts-action-date-alert',
 					header: 'Fecha de la acción',
 					message,
 					inputs: [
