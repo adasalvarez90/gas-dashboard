@@ -42,6 +42,13 @@ ion-modal.glass-modal::part(backdrop) {
   backdrop-filter: blur(14px);
 }
 
+/* Base general para TODOS los modales glass */
+ion-modal.glass-modal {
+  --width: min(760px, 94vw);
+  --max-width: 94vw;
+  --border-radius: 20px;
+}
+
 /* CONTENEDOR PRINCIPAL DEL MODAL */
 ion-modal.glass-modal::part(content) {
   background: transparent !important;
@@ -54,6 +61,18 @@ ion-modal.glass-modal ion-content {
   --background: rgba(var(--ion-background-color-rgb), 0.65) !important; /* ← nivel pro */
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+}
+
+/* Header/Toolbar consistente para cualquier modal glass */
+ion-modal.glass-modal ion-header ion-toolbar {
+  --background: transparent;
+  --color: #f3f6ff;
+  border-bottom: 1px solid rgba(var(--ion-color-light-rgb), 0.08);
+}
+
+ion-modal.glass-modal ion-title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
 /* Alert glass para fecha de acción (commission-cuts) */
@@ -166,6 +185,130 @@ ion-alert.commission-cuts-action-date-alert .alert-button {
 }
 
 ion-alert.commission-cuts-action-date-alert .alert-button:not(.alert-button-role-cancel) {
+  background: rgba(var(--ion-color-primary-rgb), 0.15);
+}
+
+/* Alert para motivo de atraso (construido en commission-cuts.page.ts) */
+ion-alert.commission-cuts-late-reason-alert {
+  --backdrop-opacity: 0.58;
+  --ion-backdrop-color: transparent;
+}
+
+ion-alert.commission-cuts-late-reason-alert::part(backdrop) {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-wrapper {
+  background: rgba(var(--ion-background-color-rgb), 0.65);
+  border: none !important;
+  outline: none !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(var(--ion-color-light-rgb), 0.05);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-wrapper:focus,
+ion-alert.commission-cuts-late-reason-alert .alert-wrapper:focus-visible,
+ion-alert.commission-cuts-late-reason-alert .alert-wrapper:active {
+  border: none !important;
+  outline: none !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(var(--ion-color-light-rgb), 0.05) !important;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-head {
+  padding: 18px 18px 8px 18px;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-title {
+  color: #f3f6ff !important;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-title,
+ion-alert.commission-cuts-late-reason-alert .alert-message,
+ion-alert.commission-cuts-late-reason-alert .alert-radio-label {
+  color: #f3f6ff !important;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-message {
+  font-size: 16px;
+  line-height: 1.35;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-radio-group,
+ion-alert.commission-cuts-late-reason-alert .alert-input-group {
+  padding: 8px 18px 0 18px;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-radio-button,
+ion-alert.commission-cuts-late-reason-alert .alert-input-wrapper {
+  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.18);
+  border-radius: 12px;
+  background: rgba(7, 12, 24, 0.72);
+  margin-bottom: 10px;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-radio-icon {
+  border-color: rgba(var(--ion-color-primary-rgb), 0.5) !important;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-radio-inner {
+  background: rgba(var(--ion-color-primary-rgb), 0.95) !important;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-input,
+ion-alert.commission-cuts-late-reason-alert textarea.alert-input {
+  color: #f6f8ff;
+  background: transparent;
+}
+
+ion-alert.commission-cuts-late-reason-alert .commission-cuts-late-reason-extra-wrap {
+  margin: 0 18px 8px;
+}
+
+ion-alert.commission-cuts-late-reason-alert .commission-cuts-late-reason-extra-label {
+  display: block;
+  color: rgba(214, 222, 236, 0.88);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  margin: 0 0 6px;
+}
+
+ion-alert.commission-cuts-late-reason-alert textarea.commission-cuts-late-reason-extra-text {
+  width: 100%;
+  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.18);
+  border-radius: 12px;
+  background: rgba(7, 12, 24, 0.72);
+  color: #f6f8ff;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 76px;
+  outline: none;
+}
+
+ion-alert.commission-cuts-late-reason-alert textarea.commission-cuts-late-reason-extra-text:focus {
+  border-color: rgba(var(--ion-color-primary-rgb), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.14);
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-button-group {
+  padding: 12px 14px 14px 14px;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-button {
+  border-radius: 10px;
+  min-height: 38px;
+  color: rgba(var(--ion-color-primary-rgb), 0.98);
+  font-weight: 700;
+}
+
+ion-alert.commission-cuts-late-reason-alert .alert-button:not(.alert-button-role-cancel) {
   background: rgba(var(--ion-color-primary-rgb), 0.15);
 }
 

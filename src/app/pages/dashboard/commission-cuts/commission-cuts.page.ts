@@ -12,12 +12,13 @@ import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
 import { AdvisorCutSummary } from 'src/app/models/commission-cuts-summary.model';
 import {
+	COMMISSION_CUT_LATE_REASONS,
+	LATE_REASON_CODES_BY_STEP,
 	type LateReasonEntry,
 	type LateReasonStep,
 	getLateReasonLabel,
 	normalizeLateReasons,
 } from 'src/app/models/commission-cut-late-reason.model';
-import { LateReasonModalComponent } from 'src/app/components/late-reason-modal/late-reason-modal.component';
 import {
 	ProcessDeferredModalComponent,
 	type ProcessDeferredModalGroupInput,
@@ -2061,16 +2062,62 @@ export class CommissionCutsPage implements OnInit {
 		s?: AdvisorCutSummaryWithState,
 		subtitle?: string
 	): Promise<{ reason: string; text?: string } | undefined> {
-		const modal = await this.modalCtrl.create({
-			component: LateReasonModalComponent,
-			componentProps: {
-				step,
-				subtitle: subtitle ?? `Indica el motivo de atraso para el paso ${step}.`,
-			},
+		const options = LATE_REASON_CODES_BY_STEP[step] ?? [];
+		if (!options.length) return undefined;
+		return new Promise((resolve) => {
+			void this.alertCtrl
+				.create({
+					cssClass: 'commission-cuts-late-reason-alert',
+					header: 'Motivo de atraso',
+					message: subtitle ?? `Indica el motivo de atraso para el paso ${step}.`,
+					inputs: options.map((code, idx) => ({
+						type: 'radio' as const,
+						label: COMMISSION_CUT_LATE_REASONS[code] ?? code,
+						value: code,
+						checked: idx === 0,
+					})),
+					buttons: [
+						{
+							text: 'Cancelar',
+							role: 'cancel',
+							handler: () => resolve(undefined),
+						},
+						{
+							text: 'Continuar',
+							handler: (data: unknown) => {
+								const root = document.querySelector(
+									'ion-alert.commission-cuts-late-reason-alert'
+								) as HTMLElement | null;
+								const reason = typeof data === 'string' ? data : undefined;
+								const textArea = root?.querySelector(
+									'textarea.commission-cuts-late-reason-extra-text'
+								) as HTMLTextAreaElement | null;
+								const text = textArea?.value?.trim() || undefined;
+								if (!reason) return false;
+								resolve({ reason, text });
+								return true;
+							},
+						},
+					],
+				})
+				.then(async (a) => {
+					await a.present();
+					// `ion-alert` no soporta bien radio + textarea en `inputs`; inyectamos textarea custom.
+					setTimeout(() => {
+						const root = document.querySelector(
+							'ion-alert.commission-cuts-late-reason-alert'
+						) as HTMLElement | null;
+						const group = root?.querySelector('.alert-radio-group') as HTMLElement | null;
+						if (!root || !group || root.querySelector('.commission-cuts-late-reason-extra-wrap')) return;
+						const wrap = document.createElement('div');
+						wrap.className = 'commission-cuts-late-reason-extra-wrap';
+						wrap.innerHTML =
+							'<label class="commission-cuts-late-reason-extra-label">Texto adicional (opcional)</label>' +
+							'<textarea class="commission-cuts-late-reason-extra-text" rows="3" placeholder="Explicación adicional..."></textarea>';
+						group.insertAdjacentElement('afterend', wrap);
+					}, 0);
+				});
 		});
-		await modal.present();
-		const { data, role } = await modal.onWillDismiss();
-		return role === 'ok' ? data : undefined;
 	}
 
 	onInvoiceFilePicked(event: Event) {
