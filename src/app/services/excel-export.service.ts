@@ -557,6 +557,7 @@ export class ExcelExportService {
 				}
 			}
 		}
+		this.autoFitColumnsFromHeader(ws, 4, 10, 40);
 	}
 
 	private applyFormatsPagoAsesora(ws: Worksheet): void {
@@ -566,6 +567,10 @@ export class ExcelExportService {
 		];
 		ws.views = [{ state: 'frozen', ySplit: 4 }];
 		for (let i = 5; i <= ws.rowCount; i++) {
+			// Régimen, Factura, Estatus, Fecha de Pago
+			for (const col of [2, 8, 9, 10]) {
+				ws.getCell(i, col).alignment = { horizontal: 'center', vertical: 'middle' };
+			}
 			ws.getCell(i, 3).numFmt = '$ #,##0.00';
 			ws.getCell(i, 4).numFmt = '$ #,##0.00';
 			ws.getCell(i, 5).numFmt = '$ #,##0.00';
@@ -574,6 +579,28 @@ export class ExcelExportService {
 			for (const col of [3, 4, 5, 6, 7]) {
 				ws.getCell(i, col).alignment = { horizontal: 'right', vertical: 'middle' };
 			}
+		}
+		this.autoFitColumnsFromHeader(ws, 4, 10, 40);
+	}
+
+	private autoFitColumnsFromHeader(ws: Worksheet, headerRow = 1, minWidth = 10, maxWidth = 40): void {
+		for (let col = 1; col <= ws.columnCount; col++) {
+			const cell = ws.getCell(headerRow, col);
+			const value = cell.value;
+			let text = '';
+			if (value == null) {
+				text = '';
+			} else if (typeof value === 'object' && 'richText' in value && Array.isArray(value.richText)) {
+				text = value.richText.map((x) => x.text ?? '').join('');
+			} else if (typeof value === 'object' && 'text' in value && typeof value.text === 'string') {
+				text = value.text;
+			} else {
+				text = String(value);
+			}
+			const maxLen = text.split(/\r?\n/).reduce((m, line) => Math.max(m, line.length), 0);
+			// Extra padding horizontal amplio para headers (aprox. 10px).
+			const target = Math.max(minWidth, Math.min(maxWidth, maxLen + 10));
+			ws.getColumn(col).width = target;
 		}
 	}
 
