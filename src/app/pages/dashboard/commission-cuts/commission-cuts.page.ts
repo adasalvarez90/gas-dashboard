@@ -1578,7 +1578,25 @@ export class CommissionCutsPage implements OnInit {
 						},
 					],
 				})
-				.then((a) => a.present());
+				.then(async (a) => {
+					await a.present();
+					// UX: abrir selector nativo al tocar cualquier parte del campo, no solo el icono.
+					setTimeout(() => {
+						const root = document.querySelector('ion-alert.commission-cuts-action-date-alert');
+						const input = root?.querySelector('.alert-input') as HTMLInputElement | null;
+						const wrapper = root?.querySelector('.alert-input-wrapper') as HTMLElement | null;
+						if (!input || !wrapper) return;
+						const openNativePicker = () => {
+							const withPicker = input as HTMLInputElement & { showPicker?: () => void };
+							if (typeof withPicker.showPicker === 'function') withPicker.showPicker();
+							else {
+								input.focus();
+								input.click();
+							}
+						};
+						wrapper.addEventListener('click', openNativePicker);
+					}, 0);
+				});
 		});
 	}
 
