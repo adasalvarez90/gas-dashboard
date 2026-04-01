@@ -58,6 +58,7 @@ type RoleSums = {
 	SALES_DIRECTION: number;
 	OPERATIONS: number;
 	CEO: number;
+	REFERRAL: number;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -171,6 +172,8 @@ export class ExcelExportService {
 			'Operaciones Accesible',
 			'OA Nom',
 			'Comisión Ana',
+			'Referidor(a)',
+			'Referidor(a) Nom',
 			'Comisión',
 		];
 		ws.mergeCells(1, 1, 2, headers.length);
@@ -204,6 +207,8 @@ export class ExcelExportService {
 
 		let totalImmediateCommission = 0;
 		let totalRecurringCommission = 0;
+		let totalReferralImmediate = 0;
+		let totalReferralRecurring = 0;
 
 		const immediateTypes = new Set(['IMMEDIATE', 'FINAL', 'ADJUSTMENT']);
 		const recurringTypes = new Set(['RECURRING']);
@@ -244,6 +249,8 @@ export class ExcelExportService {
 				byRole.OPERATIONS,
 				oaNom,
 				byRole.CEO,
+				byRole.REFERRAL,
+				contract.roles?.referral?.trim() ?? '',
 				commissionTotal,
 			];
 		};
@@ -255,6 +262,7 @@ export class ExcelExportService {
 			const row = ws.addRow(buildContractRow(contract, immediatePayments));
 			this.paintDataRowNoFill(row);
 			totalImmediateCommission += immediatePayments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
+			totalReferralImmediate += this.sumReferralAmount(immediatePayments);
 		}
 
 		const totalImmediateRow = ws.addRow([
@@ -277,9 +285,10 @@ export class ExcelExportService {
 			'',
 			'',
 			'',
+			totalReferralImmediate,
+			'Subtotal',
 			totalImmediateCommission,
 		]);
-		totalImmediateRow.getCell(19).value = 'Subtotal';
 		this.paintTotalRow(totalImmediateRow, 'BDD6EE');
 
 		ws.addRow([]);
@@ -304,6 +313,7 @@ export class ExcelExportService {
 			const row = ws.addRow(buildContractRow(contract, recurringPayments));
 			this.paintDataRowNoFill(row);
 			totalRecurringCommission += recurringPayments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
+			totalReferralRecurring += this.sumReferralAmount(recurringPayments);
 		}
 
 		const totalRecurringRow = ws.addRow([
@@ -326,9 +336,10 @@ export class ExcelExportService {
 			'',
 			'',
 			'',
+			totalReferralRecurring,
+			'Subtotal',
 			totalRecurringCommission,
 		]);
-		totalRecurringRow.getCell(19).value = 'Subtotal';
 		this.paintTotalRow(totalRecurringRow, 'BDD6EE');
 
 		ws.addRow([]);
@@ -352,9 +363,10 @@ export class ExcelExportService {
 			'',
 			'',
 			'',
+			totalReferralImmediate + totalReferralRecurring,
+			'Total',
 			totalImmediateCommission + totalRecurringCommission,
 		]);
-		grandTotalRow.getCell(19).value = 'Total';
 		this.paintTotalRow(grandTotalRow, 'D9EAD3');
 		this.applyFormatsDesglose(ws);
 	}
@@ -396,6 +408,7 @@ export class ExcelExportService {
 		this.paintHeader(headerRow, '858FB3');
 
 		const advisorsByUid = new Map(data.advisors.map((a) => [a.uid, a]));
+		const contractsByUid = new Map(data.contracts.map((c) => [c.uid, c]));
 		const paymentsByAdvisor = this.groupBy(data.commissionPayments, (p) => p.advisorUid);
 
 		const rows: PagoAsesoraRow[] = Array.from(paymentsByAdvisor.entries()).map(([advisorUid, payments]) => {
@@ -405,13 +418,19 @@ export class ExcelExportService {
 
 			const comisionVentas = byRole.CONSULTANT;
 			const comisionGerencia = byRole.MANAGER;
-			const comisionReferidora = 0;
+			const comisionReferidora = byRole.REFERRAL;
 			let comisionOpsDir = 0;
 			if (tags.has('KAM')) comisionOpsDir += byRole.KAM;
 			if (tags.has('SALES_DIRECTION')) comisionOpsDir += byRole.SALES_DIRECTION;
 			if (tags.has('OPERATIONS')) comisionOpsDir += byRole.OPERATIONS;
 			if ((advisor?.hierarchyLevel ?? '').toUpperCase() === 'CEO') comisionOpsDir += byRole.CEO;
 			const comisionTotal = comisionVentas + comisionGerencia + comisionReferidora + comisionOpsDir;
+
+			const advisorName =
+				advisor?.name ??
+				(comisionReferidora > 0
+					? this.referrerDisplayNameForPayments(payments, contractsByUid, advisorUid)
+					: '');
 
 			const { mergedState } = deriveAdvisorWorkflowFromPayments(payments, cutDate);
 			const effectiveState = mergedState ?? undefined;
@@ -425,7 +444,7 @@ export class ExcelExportService {
 
 			return {
 				advisorUid,
-				advisorName: advisor?.name ?? '',
+				advisorName,
 				regimen: this.regimenLabel(advisor?.fiscalActivity),
 				comisionVentas,
 				comisionGerencia,
@@ -441,7 +460,12 @@ export class ExcelExportService {
 			};
 		});
 
-		rows.sort((a, b) => a.advisorName.localeCompare(b.advisorName));
+		rows.sort((a, b) => {
+			const ar = !advisorsByUid.has(a.advisorUid) && a.comisionReferidora > 0 ? 1 : 0;
+			const br = !advisorsByUid.has(b.advisorUid) && b.comisionReferidora > 0 ? 1 : 0;
+			if (ar !== br) return ar - br;
+			return a.advisorName.localeCompare(b.advisorName);
+		});
 		let total = 0;
 		for (const r of rows) {
 			total += r.comisionTotal;
@@ -486,13 +510,39 @@ export class ExcelExportService {
 			SALES_DIRECTION: 0,
 			OPERATIONS: 0,
 			CEO: 0,
+			REFERRAL: 0,
 		};
 		for (const p of payments) {
 			const role = (p.role ?? '').toUpperCase();
 			const amount = p.amount ?? 0;
-			if (role in out) out[role] += amount;
+			if (role === 'REFERRAL') {
+				out.REFERRAL += amount;
+				continue;
+			}
+			if (role in out) out[role as keyof RoleSums] += amount;
 		}
 		return out;
+	}
+
+	private sumReferralAmount(payments: CommissionPayment[]): number {
+		return payments
+			.filter((p) => p.role?.toUpperCase() === 'REFERRAL')
+			.reduce((acc, p) => acc + (p.amount ?? 0), 0);
+	}
+
+	/** Nombre en hoja 2: coincide con `contracts.roles.referral` si aplica al uid del pago. */
+	private referrerDisplayNameForPayments(
+		payments: CommissionPayment[],
+		contractsByUid: Map<string, Contract>,
+		advisorUid: string,
+	): string {
+		const key = advisorUid.trim();
+		for (const p of payments) {
+			if (p.role?.toUpperCase() !== 'REFERRAL') continue;
+			const ref = contractsByUid.get(p.contractUid ?? '')?.roles?.referral?.trim();
+			if (ref && ref === key) return ref;
+		}
+		return key;
 	}
 
 	private paintHeader(row: import('exceljs').Row, colorHex: string): void {
@@ -534,7 +584,8 @@ export class ExcelExportService {
 		ws.columns = [
 			{ width: 18 }, { width: 24 }, { width: 13 }, { width: 13 }, { width: 14 }, { width: 11 }, { width: 10 },
 			{ width: 15 }, { width: 10 }, { width: 16 }, { width: 12 }, { width: 16 }, { width: 11 }, { width: 16 },
-			{ width: 14 }, { width: 16 }, { width: 16 }, { width: 14 }, { width: 12 }, { width: 14 },
+			{ width: 14 }, { width: 16 }, { width: 16 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 18 },
+			{ width: 20 }, { width: 14 },
 		];
 		ws.views = [{ state: 'frozen', ySplit: 4 }];
 		for (let i = 5; i <= ws.rowCount; i++) {
@@ -544,14 +595,10 @@ export class ExcelExportService {
 			}
 			if (typeof ws.getCell(i, 5).value === 'number') ws.getCell(i, 5).numFmt = '$ #,##0.00';
 			if (typeof ws.getCell(i, 6).value === 'number') ws.getCell(i, 6).numFmt = '0%';
-			if (typeof ws.getCell(i, 9).value === 'number') ws.getCell(i, 9).numFmt = '$ #,##0.00';
-			if (typeof ws.getCell(i, 11).value === 'number') ws.getCell(i, 11).numFmt = '$ #,##0.00';
-			if (typeof ws.getCell(i, 13).value === 'number') ws.getCell(i, 13).numFmt = '$ #,##0.00';
-			if (typeof ws.getCell(i, 15).value === 'number') ws.getCell(i, 15).numFmt = '$ #,##0.00';
-			if (typeof ws.getCell(i, 17).value === 'number') ws.getCell(i, 17).numFmt = '$ #,##0.00';
-			if (typeof ws.getCell(i, 19).value === 'number') ws.getCell(i, 19).numFmt = '$ #,##0.00';
-			if (typeof ws.getCell(i, 20).value === 'number') ws.getCell(i, 20).numFmt = '$ #,##0.00';
-			for (const col of [5, 9, 11, 13, 15, 17, 19, 20]) {
+			for (const col of [9, 11, 13, 15, 17, 19, 20, 22]) {
+				if (typeof ws.getCell(i, col).value === 'number') ws.getCell(i, col).numFmt = '$ #,##0.00';
+			}
+			for (const col of [5, 9, 11, 13, 15, 17, 19, 20, 22]) {
 				if (typeof ws.getCell(i, col).value === 'number') {
 					ws.getCell(i, col).alignment = { horizontal: 'right', vertical: 'middle' };
 				}

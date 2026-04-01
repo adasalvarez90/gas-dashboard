@@ -53,10 +53,7 @@ export class ContractCommissionsComponent implements OnInit, OnChanges {
 			for (const p of payments) {
 				const key = `${p.advisorUid}::${p.role}`;
 				const existing = groups.get(key);
-				const name =
-					(advisorsDic as Record<string, { name?: string }>)?.[p.advisorUid]?.name ||
-					(advisorsDic as Record<string, { displayName?: string }>)?.[p.advisorUid]?.displayName ||
-					'Desconocido';
+				const name = this.resolveCommissionGroupDisplayName(advisorsDic as Record<string, { name?: string; displayName?: string }>, p);
 				const isPaid = !!p.paidAt || p.paid;
 				const isPending = !isPaid && !p.cancelled;
 				const amount = p.amount || 0;
@@ -101,6 +98,9 @@ export class ContractCommissionsComponent implements OnInit, OnChanges {
 				const ap = a.pendingAmount > 0 ? 0 : 1;
 				const bp = b.pendingAmount > 0 ? 0 : 1;
 				if (ap !== bp) return ap - bp;
+				const ar = a.role?.toUpperCase?.() === 'REFERRAL' ? 1 : 0;
+				const br = b.role?.toUpperCase?.() === 'REFERRAL' ? 1 : 0;
+				if (ar !== br) return ar - br;
 				return b.totalAmount - a.totalAmount;
 			});
 			return result;
@@ -176,6 +176,25 @@ export class ContractCommissionsComponent implements OnInit, OnChanges {
 		REFERRAL: 'Referido',
 		referral: 'Referido',
 	};
+
+	/**
+	 * Referidor(a) suele guardarse como texto en `contract.roles.referral`, no como UID en catálogo de asesores.
+	 */
+	private resolveCommissionGroupDisplayName(
+		advisorsDic: Record<string, { name?: string; displayName?: string }>,
+		p: CommissionPayment,
+	): string {
+		const fromDic = advisorsDic?.[p.advisorUid]?.name || advisorsDic?.[p.advisorUid]?.displayName;
+		if (fromDic) return fromDic;
+
+		const isReferral = p.role?.toUpperCase?.() === 'REFERRAL';
+		const referralOnContract = this.contract?.roles?.referral?.trim();
+		if (isReferral && referralOnContract) return referralOnContract;
+
+		if (p.advisorUid?.trim()) return p.advisorUid.trim();
+
+		return 'Desconocido';
+	}
 
 	constructor(
 		private trancheFacade: TrancheFacade,

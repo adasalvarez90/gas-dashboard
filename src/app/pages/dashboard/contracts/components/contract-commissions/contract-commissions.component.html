@@ -59,7 +59,7 @@
 											<div class="subitem-meta">
 												{{ roleLabel(g.role) }}
 												·
-												@if (g.splitLabel !== null) { %{{ g.splitLabel }} } @else { var. }
+												@if (g.splitLabel !== null) { {{ g.splitLabel }}% } @else { var. }
 											</div>
 											<span class="detail-toggle">
 												{{ isGroupExpanded(g.key) ? 'Ocultar detalle' : 'Ver detalle' }}

@@ -148,6 +148,12 @@
 					<span class="team-role">CEO </span>
 					<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.ceo) }}</span>
 				</div>
+				@if (contract.source === 'REFERIDORA' || contract.roles?.referral) {
+				<div class="team-item">
+					<span class="team-role">Referidor(a)</span>
+					<span class="team-name">{{ getAdvisorName(advisorsDic, contract.roles?.referral) }}</span>
+				</div>
+				}
 			</div>
 		</div>
 

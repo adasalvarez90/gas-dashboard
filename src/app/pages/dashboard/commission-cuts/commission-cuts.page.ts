@@ -152,11 +152,14 @@ export class CommissionCutsPage implements OnInit {
 	advisorSummaries$ = combineLatest([
 		this.cutsDeferralIndex$,
 		this.advisors$,
+		this.contracts$,
 		this.filterCutDate$,
 		this.filterAdvisorUid$,
 	]).pipe(
-		map(([idx, advisorsDic, filterCut, filterAdvisor]) => {
+		map(([idx, advisorsDic, contracts, filterCut, filterAdvisor]) => {
 			const { payments, horizon, effectiveByUid } = idx;
+			const contractMap = new Map<string, Contract>();
+			contracts.forEach((c) => contractMap.set(c.uid, c));
 			const byCutAdvisor = new Map<string, AdvisorCutSummary>();
 
 			const addToBucket = (p: CommissionPayment, effectiveCutDate: number) => {
@@ -164,10 +167,11 @@ export class CommissionCutsPage implements OnInit {
 				if (filterAdvisor != null && p.advisorUid !== filterAdvisor) return;
 
 				const key = `${effectiveCutDate}::${p.advisorUid}`;
-				const name =
-					(advisorsDic as Record<string, { name?: string }>)?.[p.advisorUid]?.name ??
-					(advisorsDic as Record<string, { displayName?: string }>)?.[p.advisorUid]?.displayName ??
-					'Desconocido';
+				const name = this.resolveCutPaymentAdvisorDisplayName(
+					advisorsDic as Record<string, { name?: string; displayName?: string }>,
+					contractMap,
+					p,
+				);
 				const amount = p.amount ?? 0;
 				const isPaid = !!p.paidAt || p.paid;
 
@@ -203,6 +207,14 @@ export class CommissionCutsPage implements OnInit {
 					existing.pendingAmount += isPaid ? 0 : amount;
 					existing.paidAmount += isPaid ? amount : 0;
 					existing.payments.push(p);
+					const nameNow = this.resolveCutPaymentAdvisorDisplayName(
+						advisorsDic as Record<string, { name?: string; displayName?: string }>,
+						contractMap,
+						p,
+					);
+					if (existing.advisorName === 'Desconocido' && nameNow !== 'Desconocido') {
+						existing.advisorName = nameNow;
+					}
 					if (p.contractUid && !existing.contractUids.includes(p.contractUid)) {
 						existing.contractUids.push(p.contractUid);
 					}
@@ -231,6 +243,9 @@ export class CommissionCutsPage implements OnInit {
 			const result = Array.from(byCutAdvisor.values());
 			result.sort((a, b) => {
 				if (a.cutDate !== b.cutDate) return a.cutDate - b.cutDate;
+				const ar = CommissionCutsPage.isReferralCutSummary(a) ? 1 : 0;
+				const br = CommissionCutsPage.isReferralCutSummary(b) ? 1 : 0;
+				if (ar !== br) return ar - br;
 				return a.advisorName.localeCompare(b.advisorName);
 			});
 			return result;
@@ -338,11 +353,36 @@ export class CommissionCutsPage implements OnInit {
 		referral: 'Referido',
 	};
 
+	/** Referidor(a) en contrato (`roles.referral`) no está en catálogo de asesores. */
+	private resolveCutPaymentAdvisorDisplayName(
+		advisorsDic: Record<string, { name?: string; displayName?: string }>,
+		contractMap: Map<string, Contract>,
+		p: CommissionPayment,
+	): string {
+		const fromDic = advisorsDic?.[p.advisorUid]?.name ?? advisorsDic?.[p.advisorUid]?.displayName;
+		if (fromDic) return fromDic;
+
+		const isReferral = p.role?.toUpperCase?.() === 'REFERRAL';
+		if (isReferral && p.contractUid) {
+			const ref = contractMap.get(p.contractUid)?.roles?.referral?.trim();
+			if (ref) return ref;
+		}
+
+		if (p.advisorUid?.trim()) return p.advisorUid.trim();
+
+		return 'Desconocido';
+	}
+
 	private static readonly LATE_STEP_ORDER: Record<LateReasonStep, number> = {
 		DESGLOSE: 0,
 		FACTURA: 1,
 		PAGO: 2,
 	};
+
+	/** Tarjeta de corte solo-referidor: va al final del listado (tras el resto alfabético). */
+	private static isReferralCutSummary(s: { payments: CommissionPayment[] }): boolean {
+		return s.payments.length > 0 && s.payments.every((p) => p.role?.toUpperCase?.() === 'REFERRAL');
+	}
 
 	/** UIDs de comisiones diferidas seleccionadas para procesar (Path 2). */
 	selectedDeferredIds = new Set<string>();
