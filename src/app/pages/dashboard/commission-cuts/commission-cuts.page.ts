@@ -1,6 +1,6 @@
 import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, map, BehaviorSubject, firstValueFrom, take } from 'rxjs';
+import { combineLatest, map, BehaviorSubject, firstValueFrom, skip, take } from 'rxjs';
 import { shareReplay } from 'rxjs/operators';
 
 import { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
@@ -58,7 +58,7 @@ import {
 } from 'src/app/domain/time/mexico-time.util';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
 import type { CommissionProcessingMode } from 'src/app/models/commission-processing-mode.model';
-import { ActionSheetController, AlertController, LoadingController, ModalController, ToastController } from '@ionic/angular';
+import { ActionSheetController, AlertController, IonContent, LoadingController, ModalController, ToastController } from '@ionic/angular';
 
 export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
 	state: AdvisorWorkflowState | null;
@@ -108,6 +108,7 @@ export class CommissionCutsPage implements OnInit {
 
 	@ViewChild('cutSelect', { read: ElementRef }) private cutSelectRef?: ElementRef;
 	@ViewChild('advisorSelect', { read: ElementRef }) private advisorSelectRef?: ElementRef;
+	@ViewChild(IonContent) private content?: IonContent;
 
 	/** Snapshot síncrono para getAdvisorStateForCut (mismo orden que el store). */
 	private latestPaymentsSnapshot: CommissionPayment[] = [];
@@ -407,6 +408,20 @@ export class CommissionCutsPage implements OnInit {
 
 	/** Loading bloqueante mientras sube a Storage y guarda estado (evita doble clic). */
 	private async withUploadLoading<T>(message: string, fn: () => Promise<T>): Promise<T> {
+		const loading = await this.loadingCtrl.create({
+			message,
+			backdropDismiss: false,
+		});
+		await loading.present();
+		try {
+			return await fn();
+		} finally {
+			await loading.dismiss();
+		}
+	}
+
+	/** Loading para acciones de transición de estatus (evita sensación de "no pasó nada"). */
+	private async withStatusActionLoading<T>(message: string, fn: () => Promise<T>): Promise<T> {
 		const loading = await this.loadingCtrl.create({
 			message,
 			backdropDismiss: false,
@@ -908,8 +923,25 @@ export class CommissionCutsPage implements OnInit {
 	/** Recarga comisiones (histórico de cortes) cuando hubo escrituras en Firestore. */
 	private refreshCutData(reloadPayments = false) {
 		if (reloadPayments) {
-			this.commissionPaymentFacade.loadCommissionPaymentsForCuts();
+			void this.reloadPaymentsKeepingScrollPosition();
 		}
+	}
+
+	/** Evita que la lista "salte" al inicio cuando recargamos datos tras cambios de estatus. */
+	private async reloadPaymentsKeepingScrollPosition() {
+		const scrollTopBefore = await this.getCurrentScrollTop();
+		this.commissionPaymentFacade.loadCommissionPaymentsForCuts();
+		await firstValueFrom(this.commissionPayments$.pipe(skip(1), take(1)));
+		if (scrollTopBefore > 0) {
+			requestAnimationFrame(() => {
+				void this.content?.scrollToPoint(0, scrollTopBefore, 0);
+			});
+		}
+	}
+
+	private async getCurrentScrollTop(): Promise<number> {
+		const scrollEl = await this.content?.getScrollElement();
+		return scrollEl?.scrollTop ?? 0;
 	}
 
 	/** Desglose tarde respecto al plazo del **corte original** de cada comisión. */
@@ -1572,20 +1604,22 @@ export class CommissionCutsPage implements OnInit {
 			lateEntry = { step: 'DESGLOSE', reason: result.reason, text: result.text };
 		}
 		try {
-			/** GROUPED (tarjeta asesora): cada línea evalúa plazo según su `cutDate` original. */
-			if (uidsDesgloseLate.length) {
-				await this.paymentFirestore.applyBreakdownSentToPaymentUids(uidsDesgloseLate, {
-					breakdownSentAt: at,
-					lateEntry,
-				});
-			}
-			if (uidsDesgloseOnTime.length) {
-				await this.paymentFirestore.applyBreakdownSentToPaymentUids(uidsDesgloseOnTime, {
-					breakdownSentAt: at,
-				});
-			}
-			this.pdfService.exportAdvisorCutCalculation(s, this.advisorFiscalActivityForSummary(s));
-			this.refreshCutData(true);
+			await this.withStatusActionLoading('Guardando estatus y generando cálculo...', async () => {
+				/** GROUPED (tarjeta asesora): cada línea evalúa plazo según su `cutDate` original. */
+				if (uidsDesgloseLate.length) {
+					await this.paymentFirestore.applyBreakdownSentToPaymentUids(uidsDesgloseLate, {
+						breakdownSentAt: at,
+						lateEntry,
+					});
+				}
+				if (uidsDesgloseOnTime.length) {
+					await this.paymentFirestore.applyBreakdownSentToPaymentUids(uidsDesgloseOnTime, {
+						breakdownSentAt: at,
+					});
+				}
+				this.pdfService.exportAdvisorCutCalculation(s, this.advisorFiscalActivityForSummary(s));
+				this.refreshCutData(true);
+			});
 		} catch (err) {
 			console.error(err);
 			const t = await this.toastCtrl.create({
@@ -1753,33 +1787,35 @@ export class CommissionCutsPage implements OnInit {
 			if (!result) return;
 			lateEntry = { step: 'FACTURA', reason: result.reason, text: result.text };
 		}
-		const groupedInvoiceLate =
-			invoiceUidsRequiringLateReason.length > 0 ? invoiceUidsRequiringLateReason : undefined;
-		const deferredFlow = await this.applyDeferredCaseInvoiceFlow(
-			s,
-			at,
-			lateEntry,
-			undefined,
-			'GROUPED',
-			groupedInvoiceLate,
-		);
-		if (deferredFlow !== 'use-legacy') {
-			this.refreshCutData(true);
-			return;
-		}
-		const need = new Set(invoiceUidsRequiringLateReason);
-		const withL = pendingInv.filter((p) => need.has(p.uid)).map((p) => p.uid);
-		const withoutL = pendingInv.filter((p) => !need.has(p.uid)).map((p) => p.uid);
-		if (withL.length && lateEntry) {
-			await this.paymentFirestore.applyInvoiceSentToPaymentUids(withL, {
-				invoiceSentAt: at,
+		await this.withStatusActionLoading('Actualizando estatus de factura...', async () => {
+			const groupedInvoiceLate =
+				invoiceUidsRequiringLateReason.length > 0 ? invoiceUidsRequiringLateReason : undefined;
+			const deferredFlow = await this.applyDeferredCaseInvoiceFlow(
+				s,
+				at,
 				lateEntry,
-			});
-		}
-		if (withoutL.length) {
-			await this.paymentFirestore.applyInvoiceSentToPaymentUids(withoutL, { invoiceSentAt: at });
-		}
-		this.refreshCutData(true);
+				undefined,
+				'GROUPED',
+				groupedInvoiceLate,
+			);
+			if (deferredFlow !== 'use-legacy') {
+				this.refreshCutData(true);
+				return;
+			}
+			const need = new Set(invoiceUidsRequiringLateReason);
+			const withL = pendingInv.filter((p) => need.has(p.uid)).map((p) => p.uid);
+			const withoutL = pendingInv.filter((p) => !need.has(p.uid)).map((p) => p.uid);
+			if (withL.length && lateEntry) {
+				await this.paymentFirestore.applyInvoiceSentToPaymentUids(withL, {
+					invoiceSentAt: at,
+					lateEntry,
+				});
+			}
+			if (withoutL.length) {
+				await this.paymentFirestore.applyInvoiceSentToPaymentUids(withoutL, { invoiceSentAt: at });
+			}
+			this.refreshCutData(true);
+		});
 	}
 
 	async markSentToPaymentStatusOnly(s: AdvisorCutSummaryWithState) {
@@ -1811,34 +1847,36 @@ export class CommissionCutsPage implements OnInit {
 			if (!result) return;
 			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
 		}
-		const groupedPayLate =
-			paymentUidsRequiringLateReason.length > 0 ? paymentUidsRequiringLateReason : undefined;
-		const paidDeferred = await this.applyDeferredCaseMarkPaidFlow(
-			s,
-			at,
-			lateEntry,
-			undefined,
-			'GROUPED',
-			groupedPayLate,
-		);
-		if (paidDeferred !== 'use-legacy') {
-			this.refreshCutData(true);
-			return;
-		}
-		const need = new Set(paymentUidsRequiringLateReason);
-		const withL = pendingPay.filter((p) => need.has(p.uid)).map((p) => p.uid);
-		const withoutL = pendingPay.filter((p) => !need.has(p.uid)).map((p) => p.uid);
-		if (withL.length && lateEntry) {
-			await this.paymentFirestore.applyPaidToPaymentUids(withL, {
-				paidAt: at,
+		await this.withStatusActionLoading('Actualizando estatus a pagada...', async () => {
+			const groupedPayLate =
+				paymentUidsRequiringLateReason.length > 0 ? paymentUidsRequiringLateReason : undefined;
+			const paidDeferred = await this.applyDeferredCaseMarkPaidFlow(
+				s,
+				at,
 				lateEntry,
-				paidLate: true,
-			});
-		}
-		if (withoutL.length) {
-			await this.paymentFirestore.applyPaidToPaymentUids(withoutL, { paidAt: at, paidLate: false });
-		}
-		this.refreshCutData(true);
+				undefined,
+				'GROUPED',
+				groupedPayLate,
+			);
+			if (paidDeferred !== 'use-legacy') {
+				this.refreshCutData(true);
+				return;
+			}
+			const need = new Set(paymentUidsRequiringLateReason);
+			const withL = pendingPay.filter((p) => need.has(p.uid)).map((p) => p.uid);
+			const withoutL = pendingPay.filter((p) => !need.has(p.uid)).map((p) => p.uid);
+			if (withL.length && lateEntry) {
+				await this.paymentFirestore.applyPaidToPaymentUids(withL, {
+					paidAt: at,
+					lateEntry,
+					paidLate: true,
+				});
+			}
+			if (withoutL.length) {
+				await this.paymentFirestore.applyPaidToPaymentUids(withoutL, { paidAt: at, paidLate: false });
+			}
+			this.refreshCutData(true);
+		});
 	}
 
 	private async finishInvoiceWithFile(file: File) {
