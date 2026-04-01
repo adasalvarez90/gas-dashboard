@@ -4,7 +4,8 @@ import type { LateReasonEntry } from './commission-cut-late-reason.model';
 export type CommissionCutState =
 	| 'PENDING'           // Pendiente: sin desglose enviado
 	| 'BREAKDOWN_SENT'    // Desglose enviado
-	| 'SENT_TO_PAYMENT'   // Enviada a pago (factura enviada)
+	| 'INVOICE_RECIVED'   // Factura recibida
+	| 'SENT_TO_PAYMENT'   // Enviada a pago
 	| 'PAID';             // Pagada (comprobante recibido)
 
 export interface CommissionCutAdvisorState {
@@ -25,6 +26,9 @@ export interface CommissionCutAdvisorState {
 
 	/** Timestamp en que se envió la factura */
 	invoiceSentAt?: number;
+
+	/** Timestamp en que se envió la comisión al área de pago */
+	sentToPaymentAt?: number;
 
 	/** URL del archivo de factura en Storage */
 	invoiceUrl?: string;

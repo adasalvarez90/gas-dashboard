@@ -11,14 +11,16 @@ function sameCanonicalCutDate(a: number, b: number): boolean {
 const RANK: Record<CommissionCutState, number> = {
 	PENDING: 0,
 	BREAKDOWN_SENT: 1,
-	SENT_TO_PAYMENT: 2,
-	PAID: 3,
+	INVOICE_RECIVED: 2,
+	SENT_TO_PAYMENT: 3,
+	PAID: 4,
 };
 
 /** Estado del flujo inferido desde campos del pago (híbrido: verdad en `CommissionPayment`). */
 export function inferCommissionWorkflowState(p: CommissionPayment): CommissionCutState {
 	if (p.paid || p.paidAt) return 'PAID';
-	if (p.invoiceSentAt != null) return 'SENT_TO_PAYMENT';
+	if (p.sentToPaymentAt != null) return 'SENT_TO_PAYMENT';
+	if (p.invoiceSentAt != null) return 'INVOICE_RECIVED';
 	if (p.breakdownSentAt != null) return 'BREAKDOWN_SENT';
 	return 'PENDING';
 }
@@ -48,6 +50,7 @@ export function commissionPaymentToSyntheticAdvisorState(p: CommissionPayment): 
 		state,
 		breakdownSentAt: p.breakdownSentAt,
 		invoiceSentAt: p.invoiceSentAt,
+		sentToPaymentAt: p.sentToPaymentAt,
 		receiptSentAt: p.receiptSentAt ?? (p.paid && p.paidAt ? p.paidAt : undefined),
 		invoiceUrl: p.invoiceUrl,
 		receiptUrl: p.receiptUrl,
@@ -94,6 +97,7 @@ export function deriveAdvisorWorkflowFromPayments(
 		state: derived === 'MIXED' ? worst : derived,
 		breakdownSentAt: maxDefined(relevant.map((p) => p.breakdownSentAt)),
 		invoiceSentAt: maxDefined(relevant.map((p) => p.invoiceSentAt)),
+		sentToPaymentAt: maxDefined(relevant.map((p) => p.sentToPaymentAt)),
 		receiptSentAt: maxDefined(relevant.map((p) => p.receiptSentAt ?? p.paidAt)),
 		invoiceUrl: relevant.find((p) => p.invoiceUrl)?.invoiceUrl,
 		receiptUrl: relevant.find((p) => p.receiptUrl)?.receiptUrl,

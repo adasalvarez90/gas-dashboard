@@ -293,6 +293,19 @@ export class CommissionPaymentFirestoreService {
 		}
 	}
 
+	async applySentToPaymentToPaymentUids(
+		uids: string[],
+		opts: { sentToPaymentAt: number },
+	): Promise<void> {
+		const now = Date.now();
+		for (const uid of uids) {
+			await updateDoc(doc(this.firestore, this.collectionName, uid), {
+				sentToPaymentAt: opts.sentToPaymentAt,
+				_update: now,
+			} as Record<string, unknown>);
+		}
+	}
+
 	async applyPaidToPaymentUids(
 		uids: string[],
 		opts: {

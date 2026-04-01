@@ -366,7 +366,7 @@ export class CommissionCutStateFirestoreService {
 		}
 
 		const patch = this.stripUndefinedFields({
-			state: 'SENT_TO_PAYMENT',
+			state: 'INVOICE_RECIVED',
 			invoiceSentAt: at,
 			invoiceUrl,
 			...(lateReasons ? { lateReasons } : {}),
@@ -384,7 +384,7 @@ export class CommissionCutStateFirestoreService {
 				uid,
 				cutDate: cd,
 				advisorUid,
-				state: 'SENT_TO_PAYMENT',
+				state: 'INVOICE_RECIVED',
 				invoiceSentAt: at,
 				invoiceUrl,
 				...(lateReasons ? { lateReasons } : {}),

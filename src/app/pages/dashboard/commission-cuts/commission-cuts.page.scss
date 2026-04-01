@@ -137,9 +137,21 @@
 
 	.cut-section__header {
 		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 10px;
+	}
+
+	.cut-section__header-left {
+		display: flex;
 		flex-direction: column;
 		gap: 4px;
-		margin-bottom: 10px;
+	}
+
+	.cut-section-download-btn {
+		margin-left: auto;
+		white-space: nowrap;
 	}
 
 	.cut-section__eyebrow {

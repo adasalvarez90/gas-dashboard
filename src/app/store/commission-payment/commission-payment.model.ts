@@ -47,6 +47,7 @@ export interface CommissionPayment extends Metadata {
 	// --- Flujo cortes (verdad híbrida por comisión; Firestore `commissionPayments`) ---
 	breakdownSentAt?: number;
 	invoiceSentAt?: number;
+	sentToPaymentAt?: number;
 	receiptSentAt?: number;
 	invoiceUrl?: string;
 	receiptUrl?: string;

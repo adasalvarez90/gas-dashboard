@@ -303,6 +303,7 @@ export class CommissionCutsPage implements OnInit {
 	readonly STATE_LABELS: Record<string, string> = {
 		PENDING: 'Pendiente',
 		BREAKDOWN_SENT: 'Desglose descargado',
+		INVOICE_RECIVED: 'Factura recibida',
 		SENT_TO_PAYMENT: 'Enviada a pago',
 		PAID: 'Pagada',
 		MIXED: 'En proceso (varias líneas)',
@@ -936,6 +937,10 @@ export class CommissionCutsPage implements OnInit {
 		);
 	}
 
+	private paymentReadyForPaidStep(pay: CommissionPayment): boolean {
+		return !!pay.sentToPaymentAt || !!pay.invoiceSentAt;
+	}
+
 	/** Líneas con `deferredToCutDate` = corte del resumen (vista diferida). */
 	private getDeferredPaymentsInSummary(s: AdvisorCutSummaryWithState): CommissionPayment[] {
 		const out: CommissionPayment[] = [];
@@ -1073,7 +1078,7 @@ export class CommissionCutsPage implements OnInit {
 		if (deferredPays.length === 0) return 'use-legacy';
 
 		if (mode === 'GROUPED') {
-			const pending = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt);
+			const pending = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && this.paymentReadyForPaidStep(p));
 			if (!pending.length) return;
 			if (groupedPaymentLateUids?.length && lateEntry) {
 				const need = new Set(groupedPaymentLateUids);
@@ -1357,7 +1362,8 @@ export class CommissionCutsPage implements OnInit {
 		return [
 			{ label: 'Desglose', at: pay.breakdownSentAt },
 			{ label: 'Factura', at: pay.invoiceSentAt },
-			{ label: 'Pago', at: pay.receiptSentAt ?? pay.paidAt },
+			{ label: 'Enviada a pago', at: pay.sentToPaymentAt },
+			{ label: 'Pagada', at: pay.receiptSentAt ?? pay.paidAt },
 		];
 	}
 
@@ -1774,10 +1780,22 @@ export class CommissionCutsPage implements OnInit {
 		this.refreshCutData(true);
 	}
 
+	async markSentToPaymentStatusOnly(s: AdvisorCutSummaryWithState) {
+		const at = await this.promptStepActionDate('¿En qué fecha se envió la comisión a pago?');
+		if (at === undefined) return;
+		const uids = s.payments
+			.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt && !p.sentToPaymentAt)
+			.map((p) => p.uid);
+		if (uids.length) {
+			await this.paymentFirestore.applySentToPaymentToPaymentUids(uids, { sentToPaymentAt: at });
+		}
+		this.refreshCutData(true);
+	}
+
 	async markPaidStatusOnly(s: AdvisorCutSummaryWithState) {
 		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
 		if (at === undefined) return;
-		const pendingPay = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt);
+		const pendingPay = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && this.paymentReadyForPaidStep(p));
 		const paymentUidsRequiringLateReason = pendingPay
 			.filter((p) => this.paymentNeedsPaymentLateReason(s, p, at))
 			.map((p) => p.uid);
@@ -1934,9 +1952,9 @@ export class CommissionCutsPage implements OnInit {
 					this.refreshCutData(true);
 					return;
 				}
-				const pendingPay = p.s
-					? p.s.payments.filter((x) => !x.cancelled && !x.paid && !x.paidAt && x.invoiceSentAt)
-					: [];
+		const pendingPay = p.s
+			? p.s.payments.filter((x) => !x.cancelled && !x.paid && !x.paidAt && this.paymentReadyForPaidStep(x))
+			: [];
 				const uids =
 					p.s && pendingPay.length
 						? pendingPay.map((x) => x.uid)
@@ -2023,6 +2041,7 @@ export class CommissionCutsPage implements OnInit {
 		if (state === 'MIXED') return ['invoice', 'receipt'];
 		if (state === 'PENDING') return [];
 		if (state === 'BREAKDOWN_SENT') return ['invoice'];
+		if (state === 'INVOICE_RECIVED') return ['invoice'];
 		if (state === 'SENT_TO_PAYMENT') return ['receipt'];
 		if (state === 'PAID') return ['invoice', 'receipt'];
 		return [];
@@ -2119,5 +2138,14 @@ export class CommissionCutsPage implements OnInit {
 		const pendingAmount = summaries.reduce((a, s) => a + s.pendingAmount, 0);
 		const paidAmount = summaries.reduce((a, s) => a + s.paidAmount, 0);
 		this.pdfService.exportByAdvisor(advisorName, summaries, totalAmount, pendingAmount, paidAmount);
+	}
+
+	downloadCutBreakdown(group: CutSummariesGroup) {
+		const label = new Date(group.cutDate).toLocaleDateString('es-MX', {
+			day: '2-digit',
+			month: 'short',
+			year: 'numeric',
+		});
+		this.exportPdfGeneral(group.items, label);
 	}
 }

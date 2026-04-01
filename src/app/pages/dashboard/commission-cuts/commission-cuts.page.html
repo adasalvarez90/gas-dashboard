@@ -106,8 +106,19 @@
 								@for (group of cutGroups; track group.cutDate) {
 									<section class="cut-section" [class.cut-section--first]="$first">
 										<header class="cut-section__header">
-											<span class="cut-section__eyebrow">Corte</span>
-											<h3 class="cut-section__title">{{ group.cutDate | date:'d MMM y' }}</h3>
+											<div class="cut-section__header-left">
+												<span class="cut-section__eyebrow">Corte</span>
+												<h3 class="cut-section__title">{{ group.cutDate | date:'d MMM y' }}</h3>
+											</div>
+											<ion-button
+												size="small"
+												class="cut-section-download-btn"
+												color="primary"
+												fill="outline"
+												(click)="downloadCutBreakdown(group); $event.stopPropagation()"
+											>
+												Descargar desglose
+											</ion-button>
 										</header>
 										<hr class="cut-section__rule" />
 										<div class="summary-cards">
@@ -198,14 +209,21 @@
 												</ion-chip>
 											}
 
+											@if (cardWorkflowUiKey(s) === 'INVOICE_RECIVED') {
+												<ion-chip class="footer-action-chip footer-action-chip--primary" (click)="markSentToPaymentStatusOnly(s)">
+													Enviada a pago
+												</ion-chip>
+											}
+
 											@if (cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT') {
 												<ion-chip class="footer-action-chip footer-action-chip--success" (click)="markPaidStatusOnly(s)">
-													Pagada
+													Marcar como pagada
 												</ion-chip>
 											}
 
 											@if (
 												cardWorkflowUiKey(s) === 'BREAKDOWN_SENT' ||
+												cardWorkflowUiKey(s) === 'INVOICE_RECIVED' ||
 												cardWorkflowUiKey(s) === 'SENT_TO_PAYMENT' ||
 												cardWorkflowUiKey(s) === 'PAID'
 											) {
