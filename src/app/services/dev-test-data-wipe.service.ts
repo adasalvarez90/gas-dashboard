@@ -17,7 +17,6 @@ export class DevTestDataWipeService {
 	/** Orden: dependientes primero, contratos al final. */
 	private readonly collectionOrder = [
 		'commissionPayments',
-		'commissionCutAdvisorStates',
 		'deposits',
 		'tranches',
 		'contracts',

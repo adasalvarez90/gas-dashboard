@@ -36,6 +36,7 @@
     "@ngrx/router-store": "^20.1.0",
     "@ngrx/store": "^20.1.0",
     "@ngrx/store-devtools": "^20.1.0",
+    "exceljs": "^4.4.0",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.7.0",
     "ionicons": "^7.0.0",

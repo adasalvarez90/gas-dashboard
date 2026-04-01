@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
 import { AdvisorCutSummary } from '../models/commission-cuts-summary.model';
-import { CommissionCutAdvisorState } from '../models/commission-cut-state.model';
 import { CommissionPayment } from '../store/commission-payment/commission-payment.model';
 import type { AdvisorFiscalActivity } from '../store/advisor/advisor.model';
 import { mexicoDateKeyFromTimestamp } from '../domain/time/mexico-time.util';
@@ -11,9 +10,9 @@ import {
 	normalizeDeferredToCutStored,
 	sameCanonicalCutDate,
 } from '../domain/commission-cut/commission-cut-deadlines.util';
-import { paymentWorkflowStateAtCut } from '../domain/commission-cut/commission-payment-workflow.util';
+import { paymentWorkflowStateAtCut, type AdvisorWorkflowState } from '../domain/commission-cut/commission-payment-workflow.util';
 
-export type SummaryForPdf = AdvisorCutSummary & { state?: CommissionCutAdvisorState | null };
+export type SummaryForPdf = AdvisorCutSummary & { state?: AdvisorWorkflowState | null };
 
 @Injectable({ providedIn: 'root' })
 export class CommissionCutsPdfService {

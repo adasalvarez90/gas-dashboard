@@ -16,6 +16,12 @@ const RANK: Record<CommissionCutState, number> = {
 	PAID: 4,
 };
 
+/**
+ * Estado de flujo derivado desde `commissionPayments`.
+ * Mantiene la forma de CommissionCutAdvisorState para compatibilidad.
+ */
+export type AdvisorWorkflowState = CommissionCutAdvisorState;
+
 /** Estado del flujo inferido desde campos del pago (híbrido: verdad en `CommissionPayment`). */
 export function inferCommissionWorkflowState(p: CommissionPayment): CommissionCutState {
 	if (p.paid || p.paidAt) return 'PAID';
@@ -29,7 +35,7 @@ export function inferCommissionWorkflowState(p: CommissionPayment): CommissionCu
  * Para diferidos implícitos: estado “como advisor state” solo en corte original o en `deferredToCutDate`.
  * En cortes intermedios de la cadena → null (sin avance local).
  */
-export function paymentWorkflowStateAtCut(p: CommissionPayment, cutDate: number): CommissionCutAdvisorState | null {
+export function paymentWorkflowStateAtCut(p: CommissionPayment, cutDate: number): AdvisorWorkflowState | null {
 	if (p.cancelled || p.paid || p.paidAt) return null;
 	const atOrig = sameCanonicalCutDate(cutDate, p.cutDate);
 	const atDef =
@@ -41,7 +47,7 @@ export function paymentWorkflowStateAtCut(p: CommissionPayment, cutDate: number)
 }
 
 /** Construye un `CommissionCutAdvisorState` desde un pago (UI / plazos / colores). */
-export function commissionPaymentToSyntheticAdvisorState(p: CommissionPayment): CommissionCutAdvisorState {
+export function commissionPaymentToSyntheticAdvisorState(p: CommissionPayment): AdvisorWorkflowState {
 	const state = inferCommissionWorkflowState(p);
 	return {
 		uid: `pay:${p.uid}`,
@@ -90,7 +96,7 @@ export function deriveAdvisorWorkflowFromPayments(
 
 	const worst = states.reduce((a, b) => (RANK[b] > RANK[a] ? b : a), 'PENDING' as CommissionCutState);
 	const anyPaidLate = relevant.some((p) => p.paidLate);
-	const mergedState: CommissionCutAdvisorState = {
+	const mergedState: AdvisorWorkflowState = {
 		uid: `card:${summaryCutDate}`,
 		cutDate: summaryCutDate,
 		advisorUid: relevant[0]!.advisorUid,

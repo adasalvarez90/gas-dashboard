@@ -11,7 +11,6 @@ import { Contract } from 'src/app/store/contract/contract.model';
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 
 import { AdvisorCutSummary } from 'src/app/models/commission-cuts-summary.model';
-import { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
 import {
 	type LateReasonEntry,
 	type LateReasonStep,
@@ -26,6 +25,7 @@ import {
 } from 'src/app/components/process-deferred-modal/process-deferred-modal.component';
 import { CommissionCutAttachmentService } from 'src/app/services/commission-cut-attachment.service';
 import { CommissionCutsPdfService } from 'src/app/services/commission-cuts-pdf.service';
+import { ExcelExportService } from 'src/app/services/excel-export.service';
 import {
 	classifyDeferralPaymentCase,
 	getBreakdownDeadline,
@@ -48,6 +48,7 @@ import {
 	commissionPaymentToSyntheticAdvisorState,
 	deriveAdvisorWorkflowFromPayments,
 	paymentWorkflowStateAtCut,
+	type AdvisorWorkflowState,
 	type DerivedAdvisorWorkflow,
 } from 'src/app/domain/commission-cut/commission-payment-workflow.util';
 import {
@@ -60,11 +61,11 @@ import type { CommissionProcessingMode } from 'src/app/models/commission-process
 import { ActionSheetController, AlertController, LoadingController, ModalController, ToastController } from '@ionic/angular';
 
 export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
-	state: CommissionCutAdvisorState | null;
+	state: AdvisorWorkflowState | null;
 	/** Agregado de líneas en la tarjeta (incluye MIXED). */
 	advisorWorkflowDerived?: DerivedAdvisorWorkflow;
 	/** Estado del flujo en el corte **original** de cada línea (uid de pago → estado). */
-	paymentDeferralStates?: Map<string, CommissionCutAdvisorState | null>;
+	paymentDeferralStates?: Map<string, AdvisorWorkflowState | null>;
 	invoiceDeadline?: number;
 	paymentDeadline?: number;
 	isOverdue: boolean;
@@ -256,7 +257,7 @@ export class CommissionCutsPage implements OnInit {
 					(s.pendingAmount > 0 && hasLateReasons) ||
 					(s.pendingAmount > 0 && isDeferred);
 
-				const paymentDeferralStates = new Map<string, CommissionCutAdvisorState | null>();
+				const paymentDeferralStates = new Map<string, AdvisorWorkflowState | null>();
 				for (const p of s.payments) {
 					paymentDeferralStates.set(p.uid, paymentWorkflowStateAtCut(p, s.cutDate));
 				}
@@ -384,6 +385,7 @@ export class CommissionCutsPage implements OnInit {
 		private contractFacade: ContractFacade,
 		private attachmentService: CommissionCutAttachmentService,
 		private pdfService: CommissionCutsPdfService,
+		private excelExportService: ExcelExportService,
 		private paymentFirestore: CommissionPaymentFirestoreService,
 		private modalCtrl: ModalController,
 		private actionSheetCtrl: ActionSheetController,
@@ -465,7 +467,7 @@ export class CommissionCutsPage implements OnInit {
 	 * (sin texto: solo catálogo). Orden: desglose, factura, pago.
 	 */
 	private computeAutoLateReasonEntries(
-		state: CommissionCutAdvisorState | null,
+		state: AdvisorWorkflowState | null,
 		cutDate: number,
 	): LateReasonEntry[] {
 		const st = state;
@@ -1289,7 +1291,7 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	/** Estado agregado en el corte original de la asesora (varias líneas → mismo modelo que la tarjeta). */
-	getAdvisorStateForCut(advisorUid: string, cutDate: number): CommissionCutAdvisorState | null {
+	getAdvisorStateForCut(advisorUid: string, cutDate: number): AdvisorWorkflowState | null {
 		const relevant = this.latestPaymentsSnapshot.filter(
 			(p) => p.advisorUid === advisorUid && !p.cancelled && sameCanonicalCutDate(p.cutDate, cutDate),
 		);
@@ -1298,7 +1300,7 @@ export class CommissionCutsPage implements OnInit {
 	}
 
 	/** Timestamps del flujo viven en el doc del pago. */
-	private getFlowStateForPayment(_s: AdvisorCutSummaryWithState, pay: CommissionPayment): CommissionCutAdvisorState | null {
+	private getFlowStateForPayment(_s: AdvisorCutSummaryWithState, pay: CommissionPayment): AdvisorWorkflowState | null {
 		return commissionPaymentToSyntheticAdvisorState(pay);
 	}
 
@@ -1820,7 +1822,6 @@ export class CommissionCutsPage implements OnInit {
 			groupedPayLate,
 		);
 		if (paidDeferred !== 'use-legacy') {
-			this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(s.cutDate, s.advisorUid, at);
 			this.refreshCutData(true);
 			return;
 		}
@@ -1837,7 +1838,6 @@ export class CommissionCutsPage implements OnInit {
 		if (withoutL.length) {
 			await this.paymentFirestore.applyPaidToPaymentUids(withoutL, { paidAt: at, paidLate: false });
 		}
-		this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(s.cutDate, s.advisorUid, at);
 		this.refreshCutData(true);
 	}
 
@@ -1948,7 +1948,6 @@ export class CommissionCutsPage implements OnInit {
 						)
 					: 'use-legacy';
 				if (defPaid !== 'use-legacy') {
-					this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
 					this.refreshCutData(true);
 					return;
 				}
@@ -1986,7 +1985,6 @@ export class CommissionCutsPage implements OnInit {
 						paidLate: !!lateEntry,
 					});
 				}
-				this.commissionPaymentFacade.markPaidByCutDateAndAdvisor(summaryCutDate, advisorUid, at);
 				this.refreshCutData(true);
 			});
 		} catch {
@@ -2140,12 +2138,25 @@ export class CommissionCutsPage implements OnInit {
 		this.pdfService.exportByAdvisor(advisorName, summaries, totalAmount, pendingAmount, paidAmount);
 	}
 
-	downloadCutBreakdown(group: CutSummariesGroup) {
-		const label = new Date(group.cutDate).toLocaleDateString('es-MX', {
-			day: '2-digit',
-			month: 'short',
-			year: 'numeric',
+	async downloadCutBreakdown(group: CutSummariesGroup) {
+		const loading = await this.loadingCtrl.create({
+			message: 'Generando archivo Excel…',
+			backdropDismiss: false,
 		});
-		this.exportPdfGeneral(group.items, label);
+		await loading.present();
+		try {
+			await this.excelExportService.exportCommissionReport(group.cutDate);
+		} catch (err) {
+			console.error(err);
+			const t = await this.toastCtrl.create({
+				message: 'No se pudo generar el archivo Excel.',
+				duration: 4000,
+				color: 'danger',
+				position: 'top',
+			});
+			await t.present();
+		} finally {
+			await loading.dismiss();
+		}
 	}
 }

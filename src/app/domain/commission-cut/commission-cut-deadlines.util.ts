@@ -4,10 +4,9 @@ import {
 	mexicoDateKeyFromTimestamp,
 	mexicoDateKeyToCanonicalTimestamp,
 } from 'src/app/domain/time/mexico-time.util';
-import type { CommissionCutAdvisorState } from 'src/app/models/commission-cut-state.model';
 import { normalizeLateReasons } from 'src/app/models/commission-cut-late-reason.model';
 import type { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
-import { paymentWorkflowStateAtCut } from 'src/app/domain/commission-cut/commission-payment-workflow.util';
+import { paymentWorkflowStateAtCut, type AdvisorWorkflowState } from 'src/app/domain/commission-cut/commission-payment-workflow.util';
 
 function pad2(n: number): string {
 	return n < 10 ? `0${n}` : `${n}`;
@@ -126,7 +125,7 @@ export function isOriginalBusinessCutDayReached(cutDate: number): boolean {
  */
 export function paymentFlowHasAnyLateStep(
 	originalCutDate: number,
-	st: CommissionCutAdvisorState | null | undefined,
+	st: AdvisorWorkflowState | null | undefined,
 ): boolean {
 	if (!st) return false;
 	if (st.paidLate) return true;
@@ -146,7 +145,7 @@ export function paymentFlowHasAnyLateStep(
 
 export function isWorkflowOverdueForImplicitDeferral(
 	cutDate: number,
-	state: CommissionCutAdvisorState | null | undefined,
+	state: AdvisorWorkflowState | null | undefined,
 ): boolean {
 	if (!state?.breakdownSentAt) {
 		return isInvoiceOverdue(undefined, getBreakdownDeadline(cutDate));
@@ -172,7 +171,7 @@ export type PaymentLikeForDeferralDisplay = {
 /** ¿El pago impago califica para aparecer también en un corte de “diferida” (además del original)? */
 function qualifiesForDeferralDisplay(
 	p: PaymentLikeForDeferralDisplay,
-	originalCutAdvisorState: CommissionCutAdvisorState | null | undefined,
+	originalCutAdvisorState: AdvisorWorkflowState | null | undefined,
 ): boolean {
 	if (p.cancelled || p.paid || p.paidAt) return false;
 	if (!isOriginalBusinessCutDayReached(p.cutDate)) return false;
@@ -201,7 +200,7 @@ function qualifiesForDeferralDisplay(
 export function getEffectiveDeferredDisplayCut(
 	p: PaymentLikeForDeferralDisplay,
 	advisorUid: string,
-	getStateForCut: (cutDate: number) => CommissionCutAdvisorState | null,
+	getStateForCut: (cutDate: number) => AdvisorWorkflowState | null,
 ): number | null {
 	const origSt = getStateForCut(p.cutDate);
 	if (!qualifiesForDeferralDisplay(p, origSt)) return null;
@@ -229,7 +228,7 @@ export function getEffectiveDeferredDisplayCut(
  */
 export function computeDeferralDisplayIndex(
 	payments: (PaymentLikeForDeferralDisplay & { advisorUid: string; uid: string; cancelled?: boolean; paid?: boolean; paidAt?: number })[],
-	getStateForCut: (cutDate: number, advisorUid: string) => CommissionCutAdvisorState | null,
+	getStateForCut: (cutDate: number, advisorUid: string) => AdvisorWorkflowState | null,
 ): { horizon: number; effectiveByUid: Map<string, number | null> } {
 	const effectiveByUid = new Map<string, number | null>();
 	let horizon = getDeferralEndCutDate(payments);
@@ -269,7 +268,7 @@ export function computeDeferralDisplayIndexFromPayments(payments: CommissionPaym
 /** Tope de horizonte (dropdown / cap) reutilizando el índice si ya lo tienes. */
 export function getDeferralHorizonCutDate(
 	payments: (PaymentLikeForDeferralDisplay & { advisorUid: string; uid: string; cancelled?: boolean; paid?: boolean; paidAt?: number })[],
-	getStateForCut: (cutDate: number, advisorUid: string) => CommissionCutAdvisorState | null,
+	getStateForCut: (cutDate: number, advisorUid: string) => AdvisorWorkflowState | null,
 ): number {
 	return computeDeferralDisplayIndex(payments, getStateForCut).horizon;
 }

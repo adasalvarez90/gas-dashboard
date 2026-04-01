@@ -81,7 +81,7 @@ export class DashboardPage implements OnInit {
 			.create({
 				header: 'Borrar datos',
 				message:
-					'Se eliminarán permanentemente todos los documentos en Firestore de: contratos, depósitos, tranches, pagos de comisión y estados de corte por asesor (commissionCutAdvisorStates). Esta acción no se puede deshacer. ¿Continuar?',
+					'Se eliminarán permanentemente todos los documentos en Firestore de: contratos, depósitos, tranches y pagos de comisión. Esta acción no se puede deshacer. ¿Continuar?',
 				buttons: [
 					{ text: 'Cancelar', role: 'cancel' },
 					{
