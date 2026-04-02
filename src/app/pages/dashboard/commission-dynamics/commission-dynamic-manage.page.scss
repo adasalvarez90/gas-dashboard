@@ -1,0 +1,83 @@
+.form-wrap {
+	max-width: 720px;
+	margin: 0 auto;
+}
+
+.field-hint {
+	display: block;
+	font-size: 0.8rem;
+	padding: 4px 16px 0;
+}
+
+.field-error {
+	display: block;
+	font-size: 0.85rem;
+	padding: 4px 16px 8px;
+}
+
+.error-list {
+	background: transparent;
+	padding: 0;
+}
+
+.section-title {
+	font-size: 1.1rem;
+	font-weight: 600;
+	margin: 24px 0 4px;
+	padding-left: 8px;
+}
+
+.section-lead {
+	font-size: 0.9rem;
+	color: var(--ion-color-medium);
+	margin: 0 0 12px;
+	padding-left: 8px;
+}
+
+.rule-card {
+	margin-bottom: 16px;
+}
+
+.rule-card-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+ion-card-title {
+	font-size: 1rem;
+}
+
+.commission-types {
+	border: none;
+	margin: 8px 0;
+	padding: 0;
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.rule-inline-errors {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px 16px 0;
+	font-size: 0.85rem;
+}
+
+.actions-row {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding-bottom: 24px;
+}

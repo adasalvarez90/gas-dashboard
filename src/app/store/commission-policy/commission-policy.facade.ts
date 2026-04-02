@@ -6,6 +6,8 @@ import { CommissionPolicy } from './commission-policy.model';
 
 @Injectable({ providedIn: 'root' })
 export class CommissionPolicyFacade {
+	/** Catálogo completo (sin filtro de búsqueda del listado legacy). */
+	allCommissionPolicies$ = this.store.select(fromCommissionPolicy.selectAll);
 	commissionPolicies$ = this.store.select(fromCommissionPolicy.selectFiltered);
 	selectedCommissionPolicy$ = this.store.select(fromCommissionPolicy.selectedCommissionPolicy);
 	loading$ = this.store.select(fromCommissionPolicy.selectLoading);
@@ -14,8 +16,8 @@ export class CommissionPolicyFacade {
 
 	constructor(private store: Store) {}
 
-	loadCommissionPolicies(contractUid: string) {
-		this.store.dispatch(CommissionPolicyActions.loadCommissionPolicies({ contractUid }));
+	loadCommissionPolicies() {
+		this.store.dispatch(CommissionPolicyActions.loadCommissionPolicies());
 	}
 
 	selectCommissionPolicy(commissionPolicy: CommissionPolicy) {

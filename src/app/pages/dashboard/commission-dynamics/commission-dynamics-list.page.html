@@ -1,0 +1,90 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-menu-button></ion-menu-button>
+		</ion-buttons>
+		<ion-title>Dinámicas especiales</ion-title>
+		<ion-buttons slot="end">
+			<ion-button (click)="goNew()" aria-label="Nueva dinámica">
+				<ion-icon slot="icon-only" name="add-outline"></ion-icon>
+			</ion-button>
+		</ion-buttons>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<div class="page-inner ion-padding">
+		<p class="intro">
+			Catálogo de dinámicas: nombre, esquemas permitidos y reglas de porcentaje adicional (Inmediata / Regular) con condición opcional de rendimiento del contrato.
+		</p>
+
+		<ion-item lines="full">
+			<ion-input
+				label="Buscar por nombre"
+				labelPlacement="stacked"
+				[(ngModel)]="searchText"
+				placeholder="Escribe para filtrar"
+				autocomplete="off"
+			></ion-input>
+		</ion-item>
+
+		<div class="filters">
+			<ion-segment [(ngModel)]="activeFilter" aria-label="Filtrar por estado">
+				<ion-segment-button value="all">Todas</ion-segment-button>
+				<ion-segment-button value="active">Activas</ion-segment-button>
+				<ion-segment-button value="inactive">Inactivas</ion-segment-button>
+			</ion-segment>
+
+			<ion-item lines="full" class="scheme-filter">
+				<ion-select label="Esquema" labelPlacement="stacked" [(ngModel)]="schemeFilter" interface="popover">
+					<ion-select-option value="all">Todos</ion-select-option>
+					<ion-select-option value="A">Esquema A</ion-select-option>
+					<ion-select-option value="B">Esquema B</ion-select-option>
+				</ion-select>
+			</ion-item>
+		</div>
+
+		@if (loading$ | async) {
+		<div class="ion-text-center ion-padding">
+			<ion-spinner name="crescent" aria-label="Cargando"></ion-spinner>
+		</div>
+		} @else {
+			@let rows = getFiltered((policies$ | async) ?? []);
+			@if (rows.length === 0) {
+			<div class="empty-state" role="status">
+				<ion-icon name="pulse-outline" aria-hidden="true"></ion-icon>
+				<h2>Sin dinámicas</h2>
+				<p>No hay resultados con estos filtros, o el catálogo está vacío.</p>
+				<ion-button (click)="goNew()">Crear dinámica</ion-button>
+			</div>
+			} @else {
+			<ion-list class="dyn-list" lines="full">
+				@for (p of rows; track p.uid) {
+				<ion-item class="dyn-row" lines="full">
+					<ion-label>
+						<h2>{{ p.name }}</h2>
+						<p>{{ schemesLabel(p) }} · {{ ruleCount(p) }} reglas</p>
+					</ion-label>
+					<div class="row-actions" slot="end">
+						<ion-badge [color]="p.active !== false ? 'success' : 'medium'">
+							{{ p.active !== false ? 'Activa' : 'Inactiva' }}
+						</ion-badge>
+						<ion-button fill="clear" size="small" (click)="goEdit(p.uid)"> Editar </ion-button>
+						<ion-button
+							fill="clear"
+							size="small"
+							color="medium"
+							(click)="confirmDeactivate(p)"
+							[disabled]="p.active === false"
+							[attr.aria-label]="'Desactivar ' + p.name"
+						>
+							Desactivar
+						</ion-button>
+					</div>
+				</ion-item>
+				}
+			</ion-list>
+			}
+		}
+	</div>
+</ion-content>

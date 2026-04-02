@@ -43,12 +43,21 @@ function normalizeRuleYieldBetween(rule: CommissionPolicyRule): CommissionPolicy
 }
 
 /**
- * Returns a deep-cloned policy with BETWEEN bounds ordered (low ≤ high). Does not persist legacy-only docs beyond validation.
+ * Collects validation messages for UI (inline + toast) without mutating the policy.
  */
-export function validateAndNormalizeCommissionPolicy(policy: CommissionPolicy): CommissionPolicy {
+export function collectCommissionPolicyValidationErrors(policy: CommissionPolicy): string[] {
+	return runCommissionPolicyValidation(policy).errors;
+}
+
+function runCommissionPolicyValidation(policy: CommissionPolicy): {
+	errors: string[];
+	trimmedName: string;
+	mergedAllowed: CommissionSchemeCode[];
+	validatedRules: CommissionPolicyRule[];
+} {
 	const errors: string[] = [];
-	const name = (policy.name ?? '').trim();
-	if (!name) {
+	const trimmedName = (policy.name ?? '').trim();
+	if (!trimmedName) {
 		errors.push('El nombre es obligatorio');
 	}
 
@@ -63,24 +72,30 @@ export function validateAndNormalizeCommissionPolicy(policy: CommissionPolicy): 
 		errors.push('Debe definir al menos un esquema permitido (allowedSchemes o scheme legacy)');
 	}
 
-	if (!isFiniteNumber(policy.validFrom) || !isFiniteNumber(policy.validTo)) {
-		errors.push('validFrom y validTo deben ser números válidos');
-	} else if (policy.validFrom > policy.validTo) {
-		errors.push('validFrom no puede ser mayor que validTo');
-	}
+	const validatedRules = policy.rules ? policy.rules.map((r, i) => validateRule(r, allowed, `${i}`, errors)) : [];
 
-	const rules = policy.rules ? policy.rules.map((r, i) => validateRule(r, allowed, `${i}`, errors)) : [];
+	const mergedAllowed = allowed.length > 0 ? allowed : policy.scheme ? [policy.scheme] : [];
+
+	return { errors, trimmedName, mergedAllowed, validatedRules };
+}
+
+/**
+ * Returns a deep-cloned policy with BETWEEN bounds ordered (low ≤ high). Does not persist legacy-only docs beyond validation.
+ */
+export function validateAndNormalizeCommissionPolicy(policy: CommissionPolicy): CommissionPolicy {
+	const { errors, trimmedName, mergedAllowed, validatedRules } = runCommissionPolicyValidation(policy);
 
 	if (errors.length > 0) {
 		throw new Error(errors.join('; '));
 	}
 
-	const mergedAllowed = allowed.length > 0 ? allowed : policy.scheme ? [policy.scheme] : [];
+	const { validFrom: _vf, validTo: _vt, ...policyWithoutLegacyWindow } = policy as CommissionPolicy;
 
 	return {
-		...policy,
+		...policyWithoutLegacyWindow,
+		name: trimmedName,
 		allowedSchemes: mergedAllowed,
-		rules: rules.map(normalizeRuleYieldBetween),
+		rules: validatedRules.map(normalizeRuleYieldBetween),
 	};
 }
 

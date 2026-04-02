@@ -60,6 +60,15 @@ const routes: Routes = [
 				},
 			},
 			{
+				path: 'commission-dynamics',
+				loadChildren: () =>
+					import('./commission-dynamics/commission-dynamics.module').then(m => m.CommissionDynamicsPageModule),
+				canActivate: [RoleGuard],
+				data: {
+					roles: [0, 1],
+				},
+			},
+			{
 				path: 'commission-cuts',
 				loadChildren: () => import('./commission-cuts/commission-cuts.module').then(m => m.CommissionCutsPageModule),
 				canActivate: [RoleGuard],

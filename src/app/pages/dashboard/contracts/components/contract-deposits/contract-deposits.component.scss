@@ -248,6 +248,41 @@
 	margin-bottom: 10px;
 }
 
+.dynamic-section {
+	margin-top: 20px;
+}
+
+.dynamic-copy {
+	font-size: 13px;
+	line-height: 1.45;
+	opacity: 0.85;
+	margin: 0 0 12px;
+}
+
+.current-dynamic {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+	font-size: 14px;
+}
+
+.current-dynamic-label {
+	opacity: 0.75;
+}
+
+.dynamic-missing {
+	font-size: 13px;
+	color: var(--ion-color-warning);
+	margin: 0 0 8px;
+}
+
+.clear-dynamic-btn {
+	margin-top: 4px;
+	--padding-start: 0;
+}
+
 /* Responsive */
 @media (max-width: 500px) {
 	.tranche-hero {

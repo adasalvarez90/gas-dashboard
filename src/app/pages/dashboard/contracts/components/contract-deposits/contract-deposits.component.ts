@@ -14,6 +14,8 @@ import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/
 
 import { DepositFacade } from 'src/app/store/deposit/deposit.facade';
 import { TrancheFacade } from 'src/app/store/tranche/tranche.facade';
+import { CommissionPolicyFacade } from 'src/app/store/commission-policy/commission-policy.facade';
+import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
 
 @Component({
 	selector: 'app-contract-deposits',
@@ -27,6 +29,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 
 	tranches$: Observable<Tranche[]> = this.trancheFacade.tranches$;
 	deposits$: Observable<Deposit[]> = this.depositFacade.deposits$;
+	commissionPolicies$: Observable<CommissionPolicy[]> = this.commissionPolicyFacade.allCommissionPolicies$;
 
 	selectedTrancheUid: string | null = null;
 
@@ -58,15 +61,18 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 	constructor(
 		private depositFacade: DepositFacade,
 		private trancheFacade: TrancheFacade,
+		private commissionPolicyFacade: CommissionPolicyFacade,
 	) {}
 
 	ngOnInit() {
 		this.trancheFacade.loadTranches(this.contract?.uid || '');
+		this.commissionPolicyFacade.loadCommissionPolicies();
 	}
 
 	ngOnChanges(changes: SimpleChanges) {
 		if (changes['contract'] && this.contract?.uid) {
 			this.trancheFacade.loadTranches(this.contract.uid);
+			this.commissionPolicyFacade.loadCommissionPolicies();
 		}
 	}
 
@@ -217,5 +223,34 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 	/** Fecha de registro o creación del tranche para mostrar en la UI. */
 	getTrancheDisplayDate(tranche: Tranche): number | null {
 		return tranche.registeredAt ?? (tranche as unknown as { _create?: number })._create ?? null;
+	}
+
+	resolvePolicy(policies: CommissionPolicy[] | null | undefined, uid: string | null | undefined): CommissionPolicy | null {
+		if (!uid || !policies?.length) return null;
+		return policies.find((p) => p.uid === uid) ?? null;
+	}
+
+	readonly trancheDynamicNone = '__none__';
+
+	onTrancheDynamicSelected(tranche: Tranche, raw: string | null | undefined): void {
+		const uid =
+			raw === this.trancheDynamicNone || raw === '' || raw == null ? null : raw;
+		this.trancheFacade.updateTranche({
+			...tranche,
+			assignedDynamicPolicyUid: uid,
+		});
+	}
+
+	clearTrancheDynamic(tranche: Tranche, event: Event): void {
+		event.stopPropagation();
+		this.trancheFacade.updateTranche({
+			...tranche,
+			assignedDynamicPolicyUid: null,
+		});
+	}
+
+	sortedPolicies(policies: CommissionPolicy[] | null | undefined): CommissionPolicy[] {
+		if (!policies?.length) return [];
+		return [...policies].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'es'));
 	}
 }

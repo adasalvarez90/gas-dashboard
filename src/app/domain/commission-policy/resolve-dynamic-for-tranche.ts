@@ -9,17 +9,18 @@ import { normalizeCommissionPolicy } from './commission-policy-normalize';
  * **Manual:** `tranche.assignedDynamicPolicyUid` wins if that policy exists in `policies`
  * (catalog query is typically `_on === true`). Inactive policies are allowed.
  *
- * **Auto:** only `active === true`, same `validFrom`/`validTo` window as before, and
- * `contract.scheme` must appear in normalized `allowedSchemes`.
+ * **Auto:** only `active === true` and `contract.scheme` in normalized `allowedSchemes`.
+ * No ventana por fechas: lo operativo es `active`.
  *
- * **Deterministic tie-break (auto):** higher `priority` first, then newer `validFrom`,
- * then newer `_create`. Document any new field here if the order changes.
+ * **Desempate (auto):** mayor `priority`, luego `_create` más reciente.
+ *
+ * @param _fundedAt reservado por compatibilidad con callers; ya no filtra políticas.
  */
 export function resolveDynamicForTranche(
 	tranche: Tranche,
 	contract: Contract,
 	policies: CommissionPolicy[],
-	fundedAt: number
+	_fundedAt: number
 ): CommissionPolicy | null {
 	const list = policies.filter(p => p && p._on !== false);
 
@@ -34,11 +35,6 @@ export function resolveDynamicForTranche(
 			if (!raw.active) {
 				return false;
 			}
-			const from = raw.validFrom ?? 0;
-			const to = raw.validTo ?? Number.POSITIVE_INFINITY;
-			if (fundedAt < from || fundedAt > to) {
-				return false;
-			}
 			return norm.allowedSchemes.includes(contract.scheme);
 		});
 
@@ -51,10 +47,6 @@ export function resolveDynamicForTranche(
 		const pb = b.raw.priority ?? 0;
 		if (pb !== pa) {
 			return pb - pa;
-		}
-		const vf = (b.raw.validFrom ?? 0) - (a.raw.validFrom ?? 0);
-		if (vf !== 0) {
-			return vf;
 		}
 		return (b.raw._create ?? 0) - (a.raw._create ?? 0);
 	});

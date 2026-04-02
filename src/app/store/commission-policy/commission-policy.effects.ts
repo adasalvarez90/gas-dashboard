@@ -42,12 +42,12 @@ export class CommissionPolicyEffects {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
-						message: 'Creando políticas de comisiones. Espere, por favor.'
+						message: 'Guardando dinámica especial…'
 					});
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `La política de comisiones de "${commissionPolicy.name}" fue creada con éxito.`,
+						message: `La dinámica "${commissionPolicy.name}" se creó correctamente.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -67,7 +67,7 @@ export class CommissionPolicyEffects {
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al crear la política de comisiones de "${commissionPolicy.name}": ${err.message}`;
+							toast.message = `No se pudo crear la dinámica "${commissionPolicy.name}": ${err.message}`;
 							// Present the toast
 							toast.present();
 
@@ -88,12 +88,12 @@ export class CommissionPolicyEffects {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
-						message: 'Editando políticas de comisiones. Espere, por favor.'
+						message: 'Guardando dinámica especial…'
 					});
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `La política de comisiones de "${commissionPolicy.name}" fue editada con éxito.`,
+						message: `La dinámica "${commissionPolicy.name}" se actualizó correctamente.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -113,7 +113,7 @@ export class CommissionPolicyEffects {
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al editar la política de comisiones de "${commissionPolicy.name}": ${err.message}`;
+							toast.message = `No se pudo actualizar la dinámica "${commissionPolicy.name}": ${err.message}`;
 							// Present the toast
 							toast.present();
 
@@ -134,12 +134,12 @@ export class CommissionPolicyEffects {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
-						message: 'Eliminando políticas de comisiones. Espere, por favor.'
+						message: 'Eliminando dinámica…'
 					});
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `La política de comisiones fue eliminada con éxito.`,
+						message: `La dinámica se eliminó del catálogo.`,
 						duration: 3000,
 						position: 'middle'
 					});
@@ -159,7 +159,7 @@ export class CommissionPolicyEffects {
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al eliminar la política de comisiones: ${err.message}`;
+							toast.message = `No se pudo eliminar la dinámica: ${err.message}`;
 							// Present the toast
 							toast.present();
 

@@ -31,8 +31,12 @@ export interface CommissionPolicy extends Metadata {
 	name: string;
 	active: boolean;
 
-	validFrom: number;
-	validTo: number;
+	/**
+	 * Legacy / datos viejos en Firestore. La “vigencia” operativa es solo `active`
+	 * (inactiva = no auto-asigna; sí puede asignarse a mano en tranche).
+	 */
+	validFrom?: number;
+	validTo?: number;
 
 	/** Multiselect: rules may only use schemes in this set. */
 	allowedSchemes?: CommissionSchemeCode[];
@@ -40,7 +44,7 @@ export interface CommissionPolicy extends Metadata {
 
 	/**
 	 * Optional tie-break for auto-assignment (higher wins).
-	 * If omitted, resolver uses `validFrom` then `_create` (see `resolveDynamicForTranche`).
+	 * Si empata, gana el documento con `_create` más reciente (ver `resolveDynamicForTranche`).
 	 */
 	priority?: number;
 

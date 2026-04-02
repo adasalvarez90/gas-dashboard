@@ -1,0 +1,190 @@
+<ion-header>
+	<ion-toolbar>
+		<ion-buttons slot="start">
+			<ion-back-button defaultHref="/dashboard/commission-dynamics"></ion-back-button>
+		</ion-buttons>
+		<ion-title>{{ isNew ? 'Nueva dinámica' : 'Editar dinámica' }}</ion-title>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+	<div class="form-wrap">
+		<ion-item lines="full" [class.ion-invalid]="!!nameError">
+			<ion-input
+				label="Nombre"
+				labelPlacement="stacked"
+				[(ngModel)]="name"
+				placeholder="Ej. Promo Q1"
+				[attr.aria-invalid]="nameError ? 'true' : 'false'"
+				autocomplete="off"
+			></ion-input>
+		</ion-item>
+		<ion-note class="field-hint" color="medium">Nombre interno o visible en listados.</ion-note>
+		@if (nameError) {
+		<ion-text color="danger" class="field-error" role="alert">{{ nameError }}</ion-text>
+		}
+
+		<ion-item lines="full" class="ion-margin-top">
+			<ion-toggle [(ngModel)]="active" [enableOnOffLabels]="true">Activa</ion-toggle>
+		</ion-item>
+		<ion-note class="field-hint" color="medium">
+			Inactiva: no se auto-asigna; sí puede asignarse a mano en tranche.
+		</ion-note>
+
+		<ion-item lines="full" [class.ion-invalid]="!!schemesError">
+			<ion-select
+				label="Esquemas permitidos"
+				labelPlacement="stacked"
+				[multiple]="true"
+				[(ngModel)]="allowedSchemes"
+				(ionChange)="onAllowedSchemesChange($any($event).detail.value)"
+				placeholder="Elige A y/o B"
+				interface="popover"
+			>
+				@for (opt of schemeOptions; track opt.value) {
+				<ion-select-option [value]="opt.value">{{ opt.label }}</ion-select-option>
+				}
+			</ion-select>
+		</ion-item>
+		<ion-note class="field-hint" color="medium">Solo podrás crear reglas para estos esquemas.</ion-note>
+		@if (schemesError) {
+		<ion-text color="danger" class="field-error" role="alert">{{ schemesError }}</ion-text>
+		}
+
+		@if (generalErrors.length) {
+		<ion-list class="error-list" lines="none">
+			@for (err of generalErrors; track err) {
+			<ion-item>
+				<ion-text color="danger">{{ err }}</ion-text>
+			</ion-item>
+			}
+		</ion-list>
+		}
+
+		<h2 class="section-title">Reglas</h2>
+		<p class="section-lead">Porcentaje adicional por esquema, tipo de comisión y condición opcional de rendimiento del contrato.</p>
+
+		@for (row of ruleRows; track $index; let ri = $index) {
+		<ion-card class="rule-card">
+			<ion-card-header>
+				<div class="rule-card-head">
+					<ion-card-title>Regla {{ ri + 1 }}</ion-card-title>
+					<ion-button fill="clear" color="danger" size="small" (click)="confirmRemoveRule(ri)" [attr.aria-label]="'Eliminar regla ' + (ri + 1)">
+						<ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+					</ion-button>
+				</div>
+			</ion-card-header>
+			<ion-card-content>
+				<ion-item lines="full">
+					<ion-select
+						label="Esquema de la regla"
+						labelPlacement="stacked"
+						[(ngModel)]="row.scheme"
+						interface="popover"
+					>
+						@for (s of schemesForRow(row); track s) {
+						<ion-select-option [value]="s">Esquema {{ s }}</ion-select-option>
+						}
+					</ion-select>
+				</ion-item>
+
+				<ion-item lines="full">
+					<ion-input
+						label="Porcentaje adicional"
+						labelPlacement="stacked"
+						type="number"
+						inputmode="decimal"
+						[(ngModel)]="row.additionalPercent"
+					></ion-input>
+					<ion-note slot="end">%</ion-note>
+				</ion-item>
+
+				<fieldset class="commission-types">
+					<legend class="sr-only">Tipo de comisión</legend>
+					<ion-item lines="none">
+						<ion-checkbox labelPlacement="end" justify="start" [(ngModel)]="row.appliesToImmediate">
+							Inmediata
+						</ion-checkbox>
+					</ion-item>
+					<ion-item lines="none">
+						<ion-checkbox labelPlacement="end" justify="start" [(ngModel)]="row.appliesToRecurring">
+							Regular (recurrente)
+						</ion-checkbox>
+					</ion-item>
+				</fieldset>
+
+				<ion-item lines="full">
+					<ion-toggle [(ngModel)]="row.yieldEnabled" [enableOnOffLabels]="true">
+						<ion-label>Aplicar condición por rendimiento del contrato</ion-label>
+					</ion-toggle>
+				</ion-item>
+
+				@if (row.yieldEnabled) {
+				<ion-item lines="full">
+					<ion-select
+						label="Operador"
+						labelPlacement="stacked"
+						[(ngModel)]="row.yieldOp"
+						interface="popover"
+					>
+						@for (op of yieldOpOptions; track op.value) {
+						<ion-select-option [value]="op.value">{{ op.label }}</ion-select-option>
+						}
+					</ion-select>
+				</ion-item>
+
+				@if (row.yieldOp === 'BETWEEN') {
+				<ion-item lines="full">
+					<ion-input
+						label="Mínimo (inclusivo)"
+						labelPlacement="stacked"
+						type="number"
+						inputmode="decimal"
+						[(ngModel)]="row.yieldMin"
+					></ion-input>
+				</ion-item>
+				<ion-item lines="full">
+					<ion-input
+						label="Máximo (inclusivo)"
+						labelPlacement="stacked"
+						type="number"
+						inputmode="decimal"
+						[(ngModel)]="row.yieldMax"
+					></ion-input>
+				</ion-item>
+				<ion-note class="field-hint" color="medium">Intervalo inclusivo; si min &gt; max se ordenan al guardar.</ion-note>
+				} @else {
+				<ion-item lines="full">
+					<ion-input
+						label="Valor de rendimiento (%)"
+						labelPlacement="stacked"
+						type="number"
+						inputmode="decimal"
+						[(ngModel)]="row.yieldValue"
+					></ion-input>
+				</ion-item>
+				}
+				}
+
+				@if (ruleErrors[ri]?.length) {
+				<div class="rule-inline-errors" role="alert">
+					@for (e of ruleErrors[ri]; track e) {
+					<ion-text color="danger">{{ e }}</ion-text>
+					}
+				</div>
+				}
+			</ion-card-content>
+		</ion-card>
+		}
+
+		<ion-button expand="block" fill="outline" class="ion-margin-top" (click)="addRuleRow()">
+			<ion-icon slot="start" name="add-outline"></ion-icon>
+			Agregar regla
+		</ion-button>
+
+		<div class="actions-row ion-margin-top">
+			<ion-button expand="block" (click)="save()">Guardar</ion-button>
+			<ion-button expand="block" fill="clear" (click)="cancel()">Cancelar</ion-button>
+		</div>
+	</div>
+</ion-content>

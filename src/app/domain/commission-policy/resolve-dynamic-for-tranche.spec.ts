@@ -17,8 +17,6 @@ describe('resolveDynamicForTranche', () => {
 			uid: p.uid ?? 'p',
 			name: p.name ?? 'Dyn',
 			active: p.active ?? true,
-			validFrom: p.validFrom ?? 0,
-			validTo: p.validTo ?? 2000,
 			allowedSchemes: p.allowedSchemes ?? ['A'],
 			rules: p.rules ?? [],
 			_on: p._on ?? true,
@@ -39,14 +37,14 @@ describe('resolveDynamicForTranche', () => {
 			active: false,
 			allowedSchemes: ['A'],
 		});
-		const auto = policy({ uid: 'auto', active: true, validFrom: 0 });
+		const auto = policy({ uid: 'auto', active: true });
 		const tranche = { uid: 't1', assignedDynamicPolicyUid: 'manual' } as Tranche;
 		expect(resolveDynamicForTranche(tranche, contractA, [manual, auto], fundedAt)).toBe(manual);
 	});
 
 	it('auto ignores inactive policies', () => {
 		const inactive = policy({ uid: 'i', active: false });
-		const active = policy({ uid: 'a', active: true, validFrom: 100, _create: 1 });
+		const active = policy({ uid: 'a', active: true, _create: 1 });
 		const tranche = {} as Tranche;
 		expect(resolveDynamicForTranche(tranche, contractA, [inactive, active], fundedAt)).toBe(active);
 	});
@@ -57,18 +55,16 @@ describe('resolveDynamicForTranche', () => {
 		expect(resolveDynamicForTranche(tranche, contractA, [bOnly], fundedAt)).toBeNull();
 	});
 
-	it('tie-break: higher priority then validFrom then _create', () => {
+	it('tie-break: higher priority then _create', () => {
 		const p1 = policy({
 			uid: 'p1',
 			priority: 1,
-			validFrom: 100,
 			_create: 50,
 			active: true,
 		});
 		const p2 = policy({
 			uid: 'p2',
 			priority: 2,
-			validFrom: 0,
 			_create: 999,
 			active: true,
 		});
@@ -76,9 +72,10 @@ describe('resolveDynamicForTranche', () => {
 		expect(resolveDynamicForTranche(tranche, contractA, [p1, p2], fundedAt)).toBe(p2);
 	});
 
-	it('excludes policies outside validFrom..validTo', () => {
-		const out = policy({ uid: 'o', validFrom: 0, validTo: 500, active: true });
+	it('tie-break: same priority uses newer _create', () => {
+		const older = policy({ uid: 'old', priority: 1, _create: 10, active: true });
+		const newer = policy({ uid: 'new', priority: 1, _create: 99, active: true });
 		const tranche = {} as Tranche;
-		expect(resolveDynamicForTranche(tranche, contractA, [out], fundedAt)).toBeNull();
+		expect(resolveDynamicForTranche(tranche, contractA, [older, newer], fundedAt)).toBe(newer);
 	});
 });

@@ -97,6 +97,57 @@
 					Registrar depósito
 				</ion-button>
 				}
+
+				@if ((commissionPolicies$ | async); as policies) {
+				<div class="dynamic-section" (click)="$event.stopPropagation()">
+					<div class="section-divider"></div>
+					<div class="section-title">Dinámica especial</div>
+					<p class="dynamic-copy">
+						Solo una dinámica por tranche. Las inactivas no se eligen solas; puedes asignarlas a mano.
+					</p>
+					@if (resolvePolicy(policies, tranche.assignedDynamicPolicyUid); as cur) {
+					<div class="current-dynamic">
+						<span class="current-dynamic-label">Asignada:</span>
+						<strong>{{ cur.name }}</strong>
+						<ion-badge [color]="cur.active !== false ? 'success' : 'medium'">
+							{{ cur.active !== false ? 'Activa' : 'Inactiva' }}
+						</ion-badge>
+					</div>
+					} @else if (tranche.assignedDynamicPolicyUid) {
+					<p class="dynamic-missing ion-text-wrap">
+						Referencia en tranche no coincide con el catálogo cargado (UID: {{ tranche.assignedDynamicPolicyUid }}).
+					</p>
+					}
+					<ion-item lines="full">
+						<ion-select
+							label="Cambiar asignación"
+							labelPlacement="stacked"
+							interface="popover"
+							placeholder="Elegir del catálogo"
+							[value]="tranche.assignedDynamicPolicyUid ?? trancheDynamicNone"
+							(ionChange)="onTrancheDynamicSelected(tranche, $any($event).detail.value)"
+							[attr.aria-label]="'Dinámica especial para anexo ' + tranche.sequence"
+						>
+							<ion-select-option [value]="trancheDynamicNone">Sin asignar</ion-select-option>
+							@for (p of sortedPolicies(policies); track p.uid) {
+							<ion-select-option [value]="p.uid">
+								{{ p.name }}{{ p.active === false ? ' (inactiva)' : '' }}
+							</ion-select-option>
+							}
+						</ion-select>
+					</ion-item>
+					@if (tranche.assignedDynamicPolicyUid) {
+					<ion-button
+						fill="clear"
+						size="small"
+						class="clear-dynamic-btn"
+						(click)="clearTrancheDynamic(tranche, $event)"
+					>
+						Quitar asignación
+					</ion-button>
+					}
+				</div>
+				}
 			</div>
 		</div>
 		}
