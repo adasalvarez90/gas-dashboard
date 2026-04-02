@@ -104,20 +104,41 @@ If the tranche is an annex, the recurring commission must be divided across **re
 
 ---
 
-# CommissionPolicy (Dinámicas) — Scheme A Only
+# CommissionPolicy (Dinámicas especiales)
 
-Some special dynamics (e.g. offering +1%, +2%, +3% commission) apply **only** to **Scheme A** and **only** as an **immediate bonus**.
+A special dynamic is a named configuration: **allowed schemes** (step 2) plus **N rules** that each add an extra percentage when they match the contract/tranche context.
 
-Rules:
+## Creation flow (UX contract)
 
-- Base Scheme A stays: **5% recurring** (split across 12 months or remaining months for annexes)
-- The bonus increases the **immediate commission** (e.g. 4% → 5%)
-- Total commission increases accordingly (e.g. 9% → 10%), keeping recurring at 5%
+1. **Name** (required).
+2. **Allowed schemes** (required, multiselect): e.g. A, B, or both. This is the **only** set of schemes that rules may use.
+3. **Rules** (zero or more per allowed scheme; “up to N” per scheme):
+   - **Scheme** for this rule: must be **one of** the schemes selected in step 2 (UI must not offer others).
+   - **Additional percentage** for this rule.
+   - **Commission type**: applies to **immediate** (`IMMEDIATE`) and/or **regular/recurring** (`RECURRING`).
+   - **Optional yield condition** on **`contract.yieldPercent`** (the contract’s yield field — this is the canonical attribute for comparisons):
+     - **Comparison operators** (user enters **one** value each): `<`, `>`, `<=`, `>=`, `=`, `!=`
+     - **Range operator** (user enters **two** values): `BETWEEN` — label in UI e.g. **“Entre”**; semantics: inclusive closed interval `low ≤ y ≤ high` (implement `low`/`high` order normalization if the user inverts them).
+     - **Operand count (for implementation / UI):**
 
-Example:
+| Operator | Values required | Meaning (y = `contract.yieldPercent`) |
+|----------|-----------------|----------------------------------------|
+| `<` | **1** | y < value |
+| `>` | **1** | y > value |
+| `<=` | **1** | y ≤ value |
+| `>=` | **1** | y ≥ value |
+| `=` | **1** | y === value (use tolerance in code if floats) |
+| `!=` | **1** | y !== value (same tolerance policy as `=`) |
+| `BETWEEN` | **2** | low ≤ y ≤ high (inclusive) |
+   - If a rule has **no** yield condition, it applies based only on scheme + commission type (when the dynamic is in play for that tranche).
 
-- Normal Scheme A: 4% immediate + 5% recurring = 9%
-- Dynamic +1%: 5% immediate + 5% recurring = 10%
+## Business behavior
+
+- The dynamic applies at **tranche level** (each tranche evaluates and stores its applicable dynamic context independently).
+- A user can **manually assign** a dynamic to a tranche even if that dynamic is inactive, choosing from the full catalog.
+- Only **active** dynamics can be **auto-assigned** by the system.
+- A tranche can have **only one assigned dynamic** at a time.
+- **Rule scheme ⊆ allowed schemes:** every rule’s scheme must belong to the multiselect from step 2; invalid combinations must be blocked in UI and rejected on save in API/domain validation.
 
 ---
 
