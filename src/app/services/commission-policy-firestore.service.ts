@@ -4,6 +4,7 @@ import { Firestore, collection, getDocs, doc, updateDoc, setDoc, query, where } 
 import * as _ from 'lodash';
 
 import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
+import { validateAndNormalizeCommissionPolicy } from 'src/app/domain/commission-policy/commission-policy.validation';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
@@ -27,9 +28,10 @@ export class CommissionPolicyFirestoreService {
 	// ➕ Create commissionPolicy
 	async createCommissionPolicy(commissionPolicy: CommissionPolicy): Promise<CommissionPolicy> {
 		const uid = uuidv4();
-		
+		const validated = validateAndNormalizeCommissionPolicy(commissionPolicy);
+
 		const newCommissionPolicy: CommissionPolicy = {
-			...commissionPolicy,
+			...validated,
 			uid,
 			_create: Date.now(),
 			_on: true
@@ -43,7 +45,9 @@ export class CommissionPolicyFirestoreService {
 
 	// ✏️ Update commissionPolicy
 	async updateCommissionPolicy(commissionPolicy: CommissionPolicy): Promise<CommissionPolicy> {
-		let updateCommissionPolicy = _.cloneDeep(commissionPolicy);
+		let updateCommissionPolicy = _.cloneDeep(
+			validateAndNormalizeCommissionPolicy(commissionPolicy)
+		);
 
 		updateCommissionPolicy._update = Date.now();
 		

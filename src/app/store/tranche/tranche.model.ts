@@ -40,4 +40,10 @@ export interface Tranche extends Metadata {
 	}>;
 
 	sequence: number; // 1 = inicial, 2 = anexo1, 3 = anexo2
+
+	/**
+	 * Dinámica especial asignada manualmente al tranche (opcional).
+	 * Gana sobre la auto-asignación; puede apuntar a una dinámica inactiva del catálogo.
+	 */
+	assignedDynamicPolicyUid?: string | null;
 }

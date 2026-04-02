@@ -263,8 +263,10 @@ describe('CommissionEngineService', () => {
       expect(immediate[0].amount).toBe(4000); // 4% of 100000
       expect(finalPayments).toHaveSize(1);
       expect(finalPayments[0].amount).toBe(4000); // 4% extra (yield 16%) of 100000
-      const month6 = addMonths(startDate, 6);
-      expect(finalPayments[0].dueDate).toBe(month6);
+      const due = new Date(finalPayments[0].dueDate);
+      expect(due.getUTCDate()).toBe(15);
+      expect(due.getUTCMonth()).toBe(6);
+      expect(due.getUTCFullYear()).toBe(2026);
     });
 
     it('annex before month 6: FINAL due at month 6 of contract', () => {
@@ -299,13 +301,16 @@ describe('CommissionEngineService', () => {
 
       const finalPayments = drafts.filter((d) => d.paymentType === 'FINAL');
       expect(finalPayments).toHaveSize(1);
-      expect(finalPayments[0].dueDate).toBe(addMonths(startDate, 6));
+      const due = new Date(finalPayments[0].dueDate);
+      expect(due.getUTCDate()).toBe(15);
+      expect(due.getUTCMonth()).toBe(6);
+      expect(due.getUTCFullYear()).toBe(2026);
     });
 
     it('annex from month 6 onward: FINAL due at month 12 of contract', () => {
-      const startDate = new Date(2026, 0, 15).getTime();
-      const endDate = addMonths(startDate, 12);
-      const annexFundedAt = addMonths(startDate, 6); // Jul = from month 6
+      const startDate = Date.UTC(2026, 0, 15, 12, 0, 0, 0);
+      const endDate = Date.UTC(2027, 0, 15, 12, 0, 0, 0);
+      const annexFundedAt = Date.UTC(2026, 6, 15, 12, 0, 0, 0);
 
       const contract: Partial<Contract> = {
         uid: 'c1',
@@ -334,7 +339,10 @@ describe('CommissionEngineService', () => {
 
       const finalPayments = drafts.filter((d) => d.paymentType === 'FINAL');
       expect(finalPayments).toHaveSize(1);
-      expect(finalPayments[0].dueDate).toBe(addMonths(startDate, 12));
+      const due = new Date(finalPayments[0].dueDate);
+      expect(due.getUTCDate()).toBe(15);
+      expect(due.getUTCMonth()).toBe(0);
+      expect(due.getUTCFullYear()).toBe(2027);
     });
   });
 
@@ -461,6 +469,118 @@ describe('CommissionEngineService', () => {
       const immediate = drafts.find((d) => d.paymentType === 'IMMEDIATE')!;
       expect(immediate.amount).toBe(5000);
       expect(immediate.grossCommissionPercent).toBe(10);
+    });
+  });
+
+  describe('CommissionPolicy dynamics (rules model)', () => {
+    it('sums additionalPercent on immediate and recurring independently for scheme A', () => {
+      const startDate = new Date(2026, 11, 15).getTime();
+      const endDate = addMonths(startDate, 12);
+
+      const contract: Partial<Contract> = {
+        uid: 'c1',
+        scheme: 'A',
+        source: 'COMUNIDAD',
+        startDate,
+        endDate,
+        yieldPercent: 16,
+      };
+
+      const tranche: Partial<Tranche> = {
+        uid: 't1',
+        contractUid: 'c1',
+        amount: 100000,
+        sequence: 1,
+        fundedAt: startDate,
+      };
+
+      const policy: Partial<CommissionPolicy> = {
+        uid: 'p-rules',
+        name: 'Rules',
+        active: true,
+        validFrom: startDate - 1,
+        validTo: startDate + 1,
+        allowedSchemes: ['A'],
+        rules: [
+          {
+            scheme: 'A',
+            additionalPercent: 1,
+            appliesToImmediate: true,
+            appliesToRecurring: false,
+          },
+          {
+            scheme: 'A',
+            additionalPercent: 0.5,
+            appliesToImmediate: false,
+            appliesToRecurring: true,
+          },
+        ],
+      };
+
+      const roleSplits: CommissionRoleSplit[] = [{ role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }];
+
+      const drafts = service.generateForTranche(
+        contract as Contract,
+        tranche as Tranche,
+        roleSplits,
+        policy as CommissionPolicy
+      );
+
+      const immediate = drafts.find((d) => d.paymentType === 'IMMEDIATE')!;
+      expect(immediate.amount).toBe(5000);
+      expect(immediate.grossCommissionPercent).toBe(10.5);
+
+      const recurringSum = drafts
+        .filter((d) => d.paymentType === 'RECURRING')
+        .reduce((acc, d) => acc + d.amount, 0);
+      expect(Math.abs(recurringSum - 5500)).toBeLessThan(0.02);
+    });
+
+    it('applies yield BETWEEN on rules for scheme B immediate only', () => {
+      const startDate = new Date(2026, 5, 10).getTime();
+      const contract: Partial<Contract> = {
+        uid: 'cB',
+        scheme: 'B',
+        source: 'COMUNIDAD',
+        startDate,
+        yieldPercent: 18,
+      };
+      const tranche: Partial<Tranche> = {
+        uid: 'tB',
+        contractUid: 'cB',
+        amount: 100000,
+        sequence: 1,
+        fundedAt: startDate,
+      };
+      const policy: Partial<CommissionPolicy> = {
+        uid: 'pB',
+        name: 'B dyn',
+        active: true,
+        validFrom: startDate - 1,
+        validTo: startDate + 1,
+        allowedSchemes: ['B'],
+        rules: [
+          {
+            scheme: 'B',
+            additionalPercent: 1,
+            appliesToImmediate: true,
+            appliesToRecurring: false,
+            yieldCondition: { type: 'between', low: 17, high: 19 },
+          },
+        ],
+      };
+      const roleSplits: CommissionRoleSplit[] = [{ role: 'CONSULTANT', advisorUid: 'a1', percent: 100 }];
+
+      const drafts = service.generateForTranche(
+        contract as Contract,
+        tranche as Tranche,
+        roleSplits,
+        policy as CommissionPolicy
+      );
+      const immediate = drafts.find((d) => d.paymentType === 'IMMEDIATE')!;
+      expect(immediate.scheme).toBe('B');
+      expect(immediate.amount).toBe(5000);
+      expect(immediate.policyUid).toBe('pB');
     });
   });
 });

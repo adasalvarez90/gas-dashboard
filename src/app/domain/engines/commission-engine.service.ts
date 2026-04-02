@@ -4,6 +4,8 @@ import { Tranche } from '../../store/tranche/tranche.model';
 import { CommissionPaymentDraft } from '../../models/commission-engine.model';
 import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
 import { getCutDateForDueDateMexico, toCanonicalMexicoDateTimestamp } from 'src/app/domain/time/mexico-time.util';
+import { normalizeCommissionPolicy } from '../commission-policy/commission-policy-normalize';
+import { sumMatchingAdditionalPercent } from '../commission-policy/commission-policy-dynamics.util';
 
 @Injectable({ providedIn: 'root' })
 export class CommissionEngineService {
@@ -19,13 +21,25 @@ export class CommissionEngineService {
 
 		const drafts: CommissionPaymentDraft[] = [];
 
-		const schemeARecurringPercent = 5;
+		const normalized = commissionPolicy ? normalizeCommissionPolicy(commissionPolicy) : null;
 
-		const schemeAImmediatePercent = this.getSchemeAImmediatePercent(commissionPolicy);
+		const schemeAImmediatePercent = 4 + (normalized && contract.scheme === 'A'
+			? sumMatchingAdditionalPercent(normalized, contract, 'IMMEDIATE')
+			: 0);
+
+		const schemeARecurringPercent = 5 + (normalized && contract.scheme === 'A'
+			? sumMatchingAdditionalPercent(normalized, contract, 'RECURRING')
+			: 0);
+
+		const schemeBImmediatePercent = 4 + (normalized && contract.scheme === 'B'
+			? sumMatchingAdditionalPercent(normalized, contract, 'IMMEDIATE')
+			: 0);
+
+		const schemeBExtraPercent = this.getSchemeBExtraPercentByYield(contract.yieldPercent ?? 20);
 
 		const grossCommissionPercent = contract.scheme === 'A'
 			? schemeAImmediatePercent + schemeARecurringPercent
-			: 4 + this.getSchemeBExtraPercentByYield(contract.yieldPercent ?? 20);
+			: schemeBImmediatePercent + schemeBExtraPercent;
 
 		const totalCommission =
 			tranche.amount * (grossCommissionPercent / 100);
@@ -43,7 +57,7 @@ export class CommissionEngineService {
 
 			const immediatePercent = contract.scheme === 'A'
 				? schemeAImmediatePercent
-				: 4;
+				: schemeBImmediatePercent;
 
 			const immediateAmount =
 				tranche.amount *
@@ -57,7 +71,7 @@ export class CommissionEngineService {
 				advisorUid: split.advisorUid,
 				role: split.role,
 				source: contract.source,
-				policyUid: this.getPolicyUidForDraft(contract, commissionPolicy),
+				policyUid: this.getPolicyUidForDraft(commissionPolicy),
 
 				amount: immediateAmount,
 
@@ -105,7 +119,7 @@ export class CommissionEngineService {
 						advisorUid: split.advisorUid,
 						role: split.role,
 						source: contract.source,
-						policyUid: this.getPolicyUidForDraft(contract, commissionPolicy),
+						policyUid: this.getPolicyUidForDraft(commissionPolicy),
 
 						amount,
 
@@ -150,7 +164,7 @@ export class CommissionEngineService {
 					advisorUid: split.advisorUid,
 					role: split.role,
 					source: contract.source,
-					policyUid: this.getPolicyUidForDraft(contract, commissionPolicy),
+					policyUid: this.getPolicyUidForDraft(commissionPolicy),
 
 					amount: remainingAmount,
 
@@ -181,41 +195,8 @@ export class CommissionEngineService {
 		return Math.max(0, Math.min(4, extra));
 	}
 
-	/**
-	 * CommissionPolicy (dinámicas): apply ONLY to Scheme A and ONLY as an immediate bonus.
-	 *
-	 * Base Scheme A is 4% immediate + 5% recurring.
-	 * A policy may set:
-	 * - overrideImmediatePercent (preferred)
-	 * - overrideTotalCommissionPercent (interpreted as total = immediate + 5%)
-	 */
-	private getSchemeAImmediatePercent(commissionPolicy?: CommissionPolicy | null): number {
-		const baseImmediate = 4;
-		const baseRecurring = 5;
-		const baseTotal = baseImmediate + baseRecurring;
-
-		if (!commissionPolicy || commissionPolicy.scheme !== 'A') return baseImmediate;
-
-		const immediateOverride = commissionPolicy.overrideImmediatePercent;
-		if (immediateOverride != null) {
-			return immediateOverride;
-		}
-
-		const totalOverride = commissionPolicy.overrideTotalCommissionPercent;
-		if (totalOverride != null) {
-			// Enforce rule: bonus goes to immediate, recurring stays 5%.
-			return totalOverride - baseRecurring;
-		}
-
-		// No overrides -> default
-		return baseImmediate;
-	}
-
-	private getPolicyUidForDraft(contract: Contract, commissionPolicy?: CommissionPolicy | null): string | undefined {
-		// By business rule, dynamics apply only to Scheme A.
-		if (contract.scheme !== 'A') return undefined;
-		if (!commissionPolicy || commissionPolicy.scheme !== 'A') return undefined;
-		return commissionPolicy.uid;
+	private getPolicyUidForDraft(commissionPolicy?: CommissionPolicy | null): string | undefined {
+		return commissionPolicy?.uid;
 	}
 
 	// =========================
