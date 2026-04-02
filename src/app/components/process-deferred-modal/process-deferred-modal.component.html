@@ -34,27 +34,26 @@
 			</ion-item>
 			<div class="ion-padding accordion-body" slot="content">
 				<ion-list lines="none">
-					<ion-item>
+					<ion-item class="date-field">
 						<ion-label position="stacked">Fecha envío desglose</ion-label>
 						<ion-input type="date" [(ngModel)]="row.breakdownDate" name="bd{{ i }}"></ion-input>
 					</ion-item>
-					<ion-item *ngIf="rowBreakdownLate(row)">
-						<ion-note color="warning" class="late-note">Fuera de plazo (desglose)</ion-note>
-					</ion-item>
-					<ion-item>
+					<div *ngIf="rowBreakdownLate(row)" class="late-note">Fuera de plazo (desglose)</div>
+					<ion-item class="date-field">
 						<ion-label position="stacked">Fecha envío factura</ion-label>
 						<ion-input type="date" [(ngModel)]="row.invoiceDate" name="inv{{ i }}"></ion-input>
 					</ion-item>
-					<ion-item *ngIf="rowInvoiceLate(row)">
-						<ion-note color="warning" class="late-note">Fuera de plazo (factura)</ion-note>
+					<div *ngIf="rowInvoiceLate(row)" class="late-note">Fuera de plazo (factura)</div>
+					<ion-item class="date-field">
+						<ion-label position="stacked">Fecha envío a pago</ion-label>
+						<ion-input type="date" [(ngModel)]="row.sentToPaymentDate" name="stp{{ i }}"></ion-input>
 					</ion-item>
-					<ion-item>
+					<div *ngIf="rowSentToPaymentLate(row)" class="late-note">Fuera de plazo (envío a pago)</div>
+					<ion-item class="date-field">
 						<ion-label position="stacked">Fecha pago</ion-label>
 						<ion-input type="date" [(ngModel)]="row.receiptDate" name="rec{{ i }}"></ion-input>
 					</ion-item>
-					<ion-item *ngIf="rowPaymentLate(row)">
-						<ion-note color="warning" class="late-note">Fuera de plazo (pago)</ion-note>
-					</ion-item>
+					<div *ngIf="rowPaymentLate(row)" class="late-note">Fuera de plazo (pago)</div>
 					<ion-item>
 						<ion-label position="stacked">Factura (PDF, opcional)</ion-label>
 						<input type="file" accept="application/pdf" (change)="onInvoiceSelected(row, $event)" />

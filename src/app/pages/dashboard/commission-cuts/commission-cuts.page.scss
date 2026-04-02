@@ -227,7 +227,6 @@
 	.summary-card--paid-late {
 		--paid-late-rgb: 255, 152, 0; /* naranja */
 		border-color: rgba(var(--paid-late-rgb), 0.45);
-		background: rgba(var(--paid-late-rgb), 0.08);
 	}
 
 	.summary-card-header {

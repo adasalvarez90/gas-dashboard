@@ -140,7 +140,8 @@ Date-only fields must be normalized before saving so they do not shift by timezo
 |------|-------|----------|
 | Send breakdown | User | **2 business days after cut date** |
 | Generate invoice | Advisor | **2 business days after breakdown sent** |
-| Send to pay / attach proof | User | 2 business days after invoice received |
+| Send to pay | User | **2 business days after invoice received** |
+| Attach payment proof / pay | User | **2 business days after sent to payment** |
 
 ---
 
@@ -177,7 +178,7 @@ En la pantalla **Cortes de comisión**, la misma línea de pago **no** se acumul
 
 - Como mucho en **dos** cortes: **original** (`cutDate`) + **un** destino cuando corresponda — siempre como **vistas** de la **misma** fila en BD (`cutDate` + referencia `deferredToCutDate`), no como dos pagos duplicados.
 - **Destino explícito:** `deferredToCutDate` (p. ej. factura tarde) e impaga.
-- **Destino implícito (todos los `paymentType`):** el siguiente 7/21 del **mes siguiente** (no el otro corte del mismo mes) **solo si** (1) ya ocurrió el día de corte original (fecha México) y (2) el flujo desglose → factura → comprobante tiene un paso **vencido** según plazos de 2 días hábiles y los timestamps en **`CommissionPayment`** (vía `paymentWorkflowStateAtCut` / estado sintético por corte; en cortes intermedios de la cadena no hay “avance local” hasta origen o `deferredToCutDate`). **No** depende de inmediata vs recurrente.
+- **Destino implícito (todos los `paymentType`):** el siguiente 7/21 del **mes siguiente** (no el otro corte del mismo mes) **solo si** (1) ya ocurrió el día de corte original (fecha México) y (2) el flujo desglose → factura → envío a pago → comprobante tiene un paso **vencido** según plazos de 2 días hábiles y los timestamps en **`CommissionPayment`** (vía `paymentWorkflowStateAtCut` / estado sintético por corte; en cortes intermedios de la cadena no hay “avance local” hasta origen o `deferredToCutDate`). **No** depende de inmediata vs recurrente.
 - No se muestra la misma fila en ene + feb + mar + abr a la vez: solo **origen + último `deferredToCutDate`** que aplique tras reconciliar o tras una acción del usuario.
 
 ---
@@ -384,7 +385,7 @@ The user selects a catalog reason (**motivo**) and may optionally add free text 
 | Commission **diferida** (past deadline) | **Red** | Past payment deadline, regardless of cause |
 | Commission **on time** but payment not yet done | **Yellow** | Within deadline, pending receipt |
 | Commission **paid** (receipt attached) | **Green / normal** | Complete and **no** step exceeded its 2-business-day deadline |
-| Commission **paid late** (any step exceeded deadline) | **Orange** | Any of desglose / factura / comprobante fuera de plazo; **sigue naranja aunque** el comprobante quede antes del siguiente corte |
+| Commission **paid late** (any step exceeded deadline) | **Orange** | Any of desglose / factura / envío a pago / comprobante fuera de plazo; **sigue naranja aunque** el comprobante quede antes del siguiente corte |
 
 Commissions that were **paid late** retain the orange indicator after payment (auditoría). **No** se “perdona” un paso tarde porque el comprobante llegó antes del corte siguiente: basta **un** paso tarde para franja naranja.
 
@@ -419,7 +420,7 @@ When there are **diferida** commissions in the cut, the system must support two 
 ## Path 2: INDIVIDUAL — process only selected deferred commissions
 
 - User **selects** one or more deferred commissions (some or all, only diferida).
-- User provides **dates** for each step: desglose, factura, comprobante.
+- User provides **dates** for each step: desglose, factura, envío a pago, comprobante.
 - **Target cut logic** (cuando las fechas caen **antes del día** del corte diferido vigente — alinea con **Case 1a / 1b** arriba):
   - `targetCutDate` = corte ≤ fecha desglose (`getLastCutDateOnOrBefore`).
   - **Restricción:** Una comisión no puede asignarse a un corte anterior al primer corte en que fue diferida (`getMinValidTargetCut(originalCutDate, deferredCutDate)`).
@@ -431,7 +432,7 @@ When there are **diferida** commissions in the cut, the system must support two 
 - **`cutDate` (original)** no se modifica nunca; siempre conserva el corte de origen.
 - **`deferredToCutDate` después del proceso:** Si `targetCutDate === originalCutDate` → **Case 1a:** se **elimina** el campo (solo original). Si `targetCutDate !== originalCutDate` → **Case 1b o seguimiento en diferido:** se **actualiza** a `targetCutDate` (la comisión queda en origen + ese corte; desaparece de cortes posteriores que ya no son el puntero).
 - User provides **motivo** (required), **texto** (optional), **invoice**, and **receipt**.
-- **Color logic:** If **any** status date exceeds its step deadline (2 business days in the chain) → **orange** (paid late). Otherwise → **green**. Un paso tarde no se compensa con pasos posteriores “a tiempo”.
+- **Color logic:** If **any** status date exceeds its step deadline (2 business days per step: corte→desglose, desglose→factura, factura→envío a pago, envío a pago→pago) → **orange** (paid late). Otherwise → **green**. Un paso tarde no se compensa con pasos posteriores “a tiempo”.
 - Deferred commissions **not** selected remain pending and will be processed later via Path 1 (or another Path 2 selection).
 
 ---

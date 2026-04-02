@@ -14,6 +14,7 @@ import {
 	getBreakdownDeadline,
 	getInvoiceDeadline,
 	getPaymentDeadline,
+	getSentToPaymentDeadline,
 } from 'src/app/domain/commission-cut/commission-cut-deadlines.util';
 
 /** Grupo por corte de origen (Path 2). */
@@ -29,6 +30,7 @@ export interface ProcessDeferredGroupFormResult {
 	paymentUids: string[];
 	breakdownSentAt: number;
 	invoiceSentAt: number;
+	sentToPaymentAt: number;
 	receiptSentAt: number;
 	invoiceFile?: File;
 	receiptFile?: File;
@@ -56,6 +58,7 @@ interface GroupFormRow {
 	amount: number;
 	breakdownDate: string;
 	invoiceDate: string;
+	sentToPaymentDate: string;
 	receiptDate: string;
 	invoiceFile: File | null;
 	receiptFile: File | null;
@@ -109,6 +112,7 @@ export class ProcessDeferredModalComponent implements OnInit {
 			amount: g.amount,
 			breakdownDate: today,
 			invoiceDate: today,
+			sentToPaymentDate: today,
 			receiptDate: today,
 			invoiceFile: null,
 			receiptFile: null,
@@ -133,15 +137,27 @@ export class ProcessDeferredModalComponent implements OnInit {
 	}
 
 	rowPaymentLate(row: GroupFormRow): boolean {
-		const inv = toCanonicalMexicoDateTimestamp(row.invoiceDate);
+		const sent = toCanonicalMexicoDateTimestamp(row.sentToPaymentDate);
 		const rec = toCanonicalMexicoDateTimestamp(row.receiptDate);
-		if (!inv || !rec) return false;
-		return isAfterMexicoDate(rec, getPaymentDeadline(inv));
+		if (!sent || !rec) return false;
+		return isAfterMexicoDate(rec, getPaymentDeadline(sent));
+	}
+
+	rowSentToPaymentLate(row: GroupFormRow): boolean {
+		const inv = toCanonicalMexicoDateTimestamp(row.invoiceDate);
+		const sent = toCanonicalMexicoDateTimestamp(row.sentToPaymentDate);
+		if (!inv || !sent) return false;
+		return isAfterMexicoDate(sent, getSentToPaymentDeadline(inv));
 	}
 
 	/** Algún paso del flujo (con fechas ya evaluables) va fuera de plazo. */
 	rowAnyLate(row: GroupFormRow): boolean {
-		return this.rowBreakdownLate(row) || this.rowInvoiceLate(row) || this.rowPaymentLate(row);
+		return (
+			this.rowBreakdownLate(row) ||
+			this.rowInvoiceLate(row) ||
+			this.rowSentToPaymentLate(row) ||
+			this.rowPaymentLate(row)
+		);
 	}
 
 	anyDesgloseLate(): boolean {
@@ -153,16 +169,18 @@ export class ProcessDeferredModalComponent implements OnInit {
 	}
 
 	anyPagoLate(): boolean {
-		return this.rows.some((r) => this.rowPaymentLate(r));
+		return this.rows.some((r) => this.rowSentToPaymentLate(r) || this.rowPaymentLate(r));
 	}
 
 	rowComplete(row: GroupFormRow): boolean {
 		return !!(
 			row.breakdownDate &&
 			row.invoiceDate &&
+			row.sentToPaymentDate &&
 			row.receiptDate &&
 			toCanonicalMexicoDateTimestamp(row.breakdownDate) &&
 			toCanonicalMexicoDateTimestamp(row.invoiceDate) &&
+			toCanonicalMexicoDateTimestamp(row.sentToPaymentDate) &&
 			toCanonicalMexicoDateTimestamp(row.receiptDate)
 		);
 	}
@@ -198,18 +216,20 @@ export class ProcessDeferredModalComponent implements OnInit {
 		for (const row of this.rows) {
 			const breakdownSentAt = toCanonicalMexicoDateTimestamp(row.breakdownDate)!;
 			const invoiceSentAt = toCanonicalMexicoDateTimestamp(row.invoiceDate)!;
+			const sentToPaymentAt = toCanonicalMexicoDateTimestamp(row.sentToPaymentDate)!;
 			const receiptSentAt = toCanonicalMexicoDateTimestamp(row.receiptDate)!;
 			groups.push({
 				originalCutDate: row.originalCutDate,
 				paymentUids: row.paymentUids,
 				breakdownSentAt,
 				invoiceSentAt,
+				sentToPaymentAt,
 				receiptSentAt,
 				...(row.invoiceFile ? { invoiceFile: row.invoiceFile } : {}),
 				...(row.receiptFile ? { receiptFile: row.receiptFile } : {}),
 				breakdownLate: this.rowBreakdownLate(row),
 				invoiceLate: this.rowInvoiceLate(row),
-				paymentLate: this.rowPaymentLate(row),
+				paymentLate: this.rowSentToPaymentLate(row) || this.rowPaymentLate(row),
 			});
 		}
 		const result: ProcessDeferredResult = { groups };

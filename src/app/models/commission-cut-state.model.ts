@@ -33,7 +33,7 @@ export interface CommissionCutAdvisorState {
 	/** URL del archivo de factura en Storage */
 	invoiceUrl?: string;
 
-	/** Límite para pago: 2 días hábiles desde invoiceSentAt */
+	/** Límite para pago: 2 días hábiles desde sentToPaymentAt */
 	paymentDeadline?: number;
 
 	/** Timestamp en que se recibió el comprobante / se marcó pagado */

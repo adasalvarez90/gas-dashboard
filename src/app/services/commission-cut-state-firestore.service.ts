@@ -19,6 +19,7 @@ import {
 	getInvoiceDeadline,
 	getNextCutDate,
 	getPaymentDeadline,
+	getSentToPaymentDeadline,
 	isInvoiceLate,
 } from '../domain/commission-cut/commission-cut-deadlines.util';
 import { isAfterMexicoDate } from '../domain/time/mexico-time.util';
@@ -418,7 +419,11 @@ export class CommissionCutStateFirestoreService {
 		const wasInvoiceLate = !!(
 			existing?.invoiceSentAt && isInvoiceLate(existing.invoiceSentAt, invoiceDlForCheck)
 		);
-		const paymentDl = existing?.invoiceSentAt ? getPaymentDeadline(existing.invoiceSentAt) : undefined;
+		const paymentDl = existing?.sentToPaymentAt
+			? getPaymentDeadline(existing.sentToPaymentAt)
+			: existing?.invoiceSentAt
+				? getSentToPaymentDeadline(existing.invoiceSentAt)
+				: undefined;
 		const wasPaymentLate = paymentDl ? isAfterMexicoDate(at, paymentDl) : false;
 		const paidLate = wasDeferred || !!lateEntry || wasBreakdownLate || wasInvoiceLate || wasPaymentLate;
 

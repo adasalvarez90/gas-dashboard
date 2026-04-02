@@ -17,7 +17,7 @@ Each **commission** (logical row: `CommissionPayment` `uid` or equivalent) is au
 | Area | Stored on the commission |
 |------|---------------------------|
 | **Status** | Pendiente → Desglose enviado → Enviada a pago → Pagada |
-| **Timestamps** | Desglose, factura, pago (names may be `breakdownSentAt`, `invoiceSentAt`, `receiptSentAt` / `paidAt` in implementation) |
+| **Timestamps** | Desglose, factura, envío a pago, pago (names may be `breakdownSentAt`, `invoiceSentAt`, `sentToPaymentAt`, `receiptSentAt` / `paidAt` in implementation) |
 | **Deadlines & lateness** | Evaluated **per commission** (cut / deferral context of **that** row) |
 | **`lateReasons`** | Per commission |
 | **Factura / comprobante** | URLs or storage refs **linked to that commission** (and optionally shared file behind multiple links — see cuts doc) |

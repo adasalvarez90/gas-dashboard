@@ -37,6 +37,7 @@ import {
 	getMinValidTargetCut,
 	getNextCutDate,
 	getPaymentDeadline,
+	getSentToPaymentDeadline,
 	isInvoiceLate,
 	isInvoiceOverdue,
 	isPaymentOverdue,
@@ -68,6 +69,7 @@ export type AdvisorCutSummaryWithState = AdvisorCutSummary & {
 	/** Estado del flujo en el corte **original** de cada línea (uid de pago → estado). */
 	paymentDeferralStates?: Map<string, AdvisorWorkflowState | null>;
 	invoiceDeadline?: number;
+	sentToPaymentDeadline?: number;
 	paymentDeadline?: number;
 	isOverdue: boolean;
 	uploadingInvoice?: boolean;
@@ -264,13 +266,19 @@ export class CommissionCutsPage implements OnInit {
 				const invoiceDeadline = state?.breakdownSentAt
 					? getInvoiceDeadline(state.breakdownSentAt)
 					: getBreakdownDeadline(s.cutDate);
-				const paymentDeadline = state?.invoiceSentAt ? getPaymentDeadline(state.invoiceSentAt) : undefined;
+				const sentToPaymentDeadline = state?.invoiceSentAt
+					? getSentToPaymentDeadline(state.invoiceSentAt)
+					: undefined;
+				const paymentDeadline = state?.sentToPaymentAt ? getPaymentDeadline(state.sentToPaymentAt) : undefined;
 				const invOverdue = invoiceDeadline ? isInvoiceOverdue(state?.invoiceSentAt, invoiceDeadline) : false;
+				const sentToPayOverdue = sentToPaymentDeadline
+					? isPaymentOverdue(state?.sentToPaymentAt, sentToPaymentDeadline)
+					: false;
 				const payOverdue = paymentDeadline ? isPaymentOverdue(state?.receiptSentAt, paymentDeadline) : false;
 				const hasLateReasons = normalizeLateReasons(state?.lateReasons).length > 0;
 				const isDeferred = !!(state?.movedToNextCut || state?.originalCutDate);
 				const isOverdue =
-					(s.pendingAmount > 0 && (invOverdue || payOverdue)) ||
+					(s.pendingAmount > 0 && (invOverdue || sentToPayOverdue || payOverdue)) ||
 					(s.pendingAmount > 0 && hasLateReasons) ||
 					(s.pendingAmount > 0 && isDeferred);
 
@@ -285,6 +293,7 @@ export class CommissionCutsPage implements OnInit {
 					advisorWorkflowDerived: derived,
 					paymentDeferralStates,
 					invoiceDeadline,
+					sentToPaymentDeadline,
 					paymentDeadline,
 					isOverdue,
 					contractBreakdown: this.groupPaymentsByContract(s.payments, contractMap),
@@ -542,8 +551,15 @@ export class CommissionCutsPage implements OnInit {
 			}
 		}
 
-		if (st?.invoiceSentAt && st.state !== 'PAID' && !st.receiptSentAt) {
-			const payDl = getPaymentDeadline(st.invoiceSentAt);
+		if (st?.invoiceSentAt && st.state !== 'PAID' && !st.sentToPaymentAt) {
+			const sentToPayDl = getSentToPaymentDeadline(st.invoiceSentAt);
+			if (isPaymentOverdue(undefined, sentToPayDl)) {
+				entries.push({ step: 'PAGO', reason: 'PAGO_NO_REALIZADO_A_TIEMPO' });
+			}
+		}
+
+		if (st?.sentToPaymentAt && st.state !== 'PAID' && !st.receiptSentAt) {
+			const payDl = getPaymentDeadline(st.sentToPaymentAt);
 			if (isPaymentOverdue(undefined, payDl)) {
 				entries.push({ step: 'PAGO', reason: 'PAGO_NO_REALIZADO_A_TIEMPO' });
 			}
@@ -926,6 +942,7 @@ export class CommissionCutsPage implements OnInit {
 				originalCutDate: g.originalCutDate,
 				breakdownSentAt: g.breakdownSentAt,
 				invoiceSentAt: g.invoiceSentAt,
+				sentToPaymentAt: g.sentToPaymentAt,
 				...(invoiceUrl != null ? { invoiceUrl } : {}),
 				receiptSentAt: g.receiptSentAt,
 				...(receiptUrl != null ? { receiptUrl } : {}),
@@ -1043,19 +1060,30 @@ export class CommissionCutsPage implements OnInit {
 		);
 	}
 
-	/**
-	 * Motivo en pago: origen diferida en este resumen, o pago después del plazo desde la factura de esa línea.
-	 */
-	private paymentNeedsPaymentLateReason(s: AdvisorCutSummaryWithState, pay: CommissionPayment, paidAt: number): boolean {
+	/** Motivo en envío a pago: origen diferida en este resumen, o envío fuera de plazo desde factura. */
+	private paymentNeedsSentToPaymentLateReason(
+		s: AdvisorCutSummaryWithState,
+		pay: CommissionPayment,
+		sentToPaymentAt: number,
+	): boolean {
 		if (!pay.invoiceSentAt) return false;
 		return (
 			this.paymentShowsDeferredOriginInSummary(pay, s.cutDate) ||
-			isInvoiceLate(paidAt, getPaymentDeadline(pay.invoiceSentAt))
+			isInvoiceLate(sentToPaymentAt, getSentToPaymentDeadline(pay.invoiceSentAt))
+		);
+	}
+
+	/** Motivo en pago: origen diferida en este resumen, o pago después del plazo desde envío a pago. */
+	private paymentNeedsPaymentLateReason(s: AdvisorCutSummaryWithState, pay: CommissionPayment, paidAt: number): boolean {
+		if (!pay.sentToPaymentAt) return false;
+		return (
+			this.paymentShowsDeferredOriginInSummary(pay, s.cutDate) ||
+			isInvoiceLate(paidAt, getPaymentDeadline(pay.sentToPaymentAt))
 		);
 	}
 
 	private paymentReadyForPaidStep(pay: CommissionPayment): boolean {
-		return !!pay.sentToPaymentAt || !!pay.invoiceSentAt;
+		return !!pay.sentToPaymentAt;
 	}
 
 	/** Líneas con `deferredToCutDate` = corte del resumen (vista diferida). */
@@ -1509,15 +1537,21 @@ export class CommissionCutsPage implements OnInit {
 		const invoiceDeadline = st?.breakdownSentAt
 			? getInvoiceDeadline(st.breakdownSentAt)
 			: getBreakdownDeadline(pay.cutDate);
-		const paymentDeadline = st?.invoiceSentAt ? getPaymentDeadline(st.invoiceSentAt) : undefined;
+		const sentToPaymentDeadline = st?.invoiceSentAt
+			? getSentToPaymentDeadline(st.invoiceSentAt)
+			: undefined;
+		const paymentDeadline = st?.sentToPaymentAt ? getPaymentDeadline(st.sentToPaymentAt) : undefined;
 		const invOverdue = invoiceDeadline ? isInvoiceOverdue(st?.invoiceSentAt, invoiceDeadline) : false;
+		const sentToPayOverdue = sentToPaymentDeadline
+			? isPaymentOverdue(st?.sentToPaymentAt, sentToPaymentDeadline)
+			: false;
 		const payOverdue = paymentDeadline ? isPaymentOverdue(st?.receiptSentAt, paymentDeadline) : false;
 		const hasLate = normalizeLateReasons(st?.lateReasons).length > 0;
 		const desgloseOverdueSinEnviar =
 			(st?.state === 'PENDING' || !st) &&
 			!!invoiceDeadline &&
 			isInvoiceOverdue(undefined, invoiceDeadline);
-		if (invOverdue || payOverdue || hasLate || desgloseOverdueSinEnviar) return 'overdue';
+		if (invOverdue || sentToPayOverdue || payOverdue || hasLate || desgloseOverdueSinEnviar) return 'overdue';
 		const def = normalizeDeferredToCutStored(pay);
 		if (def != null && sameCanonicalCutDate(def, s.cutDate)) return 'deferredPending';
 		return 'pending';
@@ -1612,6 +1646,7 @@ export class CommissionCutsPage implements OnInit {
 			return `Informe / desglose: hasta ${new Date(deadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 		}
 		if (state === 'BREAKDOWN_SENT' && s.invoiceDeadline) return `Factura: hasta ${new Date(s.invoiceDeadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+		if (state === 'INVOICE_RECIVED' && s.sentToPaymentDeadline) return `Envío a pago: hasta ${new Date(s.sentToPaymentDeadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 		if (state === 'SENT_TO_PAYMENT' && s.paymentDeadline) return `Pago: hasta ${new Date(s.paymentDeadline).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 		if (state === 'PAID') return '—';
 		return '—';
@@ -1790,7 +1825,7 @@ export class CommissionCutsPage implements OnInit {
 		const effectiveStateCutDate = stateCutDate ?? this.getStateCutDate(s);
 		const at = await this.promptStepActionDate('¿En qué fecha se realizó el pago de comisiones?');
 		if (at === undefined) return;
-		const pendingPay = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt);
+		const pendingPay = s.payments.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.sentToPaymentAt);
 		const paymentUidsRequiringLateReason = pendingPay
 			.filter((p) => this.paymentNeedsPaymentLateReason(s, p, at))
 			.map((p) => p.uid);
@@ -1923,11 +1958,32 @@ export class CommissionCutsPage implements OnInit {
 	async markSentToPaymentStatusOnly(s: AdvisorCutSummaryWithState) {
 		const at = await this.promptStepActionDate('¿En qué fecha se envió la comisión a pago?');
 		if (at === undefined) return;
-		const uids = s.payments
-			.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt && !p.sentToPaymentAt)
+		const pending = s.payments
+			.filter((p) => !p.cancelled && !p.paid && !p.paidAt && p.invoiceSentAt && !p.sentToPaymentAt);
+		const sentToPaymentUidsRequiringLateReason = pending
+			.filter((p) => this.paymentNeedsSentToPaymentLateReason(s, p, at))
 			.map((p) => p.uid);
-		if (uids.length) {
-			await this.paymentFirestore.applySentToPaymentToPaymentUids(uids, { sentToPaymentAt: at });
+		let lateEntry: LateReasonEntry | undefined;
+		if (sentToPaymentUidsRequiringLateReason.length > 0) {
+			const result = await this.openLateReasonModal(
+				'PAGO',
+				s,
+				'Hay comisiones diferidas o fuera de plazo de envío a pago. Indica el motivo (solo aplica donde corresponde).'
+			);
+			if (!result) return;
+			lateEntry = { step: 'PAGO', reason: result.reason, text: result.text };
+		}
+		const need = new Set(sentToPaymentUidsRequiringLateReason);
+		const withL = pending.filter((p) => need.has(p.uid)).map((p) => p.uid);
+		const withoutL = pending.filter((p) => !need.has(p.uid)).map((p) => p.uid);
+		if (withL.length && lateEntry) {
+			await this.paymentFirestore.applySentToPaymentToPaymentUids(withL, {
+				sentToPaymentAt: at,
+				lateEntry,
+			});
+		}
+		if (withoutL.length) {
+			await this.paymentFirestore.applySentToPaymentToPaymentUids(withoutL, { sentToPaymentAt: at });
 		}
 		this.refreshCutData(true);
 	}

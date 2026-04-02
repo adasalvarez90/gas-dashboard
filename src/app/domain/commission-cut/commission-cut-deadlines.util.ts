@@ -16,7 +16,8 @@ function pad2(n: number): string {
  * Utilidades para plazos de comisión:
  * - Desglose: 2 días hábiles desde la fecha de corte
  * - Factura: 2 días hábiles desde desglose enviado
- * - Pago / comprobante: 2 días hábiles desde factura recibida
+ * - Envío a pago: 2 días hábiles desde factura recibida
+ * - Pago / comprobante: 2 días hábiles desde envío a pago
  * - Arrastre al siguiente corte (implícito): cualquier tipo de comisión, solo si ya cayó el corte original
  *   y el flujo (por timestamps de estado o falta de documento de estado) tiene un paso vencido.
  */
@@ -41,9 +42,14 @@ export function getInvoiceDeadline(breakdownSentAt: number): number {
 	return addBusinessDays(breakdownSentAt, 2);
 }
 
-/** Calcula límite para pago: 2 días hábiles desde invoiceSentAt */
-export function getPaymentDeadline(invoiceSentAt: number): number {
+/** Calcula límite para enviar a pago: 2 días hábiles desde invoiceSentAt */
+export function getSentToPaymentDeadline(invoiceSentAt: number): number {
 	return addBusinessDays(invoiceSentAt, 2);
+}
+
+/** Calcula límite para pago: 2 días hábiles desde sentToPaymentAt */
+export function getPaymentDeadline(sentToPaymentAt: number): number {
+	return addBusinessDays(sentToPaymentAt, 2);
 }
 
 /** Indica si la factura se envió tarde (después del plazo) */
@@ -136,8 +142,8 @@ export function paymentFlowHasAnyLateStep(
 		const invDl = getInvoiceDeadline(st.breakdownSentAt);
 		if (isInvoiceLate(st.invoiceSentAt, invDl)) return true;
 	}
-	if (st.receiptSentAt && st.invoiceSentAt) {
-		const payDl = getPaymentDeadline(st.invoiceSentAt);
+	if (st.sentToPaymentAt && st.receiptSentAt) {
+		const payDl = getPaymentDeadline(st.sentToPaymentAt);
 		if (isAfterMexicoDate(st.receiptSentAt, payDl)) return true;
 	}
 	return false;
@@ -153,8 +159,11 @@ export function isWorkflowOverdueForImplicitDeferral(
 	if (!state.invoiceSentAt) {
 		return isInvoiceOverdue(undefined, getInvoiceDeadline(state.breakdownSentAt));
 	}
+	if (!state.sentToPaymentAt) {
+		return isPaymentOverdue(undefined, getSentToPaymentDeadline(state.invoiceSentAt));
+	}
 	if (!state.receiptSentAt) {
-		return isPaymentOverdue(undefined, getPaymentDeadline(state.invoiceSentAt));
+		return isPaymentOverdue(undefined, getPaymentDeadline(state.sentToPaymentAt));
 	}
 	return false;
 }

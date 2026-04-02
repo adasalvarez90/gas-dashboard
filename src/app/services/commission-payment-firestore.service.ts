@@ -295,14 +295,24 @@ export class CommissionPaymentFirestoreService {
 
 	async applySentToPaymentToPaymentUids(
 		uids: string[],
-		opts: { sentToPaymentAt: number },
+		opts: { sentToPaymentAt: number; lateEntry?: LateReasonEntry },
 	): Promise<void> {
 		const now = Date.now();
 		for (const uid of uids) {
-			await updateDoc(doc(this.firestore, this.collectionName, uid), {
+			const dref = doc(this.firestore, this.collectionName, uid);
+			const snap = await getDoc(dref);
+			if (!snap.exists()) continue;
+			const p = snap.data() as CommissionPayment;
+			let lateReasons = normalizeLateReasons(p.lateReasons);
+			if (opts.lateEntry) {
+				lateReasons = this.mergeLateReasonsOnPayment(p, 'PAGO', { ...opts.lateEntry, step: 'PAGO' });
+			}
+			const raw = {
 				sentToPaymentAt: opts.sentToPaymentAt,
+				lateReasons,
 				_update: now,
-			} as Record<string, unknown>);
+			};
+			await updateDoc(dref, _.omitBy(raw, _.isUndefined) as Record<string, unknown>);
 		}
 	}
 
@@ -351,6 +361,7 @@ export class CommissionPaymentFirestoreService {
 			originalCutDate: number;
 			breakdownSentAt: number;
 			invoiceSentAt: number;
+			sentToPaymentAt: number;
 			/** Si no se envía, no se toca `invoiceUrl` en Firestore. */
 			invoiceUrl?: string;
 			receiptSentAt: number;
@@ -380,6 +391,7 @@ export class CommissionPaymentFirestoreService {
 				const payload: Record<string, unknown> = {
 					breakdownSentAt: g.breakdownSentAt,
 					invoiceSentAt: g.invoiceSentAt,
+					sentToPaymentAt: g.sentToPaymentAt,
 					receiptSentAt: g.receiptSentAt,
 					paid: true,
 					paidAt: g.receiptSentAt,

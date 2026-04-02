@@ -132,7 +132,7 @@ export const COMMISSION_CUT_LATE_REASONS: Record<string, string> = {
 | `invoiceDeadline` | `number` | No | Deadline for invoice (2 business days from breakdown or cut) |
 | `invoiceSentAt` | `number` | No | When invoice was received/attached |
 | `invoiceUrl` | `string` | No | Storage URL for invoice file |
-| `paymentDeadline` | `number` | No | Deadline for payment (2 business days from invoice) |
+| `paymentDeadline` | `number` | No | Deadline for payment (2 business days from sent to payment) |
 | `receiptSentAt` | `number` | No | When payment was marked done |
 | `receiptUrl` | `string` | No | Storage URL for receipt file |
 | `movedToNextCut` | `boolean` | No | Moved to next cut due to late invoice |
@@ -197,7 +197,7 @@ Al procesar comisiones diferidas seleccionadas con fechas retroactivas:
 - **`deferredToCutDate`**: Si `targetCutDate === originalCutDate` → se elimina; si no → se actualiza a `targetCutDate`.
 - **Piso:** `getMinValidTargetCut(originalCutDate, deferredCutDate)` — no se puede asignar a un corte anterior al primer corte en que fue diferida. Implementado en `commission-cut-deadlines.util.ts`.
 - **Agrupación:** Si las comisiones seleccionadas tienen distintos `cutDate` (original), se agrupan y cada grupo se procesa con su propio `originalCutDate` y `targetCutDate`.
-- **Persistencia del flujo completo en Path 2:** `completeDeferredPath2OnPaymentGroups` escribe en **cada** `uid` desglose, factura, comprobante, `paid` / `paidAt` / `receiptSentAt`, `paidLate`, `lateReasons` (PAGO si aplica) y `deferredToCutDate` según `targetCutDate` (o `deleteField` si Case 1a).
+- **Persistencia del flujo completo en Path 2:** `completeDeferredPath2OnPaymentGroups` escribe en **cada** `uid` desglose, factura, envío a pago, comprobante, `paid` / `paidAt` / `receiptSentAt`, `paidLate`, `lateReasons` (PAGO si aplica) y `deferredToCutDate` según `targetCutDate` (o `deleteField` si Case 1a).
 - **Utilidades** (`commission-cut-deadlines.util.ts`): `getLastCutDateOnOrBefore(ts)` = corte ≤ fecha; `getPreviousCutDate(cutDate)` = corte anterior en secuencia 7/21; `getMinValidTargetCut(original, deferred)` = mínimo corte válido para asignación.
 
 ## Deferred commission — dual representation & status sync (see commission-cuts.md)
