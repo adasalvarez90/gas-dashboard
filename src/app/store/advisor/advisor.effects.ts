@@ -143,13 +143,13 @@ export class AdvisorEffects {
 					// Create the loading
 					const loading = await this.loadingCtrl.create({
 						cssClass: 'my-custom-class',
-						message: 'Eliminando consultora. Espere, por favor.'
+						message: 'Archivando consultora. Espere, por favor.'
 					});
 					// Create the toast
 					const toast = await this.toastCtrl.create({
 						color: 'primary',
-						message: `La consultora fue eliminada con éxito.`,
-						duration: 3000,
+						message: `La consultora fue archivada (ya no aparece en listas; sigue visible en contratos).`,
+						duration: 3500,
 						position: 'middle'
 					});
 
@@ -168,7 +168,7 @@ export class AdvisorEffects {
 						async (err) => {
 							await loading.dismiss();
 							// Change the toast message and show it
-							toast.message = `Error al eliminar la consultora: ${err.message}`;
+							toast.message = `Error al archivar la consultora: ${err.message}`;
 							// Present the toast
 							toast.present();
 

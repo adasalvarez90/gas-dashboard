@@ -11,6 +11,7 @@ import { CommissionPayment } from 'src/app/store/commission-payment/commission-p
 import { TrancheFacade } from 'src/app/store/tranche/tranche.facade';
 import { CommissionPaymentFacade } from 'src/app/store/commission-payment/commission-payment.facade';
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
+import { AdvisorFirestoreService } from 'src/app/services/advisor-firestore.service';
 
 @Component({
 	selector: 'app-contract-commissions',
@@ -200,11 +201,12 @@ export class ContractCommissionsComponent implements OnInit, OnChanges {
 		private trancheFacade: TrancheFacade,
 		private commissionPaymentFacade: CommissionPaymentFacade,
 		private advisorFacade: AdvisorFacade,
+		private advisorFS: AdvisorFirestoreService,
 	) {}
 
 	ngOnInit() {
 		this.trancheFacade.loadTranches(this.contract?.uid || '');
-		this.advisorFacade.loadAdvisors();
+		void this.loadAdvisorsWithArchivedForContract();
 		if (this.contract?.uid) {
 			this.commissionPaymentFacade.loadCommissionPaymentsByContract(this.contract.uid);
 		}
@@ -217,7 +219,13 @@ export class ContractCommissionsComponent implements OnInit, OnChanges {
 			this.expandedGroupKeys = new Set();
 			this.trancheFacade.loadTranches(this.contract.uid);
 			this.commissionPaymentFacade.loadCommissionPaymentsByContract(this.contract.uid);
+			void this.loadAdvisorsWithArchivedForContract();
 		}
+	}
+
+	private async loadAdvisorsWithArchivedForContract(): Promise<void> {
+		const merged = await this.advisorFS.mergeActiveWithArchivedForContractRoles(this.contract?.roles);
+		this.advisorFacade.replaceAdvisorsInStore(merged);
 	}
 
 	loadData(trancheUid: string) {

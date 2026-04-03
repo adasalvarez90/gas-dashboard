@@ -21,6 +21,11 @@ export class AdvisorFacade {
 		this.store.dispatch(AdvisorActions.loadAdvisors());
 	}
 
+	/** Reemplaza el estado de asesores (p. ej. activos + archivados referenciados en un contrato). */
+	replaceAdvisorsInStore(advisors: Advisor[]) {
+		this.store.dispatch(AdvisorActions.loadAdvisorsSuccess({ advisors }));
+	}
+
 	selectAdvisor(advisor: Advisor) {
 		this.store.dispatch(AdvisorActions.selectAdvisor({ advisor }));
 	}

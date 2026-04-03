@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { FormsModule } from '@angular/forms';
@@ -9,6 +9,7 @@ import { Contract } from 'src/app/store/contract/contract.model';
 
 import { ContractFacade } from 'src/app/store/contract/contract.facade';
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
+import { AdvisorFirestoreService } from 'src/app/services/advisor-firestore.service';
 import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/domain/time/mexico-time.util';
 
 @Component({
@@ -18,7 +19,7 @@ import { toCanonicalMexicoDateTimestamp, toMexicoDateInputValue } from 'src/app/
 	styleUrls: ['./contract-info.component.scss'],
 	imports: [CommonModule, FormsModule, IonicModule],
 })
-export class ContractInfoComponent implements OnInit {
+export class ContractInfoComponent implements OnChanges {
 	@Input() contract!: Contract;
 
 	advisorsDic$ = this.advisorFacade.entities$;
@@ -43,10 +44,18 @@ export class ContractInfoComponent implements OnInit {
 	constructor(
 		private contractFacade: ContractFacade,
 		private advisorFacade: AdvisorFacade,
+		private advisorFS: AdvisorFirestoreService,
 	) {}
 
-	ngOnInit() {
-		this.advisorFacade.loadAdvisors();
+	ngOnChanges(changes: SimpleChanges) {
+		if (changes['contract'] && this.contract) {
+			void this.loadAdvisorsWithArchivedForContract();
+		}
+	}
+
+	private async loadAdvisorsWithArchivedForContract(): Promise<void> {
+		const merged = await this.advisorFS.mergeActiveWithArchivedForContractRoles(this.contract?.roles);
+		this.advisorFacade.replaceAdvisorsInStore(merged);
 	}
 
 	contractStatusLabel(status: string): string {

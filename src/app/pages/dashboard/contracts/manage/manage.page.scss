@@ -2,6 +2,18 @@
 	padding: 16px;
 }
 
+.commission-lock-hint {
+	display: block;
+	margin: 0 0 16px;
+	font-size: 13px;
+	line-height: 1.45;
+}
+
+.source-option--locked {
+	opacity: 0.45;
+	pointer-events: none;
+}
+
 .contract-hero {
 	display: flex;
 	align-items: center;

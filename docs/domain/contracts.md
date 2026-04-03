@@ -73,6 +73,25 @@ Fields **payments** and **accountStatus** are system-computed (see above) and mu
 
 ---
 
+# Contract edit lock (commission-sensitive fields)
+
+When the contract already has at least one `commissionPayments` row with `paymentType === 'IMMEDIATE'` and (`paid === true` or `paidLate === true`), the **Edit contract** form (`manage.page`) disables changes that affect commission calculation or role allocations:
+
+- `roles` (all participants), `source`, `scheme`, `yieldPercent`, `liquidity`, `term`, `yieldFrequency`, `initialCapital`, `signed`, `signatureDate`.
+
+The user can still edit **investor contact**, **bank accounts**, **documentation** (`docs`, `docsComments`), and **beneficiaries**.
+
+---
+
+# Advisors — archived (historical display)
+
+“Deleting” an advisor in the dashboard **archives** the document: `archived: true` on `advisors` (the document stays `_on: true` so it can still be read by document id).
+
+- **Pick lists** (KAM, consultora, etc.) load only advisors that are **not** archived (`getAdvisors()` filters `archived`).
+- **Contract screens** merge **active** advisors plus **any archived advisor** referenced by `contract.roles` UIDs so names keep resolving in the UI (`mergeActiveWithArchivedForContractRoles`).
+
+---
+
 # Investor identity and address
 
 - **investorRfc** — RFC del inversionista  

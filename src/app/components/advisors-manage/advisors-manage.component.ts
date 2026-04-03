@@ -128,13 +128,13 @@ export class AdvisorsManageComponent {
 		const form = this.form.value;
 		// Create the update alert
 		const prompt = await this.alertCtrl.create({
-			header: `Eliminar consultora`,
-			message: `¿Desea eliminar la consultora ${form.name}?`,
+			header: `Archivar consultora`,
+			message: `¿Archivar a ${form.name}? Dejará de aparecer en listas de selección, pero seguirá visible en contratos donde esté asignada.`,
 			buttons: [{
 				text: 'No',
 				role: 'cancel'
 			}, {
-				text: 'Sí',
+				text: 'Sí, archivar',
 				handler: () => {
 					this.advisorFacade.deleteAdvisor(form.uid);
 					// Exit

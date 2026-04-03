@@ -116,7 +116,7 @@ export class ExcelExportService {
 		const contracts = contractsSnap;
 		const tranches = tranchesSnap;
 		const deposits = depositsSnap;
-		const advisors = advisorsSnap;
+		const advisors = advisorsSnap.filter((a) => !a.archived);
 
 		const paymentsMap = new Map<string, CommissionPayment>();
 		for (const p of [...payCutSnap, ...payDeferredSnap]) {

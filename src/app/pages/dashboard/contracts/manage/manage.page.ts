@@ -9,6 +9,7 @@ import { ContractFacade } from 'src/app/store/contract/contract.facade';
 import { AdvisorFacade } from 'src/app/store/advisor/advisor.facade';
 import { CommissionConfigFacade } from 'src/app/store/commission-config/commission-config.facade';
 import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
+import { AdvisorFirestoreService } from 'src/app/services/advisor-firestore.service';
 import { Contract, ContractBeneficiary } from 'src/app/store/contract/contract.model';
 import { resolvePaymentsAndAccountStatus } from 'src/app/domain/contract/contract-derived-fields.util';
 import { beneficiariesArrayValidator, beneficiaryAgeValidator } from 'src/app/domain/contract/beneficiary-validators.util';
@@ -107,6 +108,12 @@ export class ManagePage implements OnInit {
 
 	preview: { role: string; uid: string; percent: number }[] = [];
 
+	/**
+	 * Si ya hay comisión inmediata pagada (o pagada atrasada) en el contrato,
+	 * no se editan participantes, esquema, rendimiento ni firma/capital inicial acordado.
+	 */
+	commissionCalculationLocked = false;
+
 	roleLabels = {
 		CONSULTANT: 'Consultora',
 		KAM: 'KAM',
@@ -122,6 +129,7 @@ export class ManagePage implements OnInit {
 		private advisorFacade: AdvisorFacade,
 		private commissionConfigFacade: CommissionConfigFacade,
 		private commissionPaymentFS: CommissionPaymentFirestoreService,
+		private advisorFS: AdvisorFirestoreService,
 		private navCtrl: NavController,
 		private fb: FormBuilder,
 		private alertCtrl: AlertController,
@@ -199,10 +207,12 @@ export class ManagePage implements OnInit {
 		}
 
 		this.form.get('source')?.valueChanges.subscribe((source) => {
+			if (this.commissionCalculationLocked) return;
 			if (source !== 'REFERIDORA') this.form.get('roles.referral')?.setValue('');
 		});
 
 		this.form.get('signed')?.valueChanges.subscribe((signed) => {
+			if (this.commissionCalculationLocked) return;
 			if (!signed) {
 				this.form.get('signatureDate')?.setValue(null);
 				this.form.get('signatureDate')?.clearValidators();
@@ -215,7 +225,43 @@ export class ManagePage implements OnInit {
 			this.form.get('initialCapital')?.updateValueAndValidity();
 		});
 
+		await this.refreshAdvisorsForManage();
+		await this.refreshCommissionCalculationLocked();
+		if (this.commissionCalculationLocked) {
+			this.applyCommissionCalculationFieldLock();
+		}
+
 		this.ref.detectChanges();
+	}
+
+	selectSource(value: string): void {
+		if (this.commissionCalculationLocked) return;
+		this.form.patchValue({ source: value });
+	}
+
+	private async refreshAdvisorsForManage(): Promise<void> {
+		const merged = await this.advisorFS.mergeActiveWithArchivedForContractRoles(this.contract?.roles);
+		this.advisorFacade.replaceAdvisorsInStore(merged);
+	}
+
+	private async refreshCommissionCalculationLocked(): Promise<void> {
+		if (!this.contract?.uid) {
+			this.commissionCalculationLocked = false;
+			return;
+		}
+		const payments = await this.commissionPaymentFS.getCommissionPaymentsByContract(this.contract.uid);
+		this.commissionCalculationLocked = payments.some(
+			(p) =>
+				(p.paymentType ?? '').toUpperCase() === 'IMMEDIATE' &&
+				(p.paid === true || p.paidLate === true),
+		);
+	}
+
+	private applyCommissionCalculationFieldLock(): void {
+		this.form.get('roles')?.disable({ emitEvent: false });
+		for (const n of ['scheme', 'yieldPercent', 'liquidity', 'term', 'yieldFrequency', 'initialCapital', 'signed', 'signatureDate']) {
+			this.form.get(n)?.disable({ emitEvent: false });
+		}
 	}
 
 	getPercentForRole(role: string): number {

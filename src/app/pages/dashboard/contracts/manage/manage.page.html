@@ -28,6 +28,11 @@
 		<ion-row>
 			<ion-col size="12">
 				<form [formGroup]="form">
+					@if (commissionCalculationLocked) {
+					<ion-note color="medium" class="commission-lock-hint">
+						Comisión inmediata ya pagada: no se pueden cambiar participantes, origen, esquema, rendimiento ni datos de firma/capital inicial. Puedes seguir editando datos de contacto, cuentas, documentación y beneficiarios.
+					</ion-note>
+					}
 					@if (advisorsDic$ | async; as advisorsDic) {
 						<div class="contract-hero">
 							<div class="avatar">
@@ -141,7 +146,8 @@
 							<div class="source-grid">
 								@for (s of sources; track s.value) {
 									<div class="source-option" [class.active]="form.get('source')?.value === s.value"
-										(click)="form.patchValue({ source: s.value })">{{ s.label }}</div>
+										[class.source-option--locked]="commissionCalculationLocked"
+										(click)="selectSource(s.value)">{{ s.label }}</div>
 								}
 							</div>
 						</div>
