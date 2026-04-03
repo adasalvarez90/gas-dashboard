@@ -124,7 +124,16 @@ function validateRule(
 	if (rule.yieldCondition != null) {
 		validateYieldCondition(rule.yieldCondition, `${path}.yieldCondition`, errors);
 	}
-	return { ...rule, yieldCondition: rule.yieldCondition == null ? undefined : { ...rule.yieldCondition } };
+	const out: CommissionPolicyRule = {
+		scheme: rule.scheme,
+		additionalPercent: rule.additionalPercent,
+		appliesToImmediate: rule.appliesToImmediate,
+		appliesToRecurring: rule.appliesToRecurring,
+	};
+	if (rule.yieldCondition != null) {
+		out.yieldCondition = { ...rule.yieldCondition };
+	}
+	return out;
 }
 
 export function assertCommissionPolicyValid(policy: CommissionPolicy): void {

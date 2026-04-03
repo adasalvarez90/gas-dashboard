@@ -63,11 +63,11 @@ export class CommissionDynamicsListPage implements OnInit {
 	}
 
 	goNew(): void {
-		void this.router.navigateByUrl('/dashboard/commission-dynamics/nueva');
+		void this.router.navigateByUrl('/dashboard/commission-dynamics/manage');
 	}
 
 	goEdit(uid: string): void {
-		void this.router.navigate(['/dashboard/commission-dynamics/editar', uid]);
+		void this.router.navigate(['/dashboard/commission-dynamics/manage', uid]);
 	}
 
 	async confirmDeactivate(p: CommissionPolicy): Promise<void> {
@@ -81,6 +81,23 @@ export class CommissionDynamicsListPage implements OnInit {
 					role: 'destructive',
 					handler: () => {
 						this.facade.updateCommissionPolicy({ ...p, active: false });
+					},
+				},
+			],
+		});
+		await alert.present();
+	}
+
+	async confirmActivate(p: CommissionPolicy): Promise<void> {
+		const alert = await this.alertCtrl.create({
+			header: 'Activar dinámica',
+			message: `¿Marcar "${p.name}" como activa? Podrá auto-asignarse a tranches según vigencia y reglas del motor.`,
+			buttons: [
+				{ text: 'Cancelar', role: 'cancel' },
+				{
+					text: 'Activar',
+					handler: () => {
+						this.facade.updateCommissionPolicy({ ...p, active: true });
 					},
 				},
 			],

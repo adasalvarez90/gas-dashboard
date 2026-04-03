@@ -10,11 +10,11 @@ const routes: Routes = [
 		component: CommissionDynamicsListPage,
 	},
 	{
-		path: 'nueva',
+		path: 'manage',
 		component: CommissionDynamicManagePage,
 	},
 	{
-		path: 'editar/:uid',
+		path: 'manage/:uid',
 		component: CommissionDynamicManagePage,
 	},
 ];

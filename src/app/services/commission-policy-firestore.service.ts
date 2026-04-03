@@ -7,6 +7,24 @@ import { CommissionPolicy } from 'src/app/store/commission-policy/commission-pol
 import { validateAndNormalizeCommissionPolicy } from 'src/app/domain/commission-policy/commission-policy.validation';
 import { v4 as uuidv4 } from 'uuid';
 
+/** Firestore no acepta `undefined` en ningún nivel del documento. */
+function omitUndefinedDeep<T>(input: T): T {
+	if (input === null || typeof input !== 'object') {
+		return input;
+	}
+	if (Array.isArray(input)) {
+		return input.map((item) => omitUndefinedDeep(item)) as T;
+	}
+	const out: Record<string, unknown> = {};
+	for (const [key, val] of Object.entries(input as Record<string, unknown>)) {
+		if (val === undefined) {
+			continue;
+		}
+		out[key] = omitUndefinedDeep(val);
+	}
+	return out as T;
+}
+
 @Injectable({
 	providedIn: 'root',
 })
@@ -38,7 +56,8 @@ export class CommissionPolicyFirestoreService {
 		};
 
 		const ref = doc(this.firestore, this.collectionName, uid);
-		await setDoc(ref, newCommissionPolicy);
+		const forFirestore = omitUndefinedDeep(newCommissionPolicy);
+		await setDoc(ref, forFirestore);
 
 		return newCommissionPolicy;
 	}
@@ -52,7 +71,7 @@ export class CommissionPolicyFirestoreService {
 		updateCommissionPolicy._update = Date.now();
 		
 		const ref = doc(this.firestore, this.collectionName, commissionPolicy.uid);
-		await updateDoc(ref, { ...updateCommissionPolicy });
+		await updateDoc(ref, omitUndefinedDeep({ ...updateCommissionPolicy }));
 		
 		return updateCommissionPolicy;
 	}

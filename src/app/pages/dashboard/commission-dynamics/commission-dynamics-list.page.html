@@ -70,16 +70,27 @@
 							{{ p.active !== false ? 'Activa' : 'Inactiva' }}
 						</ion-badge>
 						<ion-button fill="clear" size="small" (click)="goEdit(p.uid)"> Editar </ion-button>
+						@if (p.active !== false) {
 						<ion-button
 							fill="clear"
 							size="small"
 							color="medium"
 							(click)="confirmDeactivate(p)"
-							[disabled]="p.active === false"
 							[attr.aria-label]="'Desactivar ' + p.name"
 						>
 							Desactivar
 						</ion-button>
+						} @else {
+						<ion-button
+							fill="clear"
+							size="small"
+							color="primary"
+							(click)="confirmActivate(p)"
+							[attr.aria-label]="'Activar ' + p.name"
+						>
+							Activar
+						</ion-button>
+						}
 					</div>
 				</ion-item>
 				}

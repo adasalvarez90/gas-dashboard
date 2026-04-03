@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
@@ -24,7 +24,8 @@ export type YieldUiOperator = YieldCompareOperator | 'BETWEEN';
 
 export interface RuleDraft {
 	scheme: CommissionSchemeCode;
-	additionalPercent: number | null;
+	/** `ion-input type="number"` puede entregar string en runtime. */
+	additionalPercent: number | string | null;
 	appliesToImmediate: boolean;
 	appliesToRecurring: boolean;
 	yieldEnabled: boolean;
@@ -47,6 +48,7 @@ export class CommissionDynamicManagePage implements OnInit {
 	private readonly actions$ = inject(Actions);
 	private readonly toastCtrl = inject(ToastController);
 	private readonly alertCtrl = inject(AlertController);
+	private readonly destroyRef = inject(DestroyRef);
 
 	isNew = false;
 	policyUid: string | null = null;
@@ -84,15 +86,15 @@ export class CommissionDynamicManagePage implements OnInit {
 	ngOnInit(): void {
 		this.facade.loadCommissionPolicies();
 
-		const path = this.route.snapshot.routeConfig?.path ?? '';
-		this.isNew = path === 'nueva';
 		this.policyUid = this.route.snapshot.paramMap.get('uid');
+		/** Alta = `/manage` sin `:uid`; edición = `/manage/:uid` (ver commission-dynamics-routing). */
+		this.isNew = !this.policyUid;
 
 		this.actions$
 			.pipe(
 				ofType(CommissionPolicyActions.createCommissionPolicySuccess),
 				filter(() => this.pendingNavigateAfterCreate),
-				takeUntilDestroyed(),
+				takeUntilDestroyed(this.destroyRef),
 			)
 			.subscribe(() => {
 				this.pendingNavigateAfterCreate = false;
@@ -103,7 +105,7 @@ export class CommissionDynamicManagePage implements OnInit {
 			.pipe(
 				ofType(CommissionPolicyActions.updateCommissionPolicySuccess),
 				filter(() => this.pendingNavigateAfterUpdate),
-				takeUntilDestroyed(),
+				takeUntilDestroyed(this.destroyRef),
 			)
 			.subscribe(() => {
 				this.pendingNavigateAfterUpdate = false;
@@ -117,7 +119,7 @@ export class CommissionDynamicManagePage implements OnInit {
 					CommissionPolicyActions.updateCommissionPolicyFailure,
 				),
 				filter(() => this.pendingNavigateAfterCreate || this.pendingNavigateAfterUpdate),
-				takeUntilDestroyed(),
+				takeUntilDestroyed(this.destroyRef),
 			)
 			.subscribe(() => {
 				this.pendingNavigateAfterCreate = false;
@@ -165,7 +167,7 @@ export class CommissionDynamicManagePage implements OnInit {
 						CommissionPolicyActions.loadCommissionPoliciesFailure,
 					),
 					take(1),
-					takeUntilDestroyed(),
+					takeUntilDestroyed(this.destroyRef),
 				)
 				.subscribe(() => {
 					this.facade.allCommissionPolicies$.pipe(take(1)).subscribe((list) => {
@@ -349,8 +351,9 @@ export class CommissionDynamicManagePage implements OnInit {
 			if (!row.appliesToImmediate && !row.appliesToRecurring) {
 				out.push(`Regla ${n}: elige al menos un tipo de comisión (Inmediata y/o Regular).`);
 			}
-			const pct = row.additionalPercent;
-			if (pct == null || !Number.isFinite(pct)) {
+			const rawPct = row.additionalPercent;
+			const pct = typeof rawPct === 'string' ? Number(rawPct) : rawPct;
+			if (rawPct === '' || pct == null || !Number.isFinite(pct)) {
 				out.push(`Regla ${n}: indica un porcentaje adicional válido (≥ 0).`);
 			} else if (pct < 0) {
 				out.push(`Regla ${n}: el porcentaje adicional no puede ser negativo.`);
@@ -369,13 +372,16 @@ export class CommissionDynamicManagePage implements OnInit {
 	}
 
 	private buildPolicyPayload(): CommissionPolicy {
-		const rules: CommissionPolicyRule[] = this.ruleRows.map((row) => ({
-			scheme: row.scheme,
-			additionalPercent: Number(row.additionalPercent),
-			appliesToImmediate: row.appliesToImmediate,
-			appliesToRecurring: row.appliesToRecurring,
-			yieldCondition: this.draftToYieldCondition(row) ?? undefined,
-		}));
+		const rules: CommissionPolicyRule[] = this.ruleRows.map((row) => {
+			const yc = this.draftToYieldCondition(row);
+			const base: CommissionPolicyRule = {
+				scheme: row.scheme,
+				additionalPercent: Number(row.additionalPercent),
+				appliesToImmediate: row.appliesToImmediate,
+				appliesToRecurring: row.appliesToRecurring,
+			};
+			return yc != null ? { ...base, yieldCondition: yc } : base;
+		});
 
 		const { validFrom: _legacyFrom, validTo: _legacyTo, ...baseRest } =
 			(this.basePolicy ?? {}) as Partial<CommissionPolicy>;
@@ -428,6 +434,15 @@ export class CommissionDynamicManagePage implements OnInit {
 		} else if (this.policyUid) {
 			this.pendingNavigateAfterUpdate = true;
 			this.facade.updateCommissionPolicy({ ...payload, uid: this.policyUid });
+		} else {
+			void this.toastCtrl
+				.create({
+					color: 'danger',
+					message: 'No se pudo determinar si es alta o edición. Vuelve al listado e inténtalo de nuevo.',
+					duration: 5000,
+					position: 'bottom',
+				})
+				.then((t) => t.present());
 		}
 	}
 
