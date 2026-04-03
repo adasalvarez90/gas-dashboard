@@ -103,7 +103,7 @@
 					<div class="section-divider"></div>
 					<div class="section-title">Dinámica especial</div>
 					<p class="dynamic-copy">
-						Solo una dinámica por tranche. Las inactivas no se eligen solas; puedes asignarlas a mano.
+						Solo una dinámica por tranche. Ninguna se aplica sola: elige una aquí o déjalo en «Sin asignar» para comisión base (sin extras).
 					</p>
 					@if (resolvePolicy(policies, tranche.assignedDynamicPolicyUid); as cur) {
 					<div class="current-dynamic">
@@ -125,6 +125,7 @@
 							interface="popover"
 							placeholder="Elegir del catálogo"
 							[value]="tranche.assignedDynamicPolicyUid ?? trancheDynamicNone"
+							[disabled]="isTrancheDynamicLocked(tranche)"
 							(ionChange)="onTrancheDynamicSelected(tranche, $any($event).detail.value)"
 							[attr.aria-label]="'Dinámica especial para anexo ' + tranche.sequence"
 						>
@@ -141,6 +142,7 @@
 						fill="clear"
 						size="small"
 						class="clear-dynamic-btn"
+						[disabled]="isTrancheDynamicLocked(tranche)"
 						(click)="clearTrancheDynamic(tranche, $event)"
 					>
 						Quitar asignación

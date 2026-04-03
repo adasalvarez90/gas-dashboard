@@ -8,6 +8,7 @@ import * as TrancheActions from './tranche.actions';
 // Services
 import { TrancheService } from 'src/app/domain/tranche/tranche.service';
 import { TrancheFirestoreService } from 'src/app/services/tranche-firestore.service';
+import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
 import { AuthFacade } from '../auth/auth.facade';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class TrancheEffects {
 		private actions$: Actions,
 		private trancheFS: TrancheFirestoreService,
 		private trancheService: TrancheService,
+		private commissionPaymentFS: CommissionPaymentFirestoreService,
 		private authFacade: AuthFacade,
 		private loadingCtrl: LoadingController,
 		private toastCtrl: ToastController,
@@ -102,6 +104,26 @@ export class TrancheEffects {
 
 					// Present the loading
 					await loading.present();
+
+					// Business rule:
+					// Once IMMEDIATE commission is already paid (or paid late),
+					// the user can no longer change `assignedDynamicPolicyUid`.
+					const tranchesInContract = await this.trancheFS.getTranches(tranche.contractUid);
+					const existing = tranchesInContract.find(t => t.uid === tranche.uid);
+					const prevDynamic = existing?.assignedDynamicPolicyUid ?? null;
+					const nextDynamic = tranche.assignedDynamicPolicyUid ?? null;
+					const isChangingDynamic = prevDynamic !== nextDynamic;
+
+					if (isChangingDynamic) {
+						const payments = await this.commissionPaymentFS.getCommissionPayments(tranche.uid);
+						const hasPaidImmediate = payments.some(p =>
+							(p.paymentType ?? '').toUpperCase() === 'IMMEDIATE' &&
+							(p.paid === true || p.paidLate === true),
+						);
+						if (hasPaidImmediate) {
+							throw new Error('No se puede cambiar la dinámica especial: la comisión inmediata del tranche ya fue pagada (o pagada atrasada).');
+						}
+					}
 
 					return this.trancheFS.updateTranche(tranche).then(
 						async (response) => {

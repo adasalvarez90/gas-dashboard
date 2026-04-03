@@ -42,40 +42,22 @@ describe('resolveDynamicForTranche', () => {
 		expect(resolveDynamicForTranche(tranche, contractA, [manual, auto], fundedAt)).toBe(manual);
 	});
 
-	it('auto ignores inactive policies', () => {
+	it('no manual uid: never picks an active policy from catalog', () => {
 		const inactive = policy({ uid: 'i', active: false });
 		const active = policy({ uid: 'a', active: true, _create: 1 });
 		const tranche = {} as Tranche;
-		expect(resolveDynamicForTranche(tranche, contractA, [inactive, active], fundedAt)).toBe(active);
+		expect(resolveDynamicForTranche(tranche, contractA, [inactive, active], fundedAt)).toBeNull();
 	});
 
-	it('auto requires contract.scheme in allowedSchemes', () => {
+	it('no manual uid: ignores policies that would match scheme if auto existed', () => {
 		const bOnly = policy({ uid: 'b', allowedSchemes: ['B'], active: true });
 		const tranche = {} as Tranche;
 		expect(resolveDynamicForTranche(tranche, contractA, [bOnly], fundedAt)).toBeNull();
 	});
 
-	it('tie-break: higher priority then _create', () => {
-		const p1 = policy({
-			uid: 'p1',
-			priority: 1,
-			_create: 50,
-			active: true,
-		});
-		const p2 = policy({
-			uid: 'p2',
-			priority: 2,
-			_create: 999,
-			active: true,
-		});
-		const tranche = {} as Tranche;
-		expect(resolveDynamicForTranche(tranche, contractA, [p1, p2], fundedAt)).toBe(p2);
-	});
-
-	it('tie-break: same priority uses newer _create', () => {
-		const older = policy({ uid: 'old', priority: 1, _create: 10, active: true });
-		const newer = policy({ uid: 'new', priority: 1, _create: 99, active: true });
-		const tranche = {} as Tranche;
-		expect(resolveDynamicForTranche(tranche, contractA, [older, newer], fundedAt)).toBe(newer);
+	it('manual uid not in catalog returns null', () => {
+		const p1 = policy({ uid: 'p1', active: true });
+		const tranche = { assignedDynamicPolicyUid: 'missing' } as Tranche;
+		expect(resolveDynamicForTranche(tranche, contractA, [p1], fundedAt)).toBeNull();
 	});
 });

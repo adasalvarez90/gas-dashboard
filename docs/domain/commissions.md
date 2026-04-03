@@ -148,10 +148,11 @@ A special dynamic is a named configuration: **allowed schemes** (step 2) plus **
 
 ## Business behavior
 
-- The dynamic applies at **tranche level** (each tranche evaluates and stores its applicable dynamic context independently).
-- A user can **manually assign** a dynamic to a tranche even if that dynamic is inactive, choosing from the full catalog.
-- Only **active** dynamics can be **auto-assigned** by the system.
+- The dynamic applies at **tranche level**: optional field `assignedDynamicPolicyUid` on the tranche. **There is no system auto-assignment**; if the user leaves it unset, commission generation uses the base scheme percentages only (no extra rule percents).
+- A user can assign a dynamic from the full catalog even if that dynamic is **inactive** in the catalog (`active` is informational for operators; assignment is explicit).
+- After the tranche has any `commissionPayments` with `paymentType === 'IMMEDIATE'` that are already marked as `paid === true` (or `paidLate === true`), the user can no longer change `assignedDynamicPolicyUid` (the dynamic choice is “locked” once immediate commission is paid).
 - A tranche can have **only one assigned dynamic** at a time.
+- Each generated `CommissionPayment` may store `policyUid` as a snapshot of which policy was applied when that line was created (audit); the tranche field remains the place where the user sets intent **before** funding.
 - **Rule scheme ⊆ allowed schemes:** every rule’s scheme must belong to the multiselect from step 2; invalid combinations must be blocked in UI and rejected on save in API/domain validation.
 
 ---

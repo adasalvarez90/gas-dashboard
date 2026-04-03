@@ -16,6 +16,8 @@ import { DepositFacade } from 'src/app/store/deposit/deposit.facade';
 import { TrancheFacade } from 'src/app/store/tranche/tranche.facade';
 import { CommissionPolicyFacade } from 'src/app/store/commission-policy/commission-policy.facade';
 import { CommissionPolicy } from 'src/app/store/commission-policy/commission-policy.model';
+import { CommissionPaymentFirestoreService } from 'src/app/services/commission-payment-firestore.service';
+import type { CommissionPayment } from 'src/app/store/commission-payment/commission-payment.model';
 
 @Component({
 	selector: 'app-contract-deposits',
@@ -32,6 +34,8 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 	commissionPolicies$: Observable<CommissionPolicy[]> = this.commissionPolicyFacade.allCommissionPolicies$;
 
 	selectedTrancheUid: string | null = null;
+
+	private immediatePaidByTrancheUid = new Map<string, boolean>();
 
 	isCreateTrancheModalOpen = false;
 	createTrancheAmount: number | null = null;
@@ -62,18 +66,39 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 		private depositFacade: DepositFacade,
 		private trancheFacade: TrancheFacade,
 		private commissionPolicyFacade: CommissionPolicyFacade,
+		private commissionPaymentFS: CommissionPaymentFirestoreService,
 	) {}
 
 	ngOnInit() {
 		this.trancheFacade.loadTranches(this.contract?.uid || '');
 		this.commissionPolicyFacade.loadCommissionPolicies();
+		void this.refreshTrancheDynamicLocks();
 	}
 
 	ngOnChanges(changes: SimpleChanges) {
 		if (changes['contract'] && this.contract?.uid) {
 			this.trancheFacade.loadTranches(this.contract.uid);
 			this.commissionPolicyFacade.loadCommissionPolicies();
+			void this.refreshTrancheDynamicLocks();
 		}
+	}
+
+	private async refreshTrancheDynamicLocks(): Promise<void> {
+		if (!this.contract?.uid) return;
+		this.immediatePaidByTrancheUid.clear();
+
+		// UX lock: deshabilitar la dinámica cuando la comisión inmediata ya fue pagada.
+		const payments: CommissionPayment[] = await this.commissionPaymentFS.getCommissionPaymentsByContract(this.contract.uid);
+		for (const p of payments) {
+			if ((p.paymentType ?? '').toUpperCase() !== 'IMMEDIATE') continue;
+			if (p.paid === true || p.paidLate === true) {
+				this.immediatePaidByTrancheUid.set(p.trancheUid, true);
+			}
+		}
+	}
+
+	isTrancheDynamicLocked(tranche: Tranche): boolean {
+		return this.immediatePaidByTrancheUid.get(tranche.uid) ?? false;
 	}
 
 	loadData(trancheUid: string) {
@@ -233,6 +258,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 	readonly trancheDynamicNone = '__none__';
 
 	onTrancheDynamicSelected(tranche: Tranche, raw: string | null | undefined): void {
+		if (this.isTrancheDynamicLocked(tranche)) return;
 		const uid =
 			raw === this.trancheDynamicNone || raw === '' || raw == null ? null : raw;
 		this.trancheFacade.updateTranche({
@@ -243,6 +269,7 @@ export class ContractDepositsComponent implements OnInit, OnChanges {
 
 	clearTrancheDynamic(tranche: Tranche, event: Event): void {
 		event.stopPropagation();
+		if (this.isTrancheDynamicLocked(tranche)) return;
 		this.trancheFacade.updateTranche({
 			...tranche,
 			assignedDynamicPolicyUid: null,

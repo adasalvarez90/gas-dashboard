@@ -32,8 +32,8 @@ export interface CommissionPolicy extends Metadata {
 	active: boolean;
 
 	/**
-	 * Legacy / datos viejos en Firestore. La “vigencia” operativa es solo `active`
-	 * (inactiva = no auto-asigna; sí puede asignarse a mano en tranche).
+	 * Legacy / datos viejos en Firestore. `active` solo indica vigencia en catálogo/UI;
+	 * las dinámicas no se aplican al motor salvo que el usuario asigne la política en el tranche.
 	 */
 	validFrom?: number;
 	validTo?: number;
@@ -42,10 +42,7 @@ export interface CommissionPolicy extends Metadata {
 	allowedSchemes?: CommissionSchemeCode[];
 	rules?: CommissionPolicyRule[];
 
-	/**
-	 * Optional tie-break for auto-assignment (higher wins).
-	 * Si empata, gana el documento con `_create` más reciente (ver `resolveDynamicForTranche`).
-	 */
+	/** Optional metadata (p. ej. orden en listas); la aplicación al motor es solo por asignación en tranche. */
 	priority?: number;
 
 	// --- Legacy (pre–rules model); normalized into `rules` for computation ---
