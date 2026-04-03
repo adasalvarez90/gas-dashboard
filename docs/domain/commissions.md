@@ -66,6 +66,20 @@ Details and deferrals: [commission-cuts.md](./commission-cuts.md).
 - [commission-cuts.md](./commission-cuts.md) — workflow, PDF, deferrals, colors, hybrid UI rules.
 - [commission-cut-implementation.md](./commission-cut-implementation.md) — Firestore fields, reconcile, code map (hybrid **implemented**).
 
+## Excel export — Desglose sheet
+
+The workbook sheet **Desglose El Futuro Fem.** is built in `ExcelExportService.buildSheetDesglose`.
+
+| Rule | Behavior |
+|------|----------|
+| **Row grain** | One row per **contract tranche** that has at least one `CommissionPayment` in the exported cut for that block — **not** one row per contract. |
+| **“Nuevas” block** | Payments whose `paymentType` is `IMMEDIATE`, `FINAL`, or `ADJUSTMENT`. |
+| **“Mensuales” block** | Payments whose `paymentType` is `RECURRING`. |
+| **Capital MXN** | The **tranche** `amount` for that row (not the sum of all tranches on the contract). |
+| **Depósito** | The **tranche** funding date (`fundedAt`), not fixed to sequence 1. |
+| **Role splits & Comisión** | Sums only payments whose **`trancheUid`** matches that row’s tranche and whose type belongs to the block. |
+| **Order** | By investor name, then tranche `sequence`, then `trancheUid`. |
+
 ---
 
 # Commission Schemes

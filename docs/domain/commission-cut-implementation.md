@@ -263,6 +263,21 @@ Implementation enforces:
 
 ---
 
+# Excel export — Desglose sheet
+
+**Code:** `src/app/services/excel-export.service.ts` → `buildSheetDesglose`.
+
+Aligned with [commissions.md](./commissions.md) (*Excel export — Desglose sheet*):
+
+| Rule | Implementation detail |
+|------|------------------------|
+| Row grain | Iterate unique `(contractUid, trancheUid)` from `commissionPayments` for the cut, per block (`IMMEDIATE` / `FINAL` / `ADJUSTMENT` vs `RECURRING`). |
+| Capital / Depósito | From `Tranche` for that `trancheUid` (`amount`, `fundedAt`). |
+| Commission columns | `sumPaymentsByRole` and totals use only payments in that tranche slice matching the block’s types. |
+| Sort | Investor (`Contract.investor`), then `Tranche.sequence`, then `trancheUid`. |
+
+---
+
 # View: Comisiones atrasadas / Requieren acción
 
 **Logic (Commission Cuts page):** Derivado de **`AdvisorCutSummaryWithState`** construido desde pagos: `isOverdue` combina plazos de factura/pago vía estado fusionado de la tarjeta, `lateReasons`, y banderas de diferido (`movedToNextCut` / `workflowOriginalCutDate` en líneas). Filtros **noncompliance** / **paidLate** usan `summaryHasAnyPaidLateStrip` y stripes por línea (`getPaymentStripStatus` + `commissionPaymentToSyntheticAdvisorState`). **No** depende de una query a `commissionCutAdvisorStates`.

@@ -198,12 +198,13 @@ export class ExcelExportService {
 		const advisorName = new Map(data.advisors.map((a) => [a.uid, a.name]));
 		const contractMap = new Map(data.contracts.map((c) => [c.uid, c]));
 		const tranchesByContract = this.groupBy(data.tranches, (t) => t.contractUid);
-		const paymentsByContract = this.groupBy(data.commissionPayments, (p) => p.contractUid);
-
-		const contractRows = Array.from(paymentsByContract.keys())
-			.map((contractUid) => contractMap.get(contractUid))
-			.filter((c): c is Contract => !!c)
-			.sort((a, b) => (a.investor ?? '').localeCompare(b.investor ?? ''));
+		const paymentsByContractTranche = new Map<string, CommissionPayment[]>();
+		for (const p of data.commissionPayments) {
+			const k = this.compositeContractTrancheKey(p.contractUid, p.trancheUid);
+			const arr = paymentsByContractTranche.get(k) ?? [];
+			arr.push(p);
+			paymentsByContractTranche.set(k, arr);
+		}
 
 		let totalImmediateCommission = 0;
 		let totalRecurringCommission = 0;
@@ -213,16 +214,14 @@ export class ExcelExportService {
 		const immediateTypes = new Set(['IMMEDIATE', 'FINAL', 'ADJUSTMENT']);
 		const recurringTypes = new Set(['RECURRING']);
 
-		const buildContractRow = (contract: Contract, contractPayments: CommissionPayment[]) => {
-			const contractTranches = tranchesByContract.get(contract.uid) ?? [];
-			const tranche1 = contractTranches.find((t) => t.sequence === 1);
-			const capital = contractTranches.reduce((acc, t) => acc + (t.amount ?? 0), 0);
-			const commissionTotal = contractPayments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
-			const byRole = this.sumPaymentsByRole(contractPayments);
+		const buildTrancheRow = (contract: Contract, tranche: Tranche, tranchePayments: CommissionPayment[]) => {
+			const capital = tranche.amount ?? 0;
+			const commissionTotal = tranchePayments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
+			const byRole = this.sumPaymentsByRole(tranchePayments);
 			const rendimientoPercent = typeof contract.yieldPercent === 'number'
 				? contract.yieldPercent / 100
 				: '';
-			const asesor = advisorName.get(contractPayments[0]?.advisorUid ?? '') ?? '';
+			const asesor = advisorName.get(tranchePayments[0]?.advisorUid ?? '') ?? '';
 			const kamNom = advisorName.get(contract.roles?.kam ?? '') ?? '';
 			const consultoraNom = advisorName.get(contract.roles?.consultant ?? '') ?? '';
 			const gerenteNom = advisorName.get(contract.roles?.manager ?? '') ?? '';
@@ -233,7 +232,7 @@ export class ExcelExportService {
 				asesor,
 				contract.investor ?? '',
 				contract.signatureDate ? this.formatDate(contract.signatureDate) : '',
-				tranche1?.fundedAt ? this.formatDate(tranche1.fundedAt) : '',
+				tranche.fundedAt ? this.formatDate(tranche.fundedAt) : '',
 				capital,
 				rendimientoPercent,
 				contract.scheme ?? '',
@@ -255,14 +254,25 @@ export class ExcelExportService {
 			];
 		};
 
-		for (const contract of contractRows) {
-			const allPayments = paymentsByContract.get(contract.uid) ?? [];
-			const immediatePayments = allPayments.filter((p) => immediateTypes.has((p.paymentType ?? '').toUpperCase()));
-			if (immediatePayments.length === 0) continue;
-			const row = ws.addRow(buildContractRow(contract, immediatePayments));
+		const immediateKeys = this.sortedTrancheKeysForPaymentTypes(
+			data.commissionPayments,
+			immediateTypes,
+			contractMap,
+			tranchesByContract,
+		);
+		for (const { contractUid, trancheUid } of immediateKeys) {
+			const contract = contractMap.get(contractUid);
+			const tranche = (tranchesByContract.get(contractUid) ?? []).find((t) => t.uid === trancheUid);
+			if (!contract || !tranche) continue;
+			const k = this.compositeContractTrancheKey(contractUid, trancheUid);
+			const slice = (paymentsByContractTranche.get(k) ?? []).filter((p) =>
+				immediateTypes.has((p.paymentType ?? '').toUpperCase()),
+			);
+			if (slice.length === 0) continue;
+			const row = ws.addRow(buildTrancheRow(contract, tranche, slice));
 			this.paintDataRowNoFill(row);
-			totalImmediateCommission += immediatePayments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
-			totalReferralImmediate += this.sumReferralAmount(immediatePayments);
+			totalImmediateCommission += slice.reduce((acc, p) => acc + (p.amount ?? 0), 0);
+			totalReferralImmediate += this.sumReferralAmount(slice);
 		}
 
 		const totalImmediateRow = ws.addRow([
@@ -306,14 +316,25 @@ export class ExcelExportService {
 		const recurringHeaderRow = ws.addRow(headers);
 		this.paintHeader(recurringHeaderRow, '858FB3');
 
-		for (const contract of contractRows) {
-			const allPayments = paymentsByContract.get(contract.uid) ?? [];
-			const recurringPayments = allPayments.filter((p) => recurringTypes.has((p.paymentType ?? '').toUpperCase()));
-			if (recurringPayments.length === 0) continue;
-			const row = ws.addRow(buildContractRow(contract, recurringPayments));
+		const recurringKeys = this.sortedTrancheKeysForPaymentTypes(
+			data.commissionPayments,
+			recurringTypes,
+			contractMap,
+			tranchesByContract,
+		);
+		for (const { contractUid, trancheUid } of recurringKeys) {
+			const contract = contractMap.get(contractUid);
+			const tranche = (tranchesByContract.get(contractUid) ?? []).find((t) => t.uid === trancheUid);
+			if (!contract || !tranche) continue;
+			const k = this.compositeContractTrancheKey(contractUid, trancheUid);
+			const slice = (paymentsByContractTranche.get(k) ?? []).filter((p) =>
+				recurringTypes.has((p.paymentType ?? '').toUpperCase()),
+			);
+			if (slice.length === 0) continue;
+			const row = ws.addRow(buildTrancheRow(contract, tranche, slice));
 			this.paintDataRowNoFill(row);
-			totalRecurringCommission += recurringPayments.reduce((acc, p) => acc + (p.amount ?? 0), 0);
-			totalReferralRecurring += this.sumReferralAmount(recurringPayments);
+			totalRecurringCommission += slice.reduce((acc, p) => acc + (p.amount ?? 0), 0);
+			totalReferralRecurring += this.sumReferralAmount(slice);
 		}
 
 		const totalRecurringRow = ws.addRow([
@@ -744,6 +765,44 @@ export class ExcelExportService {
 		const day = d.getDate();
 		if (day === 7) return new Date(d.getFullYear(), d.getMonth(), 21, 12, 0, 0, 0).getTime();
 		return new Date(d.getFullYear(), d.getMonth() + 1, 7, 12, 0, 0, 0).getTime();
+	}
+
+	/** Composite key for grouping payments by contract + tranche (UIDs must not contain U+001E). */
+	private compositeContractTrancheKey(contractUid: string, trancheUid: string): string {
+		return `${contractUid}\x1e${trancheUid}`;
+	}
+
+	private sortedTrancheKeysForPaymentTypes(
+		commissionPayments: CommissionPayment[],
+		typeSet: Set<string>,
+		contractMap: Map<string, Contract>,
+		tranchesByContract: Map<string, Tranche[]>,
+	): Array<{ contractUid: string; trancheUid: string }> {
+		const keySet = new Set<string>();
+		for (const p of commissionPayments) {
+			if (!typeSet.has((p.paymentType ?? '').toUpperCase())) continue;
+			if (!p.contractUid || !p.trancheUid) continue;
+			keySet.add(this.compositeContractTrancheKey(p.contractUid, p.trancheUid));
+		}
+		const rows: Array<{ contractUid: string; trancheUid: string; contract: Contract; tranche: Tranche }> = [];
+		for (const key of keySet) {
+			const sep = key.indexOf('\x1e');
+			if (sep < 0) continue;
+			const contractUid = key.slice(0, sep);
+			const trancheUid = key.slice(sep + 1);
+			const contract = contractMap.get(contractUid);
+			const tranche = (tranchesByContract.get(contractUid) ?? []).find((t) => t.uid === trancheUid);
+			if (!contract || !tranche) continue;
+			rows.push({ contractUid, trancheUid, contract, tranche });
+		}
+		rows.sort((a, b) => {
+			const inv = (a.contract.investor ?? '').localeCompare(b.contract.investor ?? '');
+			if (inv !== 0) return inv;
+			const seq = (a.tranche.sequence ?? 0) - (b.tranche.sequence ?? 0);
+			if (seq !== 0) return seq;
+			return a.trancheUid.localeCompare(b.trancheUid);
+		});
+		return rows.map(({ contractUid, trancheUid }) => ({ contractUid, trancheUid }));
 	}
 
 	private groupBy<T>(arr: T[], keyFn: (v: T) => string): Map<string, T[]> {
