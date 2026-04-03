@@ -10,11 +10,12 @@ export const environment = {
 	
 	// Your web app's Firebase configuration
 	firebase: {
-		apiKey: "AIzaSyAU5hrP03em0AYKMlwG74YQ9I2_vnHEmKE",
-		authDomain: "nexora-e8238.firebaseapp.com",
-		projectId: "nexora-e8238",
-		storageBucket: "nexora-e8238.firebasestorage.app",
-		messagingSenderId: "65807573709",
-		appId: "1:65807573709:web:bd0bf7c9cf377b310fff84"
+		apiKey: "AIzaSyD8dywqP3g1kZC7JD3BH1b9QAf42F5oX8s",
+		authDomain: "nexora-prod-a696e.firebaseapp.com",
+		projectId: "nexora-prod-a696e",
+		storageBucket: "nexora-prod-a696e.firebasestorage.app",
+		messagingSenderId: "317722043420",
+		appId: "1:317722043420:web:3b45bb7be130caef69ebd9",
+		measurementId: "G-TGE89CR0WL"
 	},
 };
